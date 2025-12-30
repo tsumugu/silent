@@ -2,7 +2,7 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import { createUIWindow } from './windows/UIWindow';
 import { createHiddenWindow } from './windows/HiddenWindow';
-import { setupIPCHandlers } from './ipc/handlers';
+import { clearIPCHandlers, setupIPCHandlers } from './ipc/handlers';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -48,35 +48,43 @@ app.whenReady().then(() => {
   // Set up IPC handlers for communication between windows
   setupIPCHandlers(mainWindow, hiddenWindow);
 
-  // Fullscreen state change listeners
-  mainWindow.on('enter-full-screen', () => {
-    mainWindow?.webContents.send('fullscreen-changed', true);
+  mainWindow.on('closed', () => {
+    mainWindow = null;
   });
 
   mainWindow.on('leave-full-screen', () => {
     mainWindow?.webContents.send('fullscreen-changed', false);
   });
 
-  // Window controls IPC handlers
-  ipcMain.on('window:minimize', () => {
-    mainWindow?.minimize();
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+    clearIPCHandlers();
   });
 
-  ipcMain.on('window:maximize', () => {
-    if (mainWindow?.isFullScreen()) {
-      mainWindow.setFullScreen(false);
-    } else {
-      mainWindow?.setFullScreen(true);
-    }
-  });
-
-  ipcMain.on('window:close', () => {
-    mainWindow?.close();
-  });
+  // Window controls are now handled in setupIPCHandlers to keep logic unified
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createUIWindow();
+    if (mainWindow === null) {
+      const newWin = createUIWindow();
+      mainWindow = newWin;
+      // Re-setup handlers for the new window
+      if (hiddenWindow) {
+        setupIPCHandlers(newWin, hiddenWindow);
+      }
+
+      // Re-setup fullscreen listeners
+      newWin.on('enter-full-screen', () => {
+        newWin.webContents.send('fullscreen-changed', true);
+      });
+
+      newWin.on('leave-full-screen', () => {
+        newWin.webContents.send('fullscreen-changed', false);
+      });
+
+      newWin.on('closed', () => {
+        mainWindow = null;
+        clearIPCHandlers();
+      });
     }
   });
 });

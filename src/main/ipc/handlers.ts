@@ -4,19 +4,30 @@ import { PlaybackInfo } from '../../shared/types';
 
 import { ytMusicService } from '../services/YTMusicService';
 
+export function clearIPCHandlers() {
+  Object.values(IPCChannels).forEach(channel => {
+    ipcMain.removeAllListeners(channel);
+    ipcMain.removeHandler(channel);
+  });
+}
+
 export function setupIPCHandlers(
   uiWindow: BrowserWindow,
   hiddenWindow: BrowserWindow
 ) {
+  // Clear existing listeners and handlers to avoid duplication when window is recreated
+  clearIPCHandlers();
+
   // ========================================
-  // Window controls (already set up in index.ts, but included here for completeness)
+  // Window controls
   // ========================================
 
   ipcMain.on(IPCChannels.WINDOW_MINIMIZE, () => {
-    uiWindow.minimize();
+    if (!uiWindow.isDestroyed()) uiWindow.minimize();
   });
 
   ipcMain.on(IPCChannels.WINDOW_MAXIMIZE, () => {
+    if (uiWindow.isDestroyed()) return;
     if (uiWindow.isFullScreen()) {
       uiWindow.setFullScreen(false);
     } else {
@@ -25,7 +36,7 @@ export function setupIPCHandlers(
   });
 
   ipcMain.on(IPCChannels.WINDOW_CLOSE, () => {
-    uiWindow.close();
+    if (!uiWindow.isDestroyed()) uiWindow.close();
   });
 
   // ========================================
@@ -34,7 +45,9 @@ export function setupIPCHandlers(
 
   ipcMain.on(IPCChannels.PLAYBACK_STATE_CHANGED, (_event, playbackInfo: PlaybackInfo) => {
     // Forward playback state from hidden window to UI window
-    uiWindow.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, playbackInfo);
+    if (!uiWindow.isDestroyed()) {
+      uiWindow.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, playbackInfo);
+    }
   });
 
   // ========================================

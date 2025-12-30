@@ -83,7 +83,12 @@ export class YTMusicService {
         console.log(`[YTMusicService] Fetching album: ${albumId}`);
         await this.initialize();
 
-        return await this.ytmusic.getAlbum(albumId);
+        try {
+            return await this.ytmusic.getAlbum(albumId);
+        } catch (e) {
+            console.error(`[YTMusicService] Failed to fetch album ${albumId}`, e);
+            return { id: albumId, title: 'Unknown Album', tracks: [] };
+        }
     }
     // async getAlbumDetails(albumId: string) {
     //     console.log(`[YTMusicService] Fetching album: ${albumId}`);
@@ -117,33 +122,35 @@ export class YTMusicService {
         console.log(`[YTMusicService] Fetching playlist: ${playlistId}`);
         await this.initialize();
 
-        // まずは基本情報だけ取得
-        const base = await this.ytmusic.getPlaylist(playlistId);
-        console.log(`[YTMusicService] Base playlist data:`, {
-            id: (base as any).id || (base as any).playlistId,
-            title: (base as any).title || (base as any).name,
-            hasTracks: !!(base as any).tracks,
-            hasContents: !!(base as any).contents
-        });
+        const isSpecialId = playlistId.startsWith('RDCL') || playlistId.startsWith('RD');
+        let base: any = {};
+        try {
+            // まずは基本情報だけ取得
+            base = await this.ytmusic.getPlaylist(playlistId);
+        } catch (e: any) {
+            console.warn(`[YTMusicService] Failed to get initial playlist data for ${playlistId}${isSpecialId ? ' (Special ID)' : ''}.`, e.message);
+        }
 
         // 曲情報が無い場合は別メソッドで取得
-        let tracks: any[] = (base as any).tracks ?? (base as any).contents ?? [];
+        let tracks: any[] = base.tracks ?? base.contents ?? [];
         if (tracks.length === 0) {
             try {
-                console.log(`[YTMusicService] No tracks found, falling back to getPlaylistVideos`);
+                console.log(`[YTMusicService] Attempting getPlaylistVideos for ${playlistId}`);
                 const videos = await this.ytmusic.getPlaylistVideos(playlistId);
                 tracks = videos ?? [];
-                console.log(`[YTMusicService] Fallback videos count: ${tracks.length}`);
-            } catch (e) {
-                console.error(`[YTMusicService] Failed to fetch playlist videos for ${playlistId}`, e);
+            } catch (e: any) {
+                console.warn(`[YTMusicService] Fallback getPlaylistVideos failed for ${playlistId}.`, e.message);
             }
         }
 
-        // 返却オブジェクトに tracks を統一して入れる
+        // 送出オブジェクトの構築
+        const title = base.title || base.name || (isSpecialId ? 'YouTube Music Mix / Charts' : 'Untitled Playlist');
+
         const result = {
-            ...(base as any),
+            ...base,
+            id: base.id || base.playlistId || playlistId,
+            title: title,
             tracks,
-            // `contents` が必要な UI がある場合は同じ配列を流用
             contents: tracks
         };
 

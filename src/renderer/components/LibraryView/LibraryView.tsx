@@ -60,8 +60,14 @@ const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlayli
                                     onAlbumSelect({ ...item, id: albumId, name: title, artist } as any);
                                 } else if (item.type === 'SONG' || item.videoId) {
                                     window.electronAPI.play(item.videoId, 'SONG');
-                                } else if (item.type === 'PLAYLIST' || item.browseId) {
-                                    onPlaylistSelect({ ...item, playlistId: item.browseId || item.playlistId });
+                                } else if (item.type === 'PLAYLIST' || item.browseId || item.playlistId) {
+                                    const id = item.browseId || item.playlistId;
+                                    // Special IDs (Charts/Radios) often fail in Detail View, so play them directly
+                                    if (id && (id.startsWith('RDCL') || id.startsWith('RD'))) {
+                                        window.electronAPI.play(id, 'PLAYLIST');
+                                    } else {
+                                        onPlaylistSelect({ ...item, playlistId: id });
+                                    }
                                 }
                             }}
                         >
