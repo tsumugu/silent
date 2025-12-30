@@ -13,7 +13,6 @@ export function createUIWindow(): BrowserWindow {
     frame: false,
     transparent: true,
     vibrancy: 'under-window',
-    visualEffectState: 'followWindow',
     backgroundColor: '#00000000',
     fullscreenable: true,
     webPreferences: {

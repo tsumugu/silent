@@ -109,12 +109,12 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="absolute inset-0 pt-10 bg-white/10 backdrop-blur-xl"
+              // bg-white/30
+              className={`absolute inset-0 pt-10 ${currentView === 'home' ? 'block' : 'hidden'}`}
               // If detailed view is active, we might want to hide home strictly or keep it for perf
               // With opacity/z-index management.
               style={{
-                zIndex: 0,
-                display: currentView === 'home' ? 'block' : 'none'
+                zIndex: 0
               }}
             >
               <LibraryView
@@ -132,7 +132,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-              className="absolute inset-0 z-10 bg-white/10 backdrop-blur-xl pt-10"
+              className="absolute inset-0 z-10 bg-white/20 backdrop-blur-xl pt-10"
             >
               <AlbumDetailView
                 albumId={selectedAlbumId}
@@ -153,7 +153,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-              className="absolute inset-0 z-10 bg-white/10 backdrop-blur-xl pt-10"
+              className="absolute inset-0 z-10 bg-white/20 backdrop-blur-xl pt-10"
             >
               <PlaylistDetailView
                 playlistId={selectedPlaylistId}
