@@ -4,6 +4,9 @@ import { PlaybackInfo } from '../../shared/types';
 
 import { ytMusicService } from '../services/YTMusicService';
 
+// Persist the last known playback state to restore it when UI window is recreated
+let lastPlaybackInfo: PlaybackInfo | null = null;
+
 export function clearIPCHandlers() {
   Object.values(IPCChannels).forEach(channel => {
     ipcMain.removeAllListeners(channel);
@@ -44,10 +47,17 @@ export function setupIPCHandlers(
   // ========================================
 
   ipcMain.on(IPCChannels.PLAYBACK_STATE_CHANGED, (_event, playbackInfo: PlaybackInfo) => {
+    // Persist for state recovery
+    lastPlaybackInfo = playbackInfo;
+
     // Forward playback state from hidden window to UI window
     if (!uiWindow.isDestroyed()) {
       uiWindow.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, playbackInfo);
     }
+  });
+
+  ipcMain.handle(IPCChannels.PLAYBACK_GET_STATE, () => {
+    return lastPlaybackInfo;
   });
 
   // ========================================
@@ -157,9 +167,12 @@ export function setupIPCHandlers(
       ? `https://music.youtube.com/watch?v=${id}`
       : type === 'PLAYLIST'
         ? `https://music.youtube.com/watch?list=${id}` // Playlists should play immediately
-        : `https://music.youtube.com/browse/${id}`; // Albums might browse, but typically we want to play them too? 
-    // Actually for albums 'browse' is viewing it, 'watch?playlist=' is playing.
-    // But for now, user asked for playlist DETAIL view, so 'YT_PLAY' is for hitting play button.
+        : `https://music.youtube.com/browse/${id}`;
+
+    // Stop current playback before loading new URL to prevent "stuck" states
+    hiddenWindow.webContents.executeJavaScript('navigator.mediaSession.playbackState = "none"; block_updates = true;')
+      .catch(() => { }); // Ignore errors if script fails
+
     hiddenWindow.loadURL(url);
   });
 

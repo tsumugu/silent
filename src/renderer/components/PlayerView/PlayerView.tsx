@@ -6,7 +6,11 @@ import { ControlBar } from './ControlBar';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 
-export function PlayerView() {
+interface PlayerViewProps {
+  onClose?: () => void;
+}
+
+export function PlayerView({ onClose }: PlayerViewProps) {
   const [isHovered, setIsHovered] = useState(false);
   const { playbackInfo } = usePlayerStore();
   const { height } = useWindowDimensions();
@@ -44,6 +48,7 @@ export function PlayerView() {
           artist={playbackInfo?.metadata?.artist}
           isVisible={isHovered || isMini}
           isMini={isMini}
+          onClose={onClose}
         />
       </div>
 

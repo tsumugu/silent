@@ -8,6 +8,7 @@ export enum IPCChannels {
 
   // Playback state updates (Hidden → Main → UI)
   PLAYBACK_STATE_CHANGED = 'playback:state-changed',
+  PLAYBACK_GET_STATE = 'playback:get-state',
 
   // Playback controls (UI → Main → Hidden)
   PLAYBACK_PLAY = 'playback:play',

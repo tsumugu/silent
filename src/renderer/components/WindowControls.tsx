@@ -38,7 +38,7 @@ export function WindowControls() {
 
   return (
     <div
-      className="draggable fixed top-4 left-4 flex items-center gap-2 z-50"
+      className="draggable fixed top-4 left-4 flex items-center gap-2 z-[9999]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

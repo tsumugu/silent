@@ -63,7 +63,7 @@ const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlayli
                                 } else if (item.type === 'PLAYLIST' || item.browseId || item.playlistId) {
                                     const id = item.browseId || item.playlistId;
                                     // Special IDs (Charts/Radios) often fail in Detail View, so play them directly
-                                    if (id && (id.startsWith('RDCL') || id.startsWith('RD') || id.startsWith('PL'))) {
+                                    if (id && (id.startsWith('RDCL') || id.startsWith('RD'))) {
                                         window.electronAPI.play(id, 'PLAYLIST');
                                     } else {
                                         onPlaylistSelect({ ...item, playlistId: id });

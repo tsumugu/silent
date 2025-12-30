@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('playback:state-changed', (_event, playbackInfo) => callback(playbackInfo));
   },
 
+  getPlaybackState: () => ipcRenderer.invoke('playback:get-state'),
+
   // Playback controls
   playbackPlay: () => ipcRenderer.send('playback:play'),
   playbackPause: () => ipcRenderer.send('playback:pause'),

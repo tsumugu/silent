@@ -11,6 +11,7 @@ declare global {
       onFullscreenChange: (callback: (isFullscreen: boolean) => void) => void;
       // Playback state
       onPlaybackStateChange: (callback: (playbackInfo: PlaybackInfo) => void) => void;
+      getPlaybackState: () => Promise<PlaybackInfo | null>;
       // Playback controls
       playbackPlay: () => void;
       playbackPause: () => void;

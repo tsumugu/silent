@@ -94,3 +94,11 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+// Ensure playback stops when the app is explicitly quit (Cmd+Q etc.)
+app.on('before-quit', () => {
+  console.log('App is quitting, stopping playback...');
+  if (hiddenWindow && !hiddenWindow.isDestroyed()) {
+    hiddenWindow.destroy(); // Destroying the background playback window stops the sound
+  }
+});

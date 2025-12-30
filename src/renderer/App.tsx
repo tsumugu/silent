@@ -91,6 +91,18 @@ export default function App() {
     return () => window.removeEventListener('wheel', handleWheel);
   }, [isPlayerOpen]);
 
+  // Handle keyboard shortcuts (Esc to close player)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isPlayerOpen) {
+        setIsPlayerOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPlayerOpen]);
+
   return (
     <div className="w-full h-screen overflow-hidden relative font-sans select-none">
       <div className="draggable absolute top-0 left-0 right-0 h-10 z-50" />
@@ -189,20 +201,7 @@ export default function App() {
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="absolute inset-0 z-50" // High z-index to cover everything
           >
-            <PlayerView />
-
-            {/* Close/Minimize Button for Player */}
-            <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              whileHover={{ opacity: 1, scale: 1.1 }}
-              onClick={() => setIsPlayerOpen(false)}
-              className="absolute top-12 left-1/2 -translate-x-1/2 z-50 text-white/30 p-2"
-            >
-              <svg className="w-6 h-6 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </motion.button>
+            <PlayerView onClose={() => setIsPlayerOpen(false)} />
           </motion.div>
         )}
       </AnimatePresence>
