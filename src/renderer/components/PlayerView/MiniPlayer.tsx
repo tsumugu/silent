@@ -4,10 +4,10 @@ import { usePlayerStore } from '../../store/playerStore';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 
 interface MiniPlayerProps {
-    onOpenPlayer: () => void;
+    onClick: () => void;
 }
 
-export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onOpenPlayer }) => {
+export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     const { playbackInfo, isPlaying } = usePlayerStore();
 
     // Hooks should be called unconditionally
@@ -40,6 +40,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onOpenPlayer }) => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
+            onClick={onClick}
             className="absolute bottom-4 left-4 right-4 h-16 bg-white/5 backdrop-blur-[80px] backdrop-saturate-150 rounded-xl flex items-center px-4 cursor-pointer transition-all z-40 shadow-xl overflow-hidden group"
             style={{
                 background: `linear-gradient(135deg, ${colors.primary}cc 0%, ${colors.secondary}cc 100%)`
