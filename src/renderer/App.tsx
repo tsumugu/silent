@@ -96,7 +96,10 @@ export default function App() {
       <WindowControls />
 
       {/* Main Content Layer */}
-      <div className="absolute inset-0 z-0">
+      <div
+        className="absolute inset-0 z-0"
+        style={{ display: isPlayerOpen ? 'none' : 'block' }}
+      >
         <AnimatePresence mode="popLayout" initial={false}>
           {/* Home (Library) */}
           {(currentView === 'home' || viewStack.includes('home')) && (
@@ -106,7 +109,7 @@ export default function App() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="absolute inset-0 pt-10"
+              className="absolute inset-0 pt-10 bg-white/10 backdrop-blur-xl"
               // If detailed view is active, we might want to hide home strictly or keep it for perf
               // With opacity/z-index management.
               style={{
@@ -129,7 +132,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-              className="absolute inset-0 z-10 bg-black/30 backdrop-blur-3xl pt-10"
+              className="absolute inset-0 z-10 bg-white/10 backdrop-blur-xl pt-10"
             >
               <AlbumDetailView
                 albumId={selectedAlbumId}
@@ -150,7 +153,7 @@ export default function App() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
               transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-              className="absolute inset-0 z-10 bg-black/30 backdrop-blur-3xl pt-10"
+              className="absolute inset-0 z-10 bg-white/10 backdrop-blur-xl pt-10"
             >
               <PlaylistDetailView
                 playlistId={selectedPlaylistId}
@@ -174,7 +177,7 @@ export default function App() {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute inset-0 z-50 bg-black" // High z-index to cover everything
+            className="absolute inset-0 z-50" // High z-index to cover everything
           >
             <PlayerView />
 

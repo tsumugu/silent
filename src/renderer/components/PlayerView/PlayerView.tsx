@@ -23,7 +23,7 @@ export function PlayerView() {
 
   return (
     <div
-      className="relative w-full h-full flex flex-col items-center pt-16 pb-4 px-8 transition-all duration-1000 ease-in-out backdrop-blur-3xl overflow-hidden"
+      className="relative w-full h-full flex flex-col items-center pt-16 pb-4 px-8 transition-all duration-1000 ease-in-out backdrop-blur-3xl overflow-hidden bg-black/40"
       style={{
         background: `radial-gradient(circle at center, ${colors.secondary}88 0%, ${colors.secondary}33 100%)`,
       }}

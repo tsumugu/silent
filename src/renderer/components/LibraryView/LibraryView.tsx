@@ -23,26 +23,6 @@ interface SectionProps {
 }
 
 const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlaylistSelect }) => {
-    const [isStuck, setIsStuck] = useState(false);
-    const sentinelRef = React.useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                // If sentinel is NOT intersecting, it means it scrolled out of view (upwards), so we are stuck.
-                // Note: sticky kicks in when top of element hits container top. Sentinel is above element.
-                setIsStuck(!entry.isIntersecting && entry.boundingClientRect.top < 0);
-            },
-            { threshold: [1], rootMargin: '-1px 0px 0px 0px' }
-        );
-
-        if (sentinelRef.current) {
-            observer.observe(sentinelRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, []);
-
     const breakpointColumnsObj = {
         default: 5,
         1400: 4,
@@ -53,14 +33,7 @@ const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlayli
 
     return (
         <div className="mb-12 relative">
-            {/* Sentinel to detect scroll position */}
-            {/* Placed absolutely at top to trigger when scrolling past */}
-            <div ref={sentinelRef} className="absolute -top-[1px] h-[1px] w-full invisible pointer-events-none" />
-
-            <h2
-                className={`text-2xl font-bold text-white mb-6 sticky top-0 z-10 py-2 transition-all duration-300 ${isStuck ? 'bg-black/60 backdrop-blur-md px-4 -mx-4 rounded-b-lg shadow-lg opacity-100' : 'bg-transparent opacity-90'
-                    }`}
-            >
+            <h2 className="text-2xl font-bold text-white mb-6 sticky top-0 z-10 py-2 bg-transparent opacity-90">
                 {title}
             </h2>
 

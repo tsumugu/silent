@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { usePlayerStore } from '../../store/playerStore';
+import { useTrackAssets } from '../../hooks/useTrackAssets';
 
 interface MiniPlayerProps {
     onOpenPlayer: () => void;
@@ -9,12 +10,16 @@ interface MiniPlayerProps {
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onOpenPlayer }) => {
     const { playbackInfo, isPlaying } = usePlayerStore();
 
-    if (!playbackInfo) return null;
-
-    const { metadata } = playbackInfo;
+    // Hooks should be called unconditionally
+    const metadata = playbackInfo?.metadata;
     const title = metadata?.title || 'Unknown Title';
     const artist = metadata?.artist || 'Unknown Artist';
-    const artwork = metadata?.artwork?.[0]?.src;
+    const artwork = metadata?.artwork?.[0]?.src || null;
+    const videoId = metadata?.videoId;
+
+    const { colors } = useTrackAssets(artwork, videoId);
+
+    if (!playbackInfo) return null;
 
     const handlePlayPause = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -35,11 +40,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onOpenPlayer }) => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            onClick={onOpenPlayer}
-            className="absolute bottom-4 left-4 right-4 h-16 bg-white/10 backdrop-blur-xl rounded-xl border border-white/10 flex items-center px-4 cursor-pointer hover:bg-white/15 transition-colors z-40 shadow-xl"
+            className="absolute bottom-4 left-4 right-4 h-16 bg-white/5 backdrop-blur-[80px] backdrop-saturate-150 rounded-xl flex items-center px-4 cursor-pointer transition-all z-40 shadow-xl overflow-hidden group"
+            style={{
+                background: `linear-gradient(135deg, ${colors.primary}cc 0%, ${colors.secondary}cc 100%)`
+            }}
         >
+            {/* Hover overlay for better interaction feedback */}
+            <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors pointer-events-none" />
+
             {/* Artwork */}
-            <div className={`w-10 h-10 rounded-md overflow-hidden bg-neutral-800 flex-shrink-0 ${isPlaying ? 'animate-pulse-slow' : ''}`}>
+            <div className={`w-10 h-10 rounded-md overflow-hidden bg-neutral-800 flex-shrink-0 relative z-10 ${isPlaying ? 'animate-pulse-slow' : ''}`}>
                 {artwork ? (
                     <img src={artwork} alt={title} className="w-full h-full object-cover" />
                 ) : (
@@ -50,16 +60,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onOpenPlayer }) => {
             </div>
 
             {/* Info */}
-            <div className="flex-1 mx-4 min-w-0 flex flex-col justify-center">
-                <h4 className="text-white text-sm font-medium truncate">{title}</h4>
-                <p className="text-white/60 text-xs truncate">{artist}</p>
+            <div className="flex-1 mx-4 min-w-0 flex flex-col justify-center relative z-10">
+                <h4 className="text-white text-sm font-medium truncate shadow-black drop-shadow-md">{title}</h4>
+                <p className="text-white/80 text-xs truncate drop-shadow-sm">{artist}</p>
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 relative z-10">
                 <button
                     onClick={handlePlayPause}
-                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                    className="w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center transition-colors backdrop-blur-sm"
                 >
                     {isPlaying ? (
                         <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -74,7 +84,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onOpenPlayer }) => {
 
                 <button
                     onClick={handleNext}
-                    className="w-8 h-8 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors text-white/80 hover:text-white"
+                    className="w-8 h-8 rounded-full hover:bg-black/20 flex items-center justify-center transition-colors text-white/90 hover:text-white backdrop-blur-sm"
                 >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
