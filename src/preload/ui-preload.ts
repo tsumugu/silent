@@ -28,4 +28,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Image Proxy
   proxyFetchImage: (url: string) => ipcRenderer.invoke('image:proxy-fetch', url),
+
+  // YTMusic API
+  getHome: () => ipcRenderer.invoke('ytmusic:get-home'),
+  getRecommendations: () => ipcRenderer.invoke('ytmusic:get-recommendations'),
+  getHomeAlbums: () => ipcRenderer.invoke('ytmusic:get-home-albums'),
+  getAlbumDetails: (albumId: string) => ipcRenderer.invoke('ytmusic:get-album-details', albumId),
+  getPlaylist: (playlistId: string) => ipcRenderer.invoke('ytmusic:get-playlist', playlistId),
+  showLogin: () => ipcRenderer.send('ytmusic:show-login'),
+  play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => ipcRenderer.send('ytmusic:play', id, type),
 });

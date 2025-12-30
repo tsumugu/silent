@@ -19,6 +19,14 @@ declare global {
       playbackSeek: (seekTime: number) => void;
       // Image Proxy
       proxyFetchImage: (url: string) => Promise<string>;
+      // YTMusic API
+      getHome: () => Promise<any[]>;
+      getRecommendations: () => Promise<any>;
+      getHomeAlbums: () => Promise<any[]>;
+      getAlbumDetails: (albumId: string) => Promise<any>;
+      getPlaylist: (playlistId: string) => Promise<any>;
+      showLogin: () => void;
+      play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => void;
     };
   }
 }

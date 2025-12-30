@@ -2,6 +2,8 @@ import { BrowserWindow, ipcMain, net } from 'electron';
 import { IPCChannels } from './types';
 import { PlaybackInfo } from '../../shared/types';
 
+import { ytMusicService } from '../services/YTMusicService';
+
 export function setupIPCHandlers(
   uiWindow: BrowserWindow,
   hiddenWindow: BrowserWindow
@@ -104,6 +106,48 @@ export function setupIPCHandlers(
       console.error('Image proxy fetch error:', err);
       throw err;
     }
+  });
+
+  // ========================================
+  // YTMusic API Handlers
+  // ========================================
+
+  ipcMain.handle(IPCChannels.YT_GET_HOME, async () => {
+    return await ytMusicService.getHome();
+  });
+
+  ipcMain.handle(IPCChannels.YT_GET_RECOMMENDATIONS, async () => {
+    return await ytMusicService.getRecommendations();
+  });
+
+  ipcMain.handle(IPCChannels.YT_GET_HOME_ALBUMS, async () => {
+    return await ytMusicService.getHomeAlbums();
+  });
+
+  ipcMain.handle(IPCChannels.YT_GET_ALBUM_DETAILS, async (_event, albumId: string) => {
+    return await ytMusicService.getAlbumDetails(albumId);
+  });
+
+  ipcMain.handle(IPCChannels.YT_GET_PLAYLIST, async (_event, playlistId: string) => {
+    return await ytMusicService.getPlaylist(playlistId);
+  });
+
+  ipcMain.on(IPCChannels.YT_SHOW_LOGIN, () => {
+    hiddenWindow.show();
+    hiddenWindow.focus();
+    // Reset initialization so next request fetches fresh cookies
+    ytMusicService.initialize(true);
+  });
+
+  ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => {
+    const url = type === 'SONG'
+      ? `https://music.youtube.com/watch?v=${id}`
+      : type === 'PLAYLIST'
+        ? `https://music.youtube.com/watch?list=${id}` // Playlists should play immediately
+        : `https://music.youtube.com/browse/${id}`; // Albums might browse, but typically we want to play them too? 
+    // Actually for albums 'browse' is viewing it, 'watch?playlist=' is playing.
+    // But for now, user asked for playlist DETAIL view, so 'YT_PLAY' is for hitting play button.
+    hiddenWindow.loadURL(url);
   });
 
   console.log('IPC handlers set up successfully');

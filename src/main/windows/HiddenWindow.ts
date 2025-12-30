@@ -1,5 +1,6 @@
 import { BrowserWindow, app } from 'electron';
 import * as path from 'path';
+import { config } from '../../shared/config';
 
 export function createHiddenWindow(): BrowserWindow {
   const preloadPath = path.join(__dirname, 'preload', 'hidden-preload.js');
@@ -7,7 +8,7 @@ export function createHiddenWindow(): BrowserWindow {
   const win = new BrowserWindow({
     width: 800,
     height: 600,
-    show: !app.isPackaged, // Show in development for easy login, hide in production
+    show: config.showHiddenWindow,
     webPreferences: {
       preload: preloadPath,
       contextIsolation: false, // Required for direct MediaSession hook. We will avoid EvalError by not using injection.

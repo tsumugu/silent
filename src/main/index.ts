@@ -1,3 +1,4 @@
+// Main process entry point - Last rebuild: 2025-12-30T21:16:00
 import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import { createUIWindow } from './windows/UIWindow';
 import { createHiddenWindow } from './windows/HiddenWindow';
