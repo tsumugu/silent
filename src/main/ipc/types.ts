@@ -1,0 +1,21 @@
+// IPC channel names
+export enum IPCChannels {
+  // Window controls
+  WINDOW_MINIMIZE = 'window:minimize',
+  WINDOW_MAXIMIZE = 'window:maximize',
+  WINDOW_CLOSE = 'window:close',
+  FULLSCREEN_CHANGED = 'fullscreen-changed',
+
+  // Playback state updates (Hidden → Main → UI)
+  PLAYBACK_STATE_CHANGED = 'playback:state-changed',
+
+  // Playback controls (UI → Main → Hidden)
+  PLAYBACK_PLAY = 'playback:play',
+  PLAYBACK_PAUSE = 'playback:pause',
+  PLAYBACK_NEXT = 'playback:next',
+  PLAYBACK_PREVIOUS = 'playback:previous',
+  PLAYBACK_SEEK = 'playback:seek',
+
+  // Image Proxy
+  IMAGE_PROXY_FETCH = 'image:proxy-fetch',
+}
