@@ -6,10 +6,9 @@ interface TrackInfoProps {
   artist?: string;
   isVisible: boolean;
   isMini?: boolean;
-  onClose?: () => void;
 }
 
-export function TrackInfo({ title, artist, isVisible, isMini, onClose }: TrackInfoProps) {
+export function TrackInfo({ title, artist, isVisible, isMini }: TrackInfoProps) {
   if (!title) return null;
 
   return (
@@ -22,30 +21,12 @@ export function TrackInfo({ title, artist, isVisible, isMini, onClose }: TrackIn
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Integrated Close Button (Above Title) */}
-          {onClose && (
-            <motion.button
-              whileHover={{ scale: 1.1, opacity: 1 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="mb-4 text-white/40 hover:text-white transition-colors"
-              title="Close Player (Esc)"
-            >
-              <svg className="w-6 h-6 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </motion.button>
-          )}
-
           {/* Title Row */}
           <div className="w-full flex items-center justify-center relative">
             <motion.h1
               layoutId="player-title"
-              className="text-white font-bold drop-shadow-lg truncate max-w-[90%]"
-              style={{ fontSize: isMini ? 'clamp(1.25rem, 4vw, 1.75rem)' : 'clamp(2rem, 5vw, 3rem)' }}
+              className="text-white font-bold drop-shadow-lg truncate max-w-[90%] leading-tight"
+              style={{ fontSize: isMini ? 'clamp(1rem, 3.5vh, 1.25rem)' : 'clamp(1.5rem, 4.5vh, 2.5rem)' }}
             >
               {title}
             </motion.h1>
@@ -54,8 +35,8 @@ export function TrackInfo({ title, artist, isVisible, isMini, onClose }: TrackIn
           {artist && (
             <motion.p
               layoutId="player-artist"
-              className="text-white/80 mt-2 drop-shadow-md w-full truncate text-center"
-              style={{ fontSize: isMini ? 'clamp(0.875rem, 3vw, 1.125rem)' : 'clamp(1.25rem, 4vw, 1.75rem)' }}
+              className={isMini ? 'text-white/80 mt-0.5 drop-shadow-md w-full truncate text-center leading-tight' : 'text-white/80 mt-1 drop-shadow-md w-full truncate text-center leading-tight'}
+              style={{ fontSize: isMini ? 'clamp(0.75rem, 2.5vh, 0.875rem)' : 'clamp(0.875rem, 3vh, 1.5rem)' }}
             >
               {artist}
             </motion.p>

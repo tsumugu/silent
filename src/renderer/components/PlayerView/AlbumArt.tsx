@@ -4,9 +4,10 @@ import { motion } from 'framer-motion';
 interface AlbumArtProps {
   src: string | null;
   isHovered: boolean;
+  isMini?: boolean;
 }
 
-export function AlbumArt({ src, isHovered }: AlbumArtProps) {
+export function AlbumArt({ src, isHovered, isMini }: AlbumArtProps) {
   // Fluid layout using flexbox
   if (!src) {
     return (
@@ -33,7 +34,7 @@ export function AlbumArt({ src, isHovered }: AlbumArtProps) {
         src={src}
         alt="Album artwork"
         key={src}
-        className="max-h-full max-w-full min-h-[140px] min-w-[140px] aspect-square rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] object-contain bg-gray-900"
+        className={`max-h-full max-w-full aspect-square rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] object-contain bg-gray-900`}
         onError={() => {
           console.warn('[AlbumArt] Image failed to load:', src);
         }}

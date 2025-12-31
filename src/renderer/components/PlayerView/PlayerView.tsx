@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { usePlayerStore } from '../../store/playerStore';
 import { AlbumArt } from './AlbumArt';
 import { TrackInfo } from './TrackInfo';
 import { ControlBar } from './ControlBar';
+import { SeekBar } from './SeekBar';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 
@@ -44,7 +45,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
     */
     <motion.div
       layoutId="player-shell"
-      className="absolute inset-0 z-50 w-full h-full flex flex-col items-center pt-16 pb-4 px-8 overflow-hidden"
+      className="absolute inset-0 z-50 w-full h-full flex items-center justify-center pt-16 pb-4 px-8 overflow-hidden"
       style={{
         background: `linear-gradient(-135deg, ${colors.primary}B3 0%, ${colors.secondary}B3 100%)`
       }}
@@ -55,35 +56,69 @@ export function PlayerView({ onClose }: PlayerViewProps) {
         className="absolute inset-0 opacity-20 transition-all duration-1000"
       />
 
-      {/* Top Section: Track Info centered in top area */}
-      <div className="flex-1 w-full flex items-center justify-center min-h-[80px]">
-        <TrackInfo
-          title={playbackInfo?.metadata?.title}
-          artist={playbackInfo?.metadata?.artist}
-          isVisible={isHovered || isMini}
-          isMini={isMini}
-          onClose={onClose}
-        />
-      </div>
+      {/* Close Button - Absolute Position */}
+      <AnimatePresence>
+        {(isHovered || isMini) && onClose && (
+          <motion.button
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3 }}
+            whileHover={{ scale: 1.1, opacity: 1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className={`absolute top-6 left-1/2 transform -translate-x-1/2 text-white/40 hover:text-white transition-colors z-50 ${isMini ? 'mb-1' : 'mb-2'}`}
+            title="Close Player (Esc)"
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+          >
+            <svg className={isMini ? 'w-4 h-4 rotate-180' : 'w-5 h-5 rotate-180'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </motion.button>
+        )}
+      </AnimatePresence>
 
-      {/* Middle Section: Album Art (Primary element) */}
-      <motion.div
-        layoutId="player-artwork"
-        className="flex-shrink flex-grow-0 w-full max-w-[400px] min-h-0 flex items-center justify-center"
-      >
-        <AlbumArt
-          src={blobUrl}
-          isHovered={isHovered}
-        />
-      </motion.div>
+      {/* Content Container - Centered */}
+      <div className="flex flex-col items-center w-full max-w-[500px] max-h-[800px] h-full">
+        {/* Top Section: Track Info centered in top area */}
+        <div className="w-full flex items-start justify-center flex-shrink-0" style={{ height: isMini ? '60px' : '100px' }}>
+          <TrackInfo
+            title={playbackInfo?.metadata?.title}
+            artist={playbackInfo?.metadata?.artist}
+            isVisible={isHovered || isMini}
+            isMini={isMini}
+          />
+        </div>
 
-      {/* Bottom Section: Controls centered in bottom area */}
-      <div className="flex-1 w-full flex-shrink-0 flex items-center justify-center min-h-[100px]">
-        <ControlBar
-          isPlaying={playbackInfo?.playbackState === 'playing'}
-          isVisible={isHovered || isMini}
-          isMini={isMini}
-        />
+        {/* Middle Section: Album Art (Primary element) */}
+        <motion.div
+          layoutId="player-artwork"
+          className="flex-1 min-h-0 flex items-center justify-center w-full"
+        >
+          <AlbumArt
+            src={blobUrl}
+            isHovered={isHovered}
+            isMini={isMini}
+          />
+        </motion.div>
+
+        {/* Bottom Section: Controls centered in bottom area */}
+        <div className="w-full flex-shrink-0 flex flex-col items-center justify-center gap-4" style={{ height: isMini ? '140px' : '160px' }}>
+          <SeekBar
+            currentTime={playbackInfo?.position || 0}
+            duration={playbackInfo?.duration || 0}
+            isVisible={isHovered || isMini}
+            isMini={isMini}
+          />
+          <ControlBar
+            isPlaying={playbackInfo?.playbackState === 'playing'}
+            isVisible={isHovered || isMini}
+            isMini={isMini}
+          />
+        </div>
       </div>
     </motion.div>
   );

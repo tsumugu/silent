@@ -83,7 +83,13 @@ function observeMediaSession() {
     duration: 0,
   };
 
-  if ("getPositionState" in mediaSession) {
+  // Try to get position and duration from video element directly
+  const video = document.querySelector('video');
+  if (video && !isNaN(video.currentTime) && !isNaN(video.duration)) {
+    playbackInfo.position = video.currentTime;
+    playbackInfo.duration = video.duration;
+  } else if ("getPositionState" in mediaSession) {
+    // Fallback to MediaSession API
     try {
       const positionState = (mediaSession as any).getPositionState();
       if (positionState) {
@@ -101,7 +107,7 @@ function observeMediaSession() {
 }
 
 // Start polling
-setInterval(observeMediaSession, 500);
+setInterval(observeMediaSession, 100);
 
 // Playback Controls (STRICTLY Selector-less via MediaSession Hook)
 ipcRenderer.on('playback:play', () => {
