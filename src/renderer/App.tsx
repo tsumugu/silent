@@ -134,10 +134,12 @@ export default function App() {
       <div className="draggable absolute top-0 left-0 right-0 h-10 z-50" />
       <WindowControls />
 
-      {/* Main Content Layer */}
       <div
         className="absolute inset-0 z-0"
-        style={{ display: isPlayerOpen ? 'none' : 'block' }}
+        style={{
+          visibility: isPlayerOpen ? 'hidden' : 'visible',
+          pointerEvents: isPlayerOpen ? 'none' : 'auto'
+        }}
       >
         <AnimatePresence mode="popLayout" initial={false}>
 

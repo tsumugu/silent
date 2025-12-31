@@ -283,6 +283,10 @@ export class YTMusicService {
             return { url, width: t.width || 0, height: t.height || 0 };
         }).filter(t => t.url && t.url.startsWith('http'));
 
+        if (thumbnails.length === 0 && rawThumbnails.length > 0) {
+            console.warn('[YTMusicService] Failed to extract thumbnails from raw data:', rawThumbnails);
+        }
+
         return thumbnails.sort((a, b) => (a.width * a.height) - (b.width * b.height));
     }
 

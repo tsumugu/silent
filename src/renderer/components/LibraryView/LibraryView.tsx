@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { MusicSection } from './MusicSection';
 import { SearchBar } from './SearchBar';
 import { MusicItem } from '../../../shared/types/music';
+import { useIsSticky } from '../../hooks/useIsSticky';
 import { LoadingState, ErrorState, EmptyState } from '../common/StateViews';
 
-interface ListViewProps {
+interface LibraryViewProps {
     query?: string;
     onAlbumSelect: (album: MusicItem) => void;
     onPlaylistSelect: (playlist: MusicItem) => void;
@@ -15,7 +16,7 @@ interface ListViewProps {
     onResultsChange?: (results: any) => void;
 }
 
-export const ListView: React.FC<ListViewProps> = ({
+export const LibraryView: React.FC<LibraryViewProps> = ({
     query,
     onAlbumSelect,
     onPlaylistSelect,
@@ -30,7 +31,9 @@ export const ListView: React.FC<ListViewProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
+    const headerRef = useRef<HTMLDivElement>(null);
     const isSearchMode = !!(query && query.trim().length >= 1);
+    const isStuck = useIsSticky(headerRef);
 
     const fetchData = async () => {
         setLoading(true);
@@ -71,16 +74,12 @@ export const ListView: React.FC<ListViewProps> = ({
     };
 
     useEffect(() => {
-        console.log('[ListView] Mounted/Updated with query:', query);
         fetchData();
 
         window.electronAPI.onSessionUpdated(() => {
-            console.log('[ListView] Session updated, re-fetching...');
+            console.log('Session updated, re-fetching...');
             fetchData();
         });
-        return () => {
-            console.log('[ListView] Unmounting');
-        };
     }, [query]);
 
     // Login screen is handled locally if not logged in
@@ -110,33 +109,35 @@ export const ListView: React.FC<ListViewProps> = ({
 
     return (
         <div className="h-full overflow-y-auto scrollbar-hide relative bg-transparent">
-            {/* Header */}
-            <div className="flex items-center gap-4 px-8 pt-4 pb-4">
-                {/* Back Button (Only in search mode) */}
-                {isSearchMode && onBack && (
-                    <button
-                        onClick={onBack}
-                        className="text-white/60 hover:text-white transition-colors p-2 -ml-2 rounded-lg hover:bg-white/5 active:scale-90"
-                        title="Back (Esc)"
-                    >
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                )}
-
-                {/* SearchBar Container - Takes full width when back button is hidden */}
-                <div className="flex-1">
-                    <SearchBar
-                        onSearch={onSearch || (() => { })}
-                        placeholder="曲、アルバム、プレイリストを検索..."
-                        value={query}
-                    />
+            {/* Sticky Header */}
+            <div
+                ref={isSearchMode ? headerRef : null}
+                className={isSearchMode ? `sticky-glass-header transition-all duration-300 ${isStuck ? 'is-stuck' : ''}` : ''}
+            >
+                <div className={`flex items-center gap-4 px-8 ${isSearchMode ? 'py-4' : 'pt-8 pb-4'}`}>
+                    {isSearchMode && onBack && (
+                        <button
+                            onClick={onBack}
+                            className="text-white/60 hover:text-white transition-colors p-2 -ml-2 rounded-lg hover:bg-white/5 active:scale-90"
+                            title="Back (Esc)"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                    )}
+                    <div className="flex-1 flex flex-col gap-2">
+                        <SearchBar
+                            onSearch={onSearch || (() => { })}
+                            placeholder="Search songs, albums, playlists..."
+                            value={query}
+                        />
+                    </div>
                 </div>
             </div>
 
             {/* List Content */}
-            <div className="p-8 pb-32 pt-2">
+            <div className="p-8 pb-32">
                 {loading && <LoadingState message={isSearchMode ? "検索中..." : "コンテンツ取得中..."} />}
 
                 {error && <ErrorState error={error} />}

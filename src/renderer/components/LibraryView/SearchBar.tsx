@@ -9,7 +9,7 @@ interface SearchBarProps {
 
 export const SearchBar: React.FC<SearchBarProps> = ({
   onSearch,
-  placeholder = "Search songs, albums, playlists...",
+  placeholder = "曲、アルバム、プレイリスト...",
   debounceMs = 400,
   value = ""
 }) => {

@@ -54,12 +54,15 @@ export function useTrackAssets(imageUrl: string | null, id?: string | null): Tra
         // Listen for updates
         const handleUpdate = (update: { id: string }) => {
             if (update.id === id) {
+                console.log('[useTrackAssets] Received update for:', id);
                 syncAssets();
             }
         };
 
+        console.log('[useTrackAssets] Effect triggered for id:', id, 'imageUrl:', imageUrl);
         mediaCache.on('update', handleUpdate);
         return () => {
+            console.log('[useTrackAssets] Cleanup for id:', id);
             mediaCache.off('update', handleUpdate);
         };
     }, [imageUrl, id]);

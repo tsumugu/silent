@@ -59,7 +59,6 @@ export const MusicCard: React.FC<MusicCardProps> = ({
             src={imageUrl}
             alt={title}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
           />
         ) : (
           <div className="w-full h-full bg-neutral-800 flex items-center justify-center">

@@ -51,8 +51,9 @@ app.whenReady().then(() => {
   setupIPCHandlers(mainWindow, hiddenWindow);
 
   hiddenWindow.on('hide', () => {
-    console.log('Hidden window hidden, refreshing YTMusic session...');
+    console.log('[Main] Hidden window hidden, refreshing YTMusic session...');
     ytMusicService.initialize(true).then(() => {
+      console.log('[Main] YTMusic session refreshed, notifying UI...');
       mainWindow?.webContents.send('ytmusic:session-updated');
     });
   });
