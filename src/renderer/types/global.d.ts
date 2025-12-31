@@ -26,6 +26,7 @@ declare global {
       getHomeAlbums: () => Promise<MusicItem[]>;
       getAlbumDetails: (albumId: string) => Promise<MusicDetail | null>;
       getPlaylist: (playlistId: string) => Promise<MusicDetail | null>;
+      getSongDetails: (videoId: string) => Promise<MusicItem | null>;
       search: (query: string) => Promise<{
         songs: MusicItem[];
         albums: MusicItem[];

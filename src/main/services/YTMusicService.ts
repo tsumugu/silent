@@ -5,6 +5,7 @@ import { MusicItem, MusicArtist, MusicThumbnail, ItemType, MusicDetail } from '.
 export class YTMusicService {
     private innertube: Innertube | null = null;
     private isInitialized = false;
+    private songDetailsCache: Map<string, MusicItem> = new Map();
 
     constructor() { }
 
@@ -183,6 +184,61 @@ export class YTMusicService {
             return JSON.parse(JSON.stringify(result));
         } catch (e) {
             console.warn(`[YTMusicService] Failed to get playlist ${playlistId}`, e);
+            return null;
+        }
+    }
+
+    async getSongDetails(videoId: string): Promise<MusicItem | null> {
+        // Check cache first
+        if (this.songDetailsCache.has(videoId)) {
+            return this.songDetailsCache.get(videoId)!;
+        }
+
+        await this.initialize();
+        if (!this.innertube) return null;
+
+        try {
+            const info: any = await this.innertube.music.getInfo(videoId);
+
+            if (!info) return null;
+
+            // Extract basic info from the response
+            const basicInfo = info.basic_info || info;
+            const title = basicInfo.title?.toString() || 'Unknown Title';
+
+            // Extract thumbnails
+            const thumbnails = this.extractThumbnails(basicInfo.thumbnail || basicInfo.thumbnails);
+
+            // Extract artist info
+            const rawArtists = basicInfo.author || basicInfo.artists || basicInfo.artist;
+            const artists = this.normalizeArtists(rawArtists);
+
+            // Extract album info - this is the key part
+            let albumInfo = null;
+            if (basicInfo.album) {
+                albumInfo = {
+                    youtube_browse_id: basicInfo.album.id || basicInfo.album.browse_id,
+                    name: basicInfo.album.name?.toString() || 'Unknown Album'
+                };
+            }
+
+            const musicItem: MusicItem = {
+                type: 'SONG',
+                title,
+                thumbnails,
+                artists: artists.length > 0 ? artists : [{ name: 'Unknown Artist' }],
+                youtube_video_id: videoId,
+                album: albumInfo || undefined
+            };
+
+            const result = JSON.parse(JSON.stringify(musicItem));
+
+            // Cache the result
+            this.songDetailsCache.set(videoId, result);
+
+            return result;
+        } catch (e) {
+            console.error(`[YTMusicService] Failed to get song details for ${videoId}`, e);
             return null;
         }
     }

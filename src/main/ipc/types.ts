@@ -25,6 +25,7 @@ export enum IPCChannels {
   YT_GET_HOME = 'ytmusic:get-home',
   YT_GET_ALBUM_DETAILS = 'ytmusic:get-album-details',
   YT_GET_PLAYLIST = 'ytmusic:get-playlist',
+  YT_GET_SONG_DETAILS = 'ytmusic:get-song-details',
   YT_SEARCH = 'ytmusic:search',
   YT_SHOW_LOGIN = 'ytmusic:show-login',
   YT_PLAY = 'ytmusic:play',

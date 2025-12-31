@@ -11,17 +11,27 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 
+const packageJson = require('./package.json');
+
 const config: ForgeConfig = {
   packagerConfig: {
+    name: packageJson.productName,
+    executableName: packageJson.name,
     asar: true,
     icon: './assets/icon.icns'
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
     new MakerZIP({}, ['darwin']),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    {
+      name: '@electron-forge/maker-dmg',
+      config: {
+        // background: './assets/dmg-background.png',
+        name: packageJson.productName,
+        icon: packageJson.icon,
+        format: 'ULFO'
+      }
+    }
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),

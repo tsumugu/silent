@@ -58,8 +58,14 @@ function observeMediaSession() {
         type: art.type,
       })) : [],
       videoId: (() => {
-        // Use getImageCacheKey for consistent ID generation
-        return getImageCacheKey(metadata.title, metadata.artist);
+        // Extract actual YouTube video ID from URL
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const videoId = urlParams.get('v');
+          return videoId || undefined;
+        } catch {
+          return undefined;
+        }
       })(),
     };
   }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlayerStore } from '../../store/playerStore';
 import { AlbumArt } from './AlbumArt';
@@ -8,13 +8,16 @@ import { SeekBar } from './SeekBar';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
+import { MusicItem } from '../../../shared/types/music';
 
 interface PlayerViewProps {
   onClose?: () => void;
+  onNavigateToAlbum?: (albumItem: MusicItem) => void;
 }
 
-export function PlayerView({ onClose }: PlayerViewProps) {
+export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [albumInfo, setAlbumInfo] = useState<{ id: string; name: string } | null>(null);
   const { playbackInfo } = usePlayerStore();
   const { height } = useWindowDimensions();
 
@@ -24,6 +27,43 @@ export function PlayerView({ onClose }: PlayerViewProps) {
   // Extract original artwork URL from metadata
   const originalArtwork = playbackInfo?.metadata?.artwork?.[0]?.src || null;
   const videoId = playbackInfo?.metadata?.videoId;
+
+  // Fetch album info when videoId changes
+  useEffect(() => {
+    if (!videoId) {
+      setAlbumInfo(null);
+      return;
+    }
+
+    window.electronAPI.getSongDetails(videoId)
+      .then((songDetails) => {
+        if (songDetails?.album) {
+          setAlbumInfo({
+            id: songDetails.album.youtube_browse_id,
+            name: songDetails.album.name
+          });
+        } else {
+          setAlbumInfo(null);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch album info:', err);
+        setAlbumInfo(null);
+      });
+  }, [videoId]);
+
+  const handleAlbumClick = () => {
+    if (albumInfo && onNavigateToAlbum) {
+      const albumItem: MusicItem = {
+        type: 'ALBUM',
+        title: albumInfo.name,
+        youtube_browse_id: albumInfo.id,
+        thumbnails: [],
+        artists: []
+      };
+      onNavigateToAlbum(albumItem);
+    }
+  };
 
   // Generate stable cache key
   const cacheKey = getImageCacheKey(
@@ -55,7 +95,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
       layoutId="player-shell"
       className="absolute inset-0 z-50 w-full h-full flex items-center justify-center overflow-hidden"
       style={{
-        background: `linear - gradient(-135deg, ${colors.primary}B3 0 %, ${colors.secondary}B3 100 %)`
+        background: `linear-gradient(-135deg, ${colors.primary}B3 0%, ${colors.secondary}B3 100%)`
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -78,7 +118,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
               e.stopPropagation();
               onClose();
             }}
-            className={`absolute top - 6 left - 1 / 2 transform - translate - x - 1 / 2 text - white / 40 hover: text - white transition - colors z - 50 ${isMini ? 'mb-1' : 'mb-2'} `}
+            className={`absolute top-6 left-1/2 transform-translate-x-1/2 text-white/40 hover:text-white transition-colors z-50 ${isMini ? 'mb-1' : 'mb-2'} `}
             title="Close Player (Esc)"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
@@ -103,6 +143,8 @@ export function PlayerView({ onClose }: PlayerViewProps) {
             <TrackInfo
               title={playbackInfo?.metadata?.title}
               artist={playbackInfo?.metadata?.artist}
+              album={albumInfo?.name}
+              onAlbumClick={handleAlbumClick}
               isVisible={isHovered || isMini}
               isMini={isMini}
             />

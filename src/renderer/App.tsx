@@ -224,7 +224,13 @@ export default function App() {
       {/* Player Layers (Full & Mini) */}
       <AnimatePresence mode="popLayout">
         {isPlayerOpen ? (
-          <PlayerView onClose={() => setIsPlayerOpen(false)} />
+          <PlayerView
+            onClose={() => setIsPlayerOpen(false)}
+            onNavigateToAlbum={(albumItem) => {
+              navigateTo('detail', albumItem);
+              setIsPlayerOpen(false);
+            }}
+          />
         ) : (
           <MiniPlayer
             key="player-mini"
