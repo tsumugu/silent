@@ -7,7 +7,7 @@ export function useMediaSession() {
 
   useEffect(() => {
     // 1. Listen for playback state updates from hidden window
-    window.electronAPI.onPlaybackStateChange((playbackInfo) => {
+    const unsubscribe = window.electronAPI.onPlaybackStateChange((playbackInfo) => {
       setPlaybackInfo(playbackInfo);
     });
 
@@ -17,5 +17,9 @@ export function useMediaSession() {
         setPlaybackInfo(initialState);
       }
     });
+
+    return () => {
+      unsubscribe();
+    };
   }, [setPlaybackInfo]);
 }

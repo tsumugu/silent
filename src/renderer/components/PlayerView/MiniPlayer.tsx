@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { usePlayerStore } from '../../store/playerStore';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
+import { useWindowDimensions } from '../../hooks/useWindowDimensions';
+import { getImageCacheKey } from '../../../shared/utils/imageKey';
 
 interface MiniPlayerProps {
     onClick: () => void;
@@ -14,10 +16,16 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     const metadata = playbackInfo?.metadata;
     const title = metadata?.title || 'Unknown Title';
     const artist = metadata?.artist || 'Unknown Artist';
-    const artwork = metadata?.artwork?.[0]?.src || null;
+    const originalArtwork = metadata?.artwork?.[0]?.src || null;
     const videoId = metadata?.videoId;
 
-    const { colors } = useTrackAssets(artwork, videoId);
+    // Generate stable cache key
+    const cacheKey = getImageCacheKey(title, artist, {
+        videoId: videoId
+    });
+
+    // Use the integrated hook for high-quality blob URL and colors
+    const { colors, blobUrl } = useTrackAssets(originalArtwork, cacheKey);
 
     if (!playbackInfo) return null;
 
@@ -41,7 +49,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
             onClick={onClick}
             className="absolute bottom-4 left-4 right-4 h-16 bg-white/5 backdrop-blur-[80px] backdrop-saturate-150 rounded-xl flex items-center px-4 cursor-pointer z-40 shadow-xl overflow-hidden group"
             style={{
-                background: `linear-gradient(135deg, ${colors.primary}cc 0%, ${colors.secondary}cc 100%)`
+                background: `linear - gradient(135deg, ${colors.primary}cc 0 %, ${colors.secondary}cc 100 %)`
             }}
         >
             {/* Hover overlay for better interaction feedback */}
@@ -50,10 +58,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
             {/* Artwork */}
             <motion.div
                 layoutId="player-artwork"
-                className={`w-10 h-10 rounded-md overflow-hidden bg-neutral-800 flex-shrink-0 relative z-10 ${isPlaying ? 'animate-pulse-slow' : ''}`}
+                className={`w - 10 h - 10 rounded - md overflow - hidden bg - neutral - 800 flex - shrink - 0 relative z - 10 ${isPlaying ? 'animate-pulse-slow' : ''} `}
             >
-                {artwork ? (
-                    <img src={artwork} alt={title} className="w-full h-full object-cover" />
+                {blobUrl ? (
+                    <img src={blobUrl} alt={title} className="w-full h-full object-cover" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center">
                         <span className="text-xs text-white/30">♪</span>

@@ -11,8 +11,14 @@ export function AlbumArt({ src, isHovered, isMini }: AlbumArtProps) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Reset loading state when src changes
+  // EXCEPT if the new src is already a Data URL (likely from cache), 
+  // we can assume it's "ready" to avoid a flicker.
   useEffect(() => {
-    setIsLoaded(false);
+    if (src?.startsWith('data:')) {
+      setIsLoaded(true);
+    } else {
+      setIsLoaded(false);
+    }
   }, [src]);
 
   return (
@@ -39,7 +45,6 @@ export function AlbumArt({ src, isHovered, isMini }: AlbumArtProps) {
           <motion.img
             src={src}
             alt="Album artwork"
-            key={src}
             onLoad={() => setIsLoaded(true)}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{

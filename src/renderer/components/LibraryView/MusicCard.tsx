@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { MusicItem } from '../../../shared/types/music';
+import { useTrackAssets } from '../../hooks/useTrackAssets';
+import { getImageCacheKey } from '../../../shared/utils/imageKey';
 
 interface MusicCardProps {
   item: MusicItem;
@@ -13,21 +15,29 @@ export const MusicCard: React.FC<MusicCardProps> = ({
   item,
   onAlbumSelect,
   onPlaylistSelect,
-  onSongSelect,
+  onSongSelect
 }) => {
   const thumbnails = item.thumbnails || [];
-  const imageUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
+  const rawImageUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
+
   const title = item.title;
   const artist = item.artists
     ?.map((a: any) => a.name)
     .filter((name: string) => name && name.trim().length > 0)
     .join(', ') || '';
 
+  const canonicalId = getImageCacheKey(title, artist, {
+    browseId: item.youtube_browse_id,
+    playlistId: item.youtube_playlist_id,
+    videoId: item.youtube_video_id
+  });
+
+  // Use assets from cache (handles proxying, high-res, and stability)
+  const { blobUrl: imageUrl } = useTrackAssets(rawImageUrl, canonicalId);
+
   const normalizedType = item.type === 'ALBUM' ? 'album' :
     item.type === 'PLAYLIST' ? 'playlist' :
       item.type === 'SONG' ? 'song' : item.type === 'ARTIST' ? 'artist' : null;
-
-  const canonicalId = item.youtube_browse_id || item.youtube_playlist_id || item.youtube_video_id;
 
   const handleClick = () => {
     if (normalizedType === 'album' && onAlbumSelect) {
@@ -44,14 +54,14 @@ export const MusicCard: React.FC<MusicCardProps> = ({
   return (
     <motion.div
       key={canonicalId}
-      layoutId={normalizedType && canonicalId ? `card-${normalizedType}-${canonicalId}` : undefined}
+      layoutId={normalizedType && canonicalId ? `card - ${normalizedType} -${canonicalId} ` : undefined}
       className="mb-8 cursor-pointer group bg-white/0 rounded-xl overflow-hidden"
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={handleClick}
     >
       <motion.div
-        layoutId={normalizedType && canonicalId ? `art-${normalizedType}-${canonicalId}` : undefined}
+        layoutId={normalizedType && canonicalId ? `art - ${normalizedType} -${canonicalId} ` : undefined}
         className="relative aspect-square overflow-hidden rounded-md shadow-lg bg-white/5 mb-3 group-hover:shadow-2xl transition-shadow"
       >
         {imageUrl ? (

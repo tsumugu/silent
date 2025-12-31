@@ -77,7 +77,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         fetchData();
 
         window.electronAPI.onSessionUpdated(() => {
-            console.log('Session updated, re-fetching...');
+
             fetchData();
         });
     }, [query]);

@@ -15,7 +15,7 @@ const DEFAULT_COLORS = {
     secondary: '#2a2a2a',
 };
 
-export function useTrackAssets(imageUrl: string | null, id?: string | null): TrackAssets {
+export function useTrackAssets(rawImageUrl: string | null, id?: string | null): TrackAssets {
     const [assets, setAssets] = useState<TrackAssets>({
         blobUrl: null,
         colors: DEFAULT_COLORS,
@@ -23,7 +23,10 @@ export function useTrackAssets(imageUrl: string | null, id?: string | null): Tra
     });
 
     useEffect(() => {
-        if (!imageUrl) {
+        // If meta data flickers and we lose URL but still have ID, don't clear the blob immediately.
+        // This prevents the "disappearing" effect during rapid state changes.
+        if (!rawImageUrl && !id) {
+
             setAssets({
                 blobUrl: null,
                 colors: DEFAULT_COLORS,
@@ -32,14 +35,22 @@ export function useTrackAssets(imageUrl: string | null, id?: string | null): Tra
             return;
         }
 
-        // Initial check
         const syncAssets = () => {
             const cached = id ? mediaCache.get(id) : null;
-            setAssets({
-                blobUrl: cached?.blobUrl || imageUrl,
+
+            // If we have cached data, use it. 
+            // If we don't have cached data but we have a rawImageUrl, use that as fallback.
+            // If both are missing, use the CURRENT state's blobUrl if the ID hasn't changed.
+            const finalUrl = cached?.blobUrl || rawImageUrl || (id ? assets.blobUrl : null);
+            const isFromCache = !!cached?.blobUrl;
+
+            const newAssets = {
+                blobUrl: finalUrl,
                 colors: cached?.colors || DEFAULT_COLORS,
                 isLoading: !!cached?.fetchPromise,
-            });
+            };
+
+            setAssets(newAssets);
         };
 
         syncAssets();
@@ -47,25 +58,24 @@ export function useTrackAssets(imageUrl: string | null, id?: string | null): Tra
         if (!id) return;
 
         // Trigger asset ensuring (background fetch & analysis)
-        mediaCache.ensureTrackAssets(id, imageUrl).catch(() => {
-            // Error handled inside mediaCache
-        });
+        if (rawImageUrl) {
+            mediaCache.ensureTrackAssets(id, rawImageUrl).catch((err) => {
+                console.error('[useTrackAssets:DUMP] ensureTrackAssets failed:', id, err);
+            });
+        }
 
         // Listen for updates
         const handleUpdate = (update: { id: string }) => {
             if (update.id === id) {
-                console.log('[useTrackAssets] Received update for:', id);
                 syncAssets();
             }
         };
 
-        console.log('[useTrackAssets] Effect triggered for id:', id, 'imageUrl:', imageUrl);
         mediaCache.on('update', handleUpdate);
         return () => {
-            console.log('[useTrackAssets] Cleanup for id:', id);
             mediaCache.off('update', handleUpdate);
         };
-    }, [imageUrl, id]);
+    }, [rawImageUrl, id]);
 
     return assets;
 }

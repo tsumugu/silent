@@ -11,12 +11,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Fullscreen state
   onFullscreenChange: (callback: (isFullscreen: boolean) => void) => {
-    ipcRenderer.on('fullscreen-changed', (_event, isFullscreen) => callback(isFullscreen));
+    const listener = (_event: any, isFullscreen: boolean) => callback(isFullscreen);
+    ipcRenderer.on('fullscreen-changed', listener);
+    return () => { ipcRenderer.removeListener('fullscreen-changed', listener); };
   },
 
   // Playback state listener
   onPlaybackStateChange: (callback: (playbackInfo: PlaybackInfo) => void) => {
-    ipcRenderer.on('playback:state-changed', (_event, playbackInfo) => callback(playbackInfo));
+    const listener = (_event: any, playbackInfo: PlaybackInfo) => callback(playbackInfo);
+    ipcRenderer.on('playback:state-changed', listener);
+    return () => { ipcRenderer.removeListener('playback:state-changed', listener); };
   },
 
   getPlaybackState: () => ipcRenderer.invoke('playback:get-state'),
@@ -40,7 +44,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showLogin: () => ipcRenderer.send('ytmusic:show-login'),
   checkLogin: () => ipcRenderer.invoke('ytmusic:check-login'),
   onSessionUpdated: (callback: () => void) => {
-    ipcRenderer.on('ytmusic:session-updated', () => callback());
+    const listener = () => callback();
+    ipcRenderer.on('ytmusic:session-updated', listener);
+    return () => { ipcRenderer.removeListener('ytmusic:session-updated', listener); };
   },
   play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => ipcRenderer.send('ytmusic:play', id, type),
   setVibrancy: (vibrancy: any) => ipcRenderer.send('window:set-vibrancy', vibrancy),

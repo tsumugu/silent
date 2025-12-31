@@ -7,6 +7,7 @@ import { ControlBar } from './ControlBar';
 import { SeekBar } from './SeekBar';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
+import { getImageCacheKey } from '../../../shared/utils/imageKey';
 
 interface PlayerViewProps {
   onClose?: () => void;
@@ -24,8 +25,15 @@ export function PlayerView({ onClose }: PlayerViewProps) {
   const originalArtwork = playbackInfo?.metadata?.artwork?.[0]?.src || null;
   const videoId = playbackInfo?.metadata?.videoId;
 
+  // Generate stable cache key
+  const cacheKey = getImageCacheKey(
+    playbackInfo?.metadata?.title || '',
+    playbackInfo?.metadata?.artist || '',
+    { videoId }
+  );
+
   // Use the integrated hook for high-quality blob URL and colors
-  const { blobUrl, colors } = useTrackAssets(originalArtwork, videoId);
+  const { blobUrl, colors } = useTrackAssets(originalArtwork, cacheKey);
 
   return (
     /*
@@ -47,7 +55,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
       layoutId="player-shell"
       className="absolute inset-0 z-50 w-full h-full flex items-center justify-center overflow-hidden"
       style={{
-        background: `linear-gradient(-135deg, ${colors.primary}B3 0%, ${colors.secondary}B3 100%)`
+        background: `linear - gradient(-135deg, ${colors.primary}B3 0 %, ${colors.secondary}B3 100 %)`
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -70,7 +78,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
               e.stopPropagation();
               onClose();
             }}
-            className={`absolute top-6 left-1/2 transform -translate-x-1/2 text-white/40 hover:text-white transition-colors z-50 ${isMini ? 'mb-1' : 'mb-2'}`}
+            className={`absolute top - 6 left - 1 / 2 transform - translate - x - 1 / 2 text - white / 40 hover: text - white transition - colors z - 50 ${isMini ? 'mb-1' : 'mb-2'} `}
             title="Close Player (Esc)"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
@@ -83,7 +91,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
 
       {/* Content Container - Centered with Gap-based spacing */}
       <div
-        className="flex flex-col items-center justify-center w-full h-full gap-8 md:gap-10 transition-all duration-500 pt-12 pb-12"
+        className="flex flex-col items-center justify-center w-full h-full gap-8 md:gap-10 transition-all duration-500 p-12"
         style={{
           maxWidth: isHovered || isMini ? '500px' : '100%',
           maxHeight: isHovered || isMini ? '800px' : '100%'
@@ -125,6 +133,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
               duration={playbackInfo?.duration || 0}
               isVisible={isHovered || isMini}
               isMini={isMini}
+              isPlaying={playbackInfo?.playbackState === 'playing'}
             />
             <ControlBar
               isPlaying={playbackInfo?.playbackState === 'playing'}

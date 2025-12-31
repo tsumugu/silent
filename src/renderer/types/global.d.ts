@@ -9,9 +9,9 @@ declare global {
       minimizeWindow: () => void;
       maximizeWindow: () => void;
       closeWindow: () => void;
-      onFullscreenChange: (callback: (isFullscreen: boolean) => void) => void;
+      onFullscreenChange: (callback: (isFullscreen: boolean) => void) => () => void;
       // Playback state
-      onPlaybackStateChange: (callback: (playbackInfo: PlaybackInfo) => void) => void;
+      onPlaybackStateChange: (callback: (playbackInfo: PlaybackInfo) => void) => () => void;
       getPlaybackState: () => Promise<PlaybackInfo | null>;
       // Playback controls
       playbackPlay: () => void;
@@ -33,7 +33,7 @@ declare global {
       }>;
       showLogin: () => void;
       checkLogin: () => Promise<boolean>;
-      onSessionUpdated: (callback: () => void) => void;
+      onSessionUpdated: (callback: () => void) => () => void;
       play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => void;
       setVibrancy: (vibrancy: 'under-window' | 'content' | 'sidebar' | 'menu' | 'popover' | 'hud' | 'sheet' | 'window' | 'dropdown' | 'tooltip' | 'device-discovery' | 'video' | 'selection' | 'titlebar' | null) => void;
     };

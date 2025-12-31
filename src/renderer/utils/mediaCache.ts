@@ -18,6 +18,7 @@ class MediaCache extends EventEmitter {
 
     constructor() {
         super();
+        this.setMaxListeners(100); // Support many library cards
     }
 
     get(id: string): MediaCacheItem | undefined {
@@ -26,7 +27,13 @@ class MediaCache extends EventEmitter {
 
     set(id: string, item: Partial<MediaCacheItem>) {
         const existing = this.cache.get(id) || {};
-        this.cache.set(id, { ...existing, ...item });
+        const updated = { ...existing, ...item };
+        this.cache.set(id, updated);
+
+        if (item.blobUrl) {
+
+        }
+
         this.emit('update', { id, item });
     }
 
@@ -62,17 +69,18 @@ class MediaCache extends EventEmitter {
      * Ensure both image (blob) and colors are available for a track
      */
     async ensureTrackAssets(id: string, sourceUrl: string): Promise<void> {
-        console.log('[MediaCache] ensureTrackAssets', { id, sourceUrl });
+
 
         // If everything already cached, return
         const item = this.get(id);
         if (item?.blobUrl && item?.colors) {
+
             return;
         }
 
         // Check if a fetch is already in progress
         if (item?.fetchPromise) {
-            console.log('[MediaCache] Fetch/Analysis already in progress, waiting...');
+
             return item.fetchPromise;
         }
 
@@ -82,7 +90,7 @@ class MediaCache extends EventEmitter {
                 // 1. Fetch image if no blob
                 let currentUrl = item?.blobUrl;
                 if (!currentUrl) {
-                    console.log('[MediaCache] Processing source URL:', sourceUrl);
+
 
                     // Upgrade to highest quality by modifying URL parameters (Google User Content)
                     let processedUrl = sourceUrl;
@@ -91,19 +99,20 @@ class MediaCache extends EventEmitter {
                         processedUrl = processedUrl.replace(/=s\d+/, '=s1200');
                     }
 
-                    console.log('[MediaCache] Fetching image via proxy:', processedUrl);
-                    const dataUrl = await window.electronAPI.proxyFetchImage(processedUrl);
-                    const response = await fetch(dataUrl);
-                    const blob = await response.blob();
-                    const blobUrl = URL.createObjectURL(blob);
 
-                    this.setBlobUrl(id, blobUrl);
-                    currentUrl = blobUrl;
+                    // Use Data URL directly - saves memory and avoids Object URL leaks
+                    const dataUrl = await window.electronAPI.proxyFetchImage(processedUrl);
+
+
+                    this.setBlobUrl(id, dataUrl);
+                    currentUrl = dataUrl;
                 }
 
                 // 2. Extract colors if not present
-                if (!item?.colors && currentUrl) {
-                    console.log('[MediaCache] Extracting colors...');
+                // IMPORTANT: Fetch the FRESH item state to avoid stale closure if setBlobUrl was just called
+                const freshItem = this.get(id);
+                if (!freshItem?.colors && currentUrl) {
+
                     const VibrantConstructor = (Vibrant as any).Vibrant || Vibrant;
                     const v = new (VibrantConstructor as any)(currentUrl);
                     const palette = await v.getPalette();
@@ -111,19 +120,18 @@ class MediaCache extends EventEmitter {
                     const primary = palette.Vibrant?.hex || palette.LightVibrant?.hex || '#ffffff';
                     const secondary = palette.DarkVibrant?.hex || palette.Muted?.hex || palette.DarkMuted?.hex || '#1a1a1a';
 
+
                     this.setColors(id, primary, secondary);
                 }
 
-                console.log('[MediaCache] Track assets ready:', id);
+
             } catch (err) {
-                console.error('[MediaCache] Failed to ensure track assets:', err);
+                console.error('[MediaCache] Failed to ensure track assets for:', id, err);
                 throw err;
             } finally {
-                // Clear promise when done
-                const current = this.cache.get(id);
-                if (current) {
-                    delete current.fetchPromise;
-                }
+                // Clear promise when done and EMIT update
+
+                this.set(id, { fetchPromise: undefined });
             }
         })();
 

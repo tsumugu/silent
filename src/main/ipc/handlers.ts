@@ -187,5 +187,5 @@ export function setupIPCHandlers(
     hiddenWindow.loadURL(url);
   });
 
-  console.log('IPC handlers set up successfully');
+
 }

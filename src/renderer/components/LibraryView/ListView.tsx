@@ -71,15 +71,16 @@ export const ListView: React.FC<ListViewProps> = ({
     };
 
     useEffect(() => {
-        console.log('[ListView] Mounted/Updated with query:', query);
+
         fetchData();
 
-        window.electronAPI.onSessionUpdated(() => {
-            console.log('[ListView] Session updated, re-fetching...');
+        const unsub = window.electronAPI.onSessionUpdated(() => {
+
             fetchData();
         });
         return () => {
-            console.log('[ListView] Unmounting');
+
+            unsub();
         };
     }, [query]);
 

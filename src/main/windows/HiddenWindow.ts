@@ -26,7 +26,7 @@ export function createHiddenWindow(): BrowserWindow {
   }
 
   win.webContents.on('did-finish-load', () => {
-    console.log('Hidden window loaded YouTube Music');
+    console.log('[HiddenWindow] Page loaded');
   });
 
   return win;

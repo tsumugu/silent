@@ -1,5 +1,6 @@
 import { ipcRenderer } from 'electron';
 import { PlaybackInfo } from '../shared/types';
+import { getImageCacheKey } from '../shared/utils/imageKey';
 
 let lastValidMetadata: any = null;
 let lastState: string | null = null;
@@ -57,18 +58,8 @@ function observeMediaSession() {
         type: art.type,
       })) : [],
       videoId: (() => {
-        const urlMatch = window.location.href.match(/[?&]v=([^&]+)/);
-        if (urlMatch) return urlMatch[1];
-        const t = metadata.title || "";
-        const a = metadata.artist || "";
-        if (t || a) {
-          try {
-            return "track-" + btoa(unescape(encodeURIComponent(t + a))).substring(0, 16);
-          } catch (e) {
-            return "track-unknown";
-          }
-        }
-        return undefined;
+        // Use getImageCacheKey for consistent ID generation
+        return getImageCacheKey(metadata.title, metadata.artist);
       })(),
     };
   }
@@ -99,12 +90,36 @@ function observeMediaSession() {
     } catch (e) { /* ignore */ }
   }
 
-  const currentState = JSON.stringify(playbackInfo);
-  if (currentState !== lastState) {
+  // Optimization: Only send update if significant changes occurred
+  // We compare position with a 1s threshold if metadata is same
+  let shouldUpdate = false;
+  if (!lastState) {
+    shouldUpdate = true;
+  } else {
+    const last = JSON.parse(lastState) as PlaybackInfo;
+    const metadataChanged = JSON.stringify(playbackInfo.metadata) !== JSON.stringify(last.metadata);
+    const stateChanged = playbackInfo.playbackState !== last.playbackState;
+    const durationChanged = Math.abs(playbackInfo.duration - last.duration) > 1;
+    const positionJump = Math.abs(playbackInfo.position - last.position) > 1.5; // Large jump (seek or lag)
+
+    // Update if metadata/state/duration changed, or if it's a "significant" position update
+    // We also update every 2 seconds regardless to keep progress bar smooth but not spammy
+    const timeSinceLastUpdate = Date.now() - (lastStateTime || 0);
+
+    if (metadataChanged || stateChanged || durationChanged || positionJump || timeSinceLastUpdate > 2000) {
+      shouldUpdate = true;
+    }
+  }
+
+  if (shouldUpdate) {
+    const currentState = JSON.stringify(playbackInfo);
     lastState = currentState;
+    lastStateTime = Date.now();
     ipcRenderer.send('playback:state-changed', playbackInfo);
   }
 }
+
+let lastStateTime = 0;
 
 // Start polling
 setInterval(observeMediaSession, 100);
@@ -141,5 +156,3 @@ ipcRenderer.on('playback:seek', (_event, seekTime: number) => {
     }
   }
 });
-
-console.log('Hidden window preload loaded - PURE MediaSession API Mode (Selector-less)');

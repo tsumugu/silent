@@ -27,7 +27,7 @@ export class YTMusicService {
                 location: 'JP'
             });
 
-            console.log(`[YTMusicService] Initialized. Cookies: ${uniqueCookies.length}. Login: ${this.innertube.session.logged_in}`);
+
             this.isInitialized = true;
         } catch (error) {
             console.error('Failed to initialize YTMusicService:', error);
@@ -49,7 +49,7 @@ export class YTMusicService {
 
         try {
             const homeFeed: any = await this.innertube.music.getHomeFeed();
-            console.log(`[YTMusicService] Home feed fetched. Sections: ${homeFeed.sections?.length}`);
+
 
             const sections = homeFeed.sections || [];
             const result = sections.map((section: any) => {
@@ -81,7 +81,7 @@ export class YTMusicService {
     }
 
     async getAlbumDetails(albumId: string): Promise<MusicDetail | null> {
-        console.log(`[YTMusicService] Fetching album: ${albumId}`);
+
         await this.initialize();
         if (!this.innertube) return null;
 
@@ -97,7 +97,7 @@ export class YTMusicService {
                 const trackSection = album.sections.find((s: any) => s.contents && s.contents.length > 0);
                 if (trackSection) {
                     contents = trackSection.contents;
-                    console.log(`[YTMusicService] Found tracks in a section other than the first one.`);
+
                 } else if (album.sections[0]?.contents) {
                     contents = album.sections[0].contents;
                 }
@@ -149,7 +149,7 @@ export class YTMusicService {
     }
 
     async getPlaylist(playlistId: string): Promise<MusicDetail | null> {
-        console.log(`[YTMusicService] Fetching playlist: ${playlistId}`);
+
         await this.initialize();
         if (!this.innertube) return null;
 
@@ -188,14 +188,13 @@ export class YTMusicService {
     }
 
     async search(query: string) {
-        console.log(`[YTMusicService] Searching for: ${query}`);
+
         await this.initialize();
         if (!this.innertube) return { songs: [], albums: [], playlists: [] };
 
         try {
             const searchResults: any = await this.innertube.music.search(query);
 
-            console.log(`[YTMusicService] Search raw result keys:`, Object.keys(searchResults));
 
             const songs: MusicItem[] = [];
             const albums: MusicItem[] = [];
@@ -243,7 +242,7 @@ export class YTMusicService {
 
             findAndProcessShelves(searchResults);
 
-            console.log(`[YTMusicService] Search summary for "${query}": ${songs.length} songs, ${albums.length} albums, ${playlists.length} playlists`);
+
 
             const result = {
                 songs: songs.slice(0, 20),
@@ -294,9 +293,6 @@ export class YTMusicService {
         if (!rawArtists) return [];
         const artists: MusicArtist[] = [];
 
-        // 詳細なログを追加して原因を特定する
-        // console.log(`[normalizeArtists] Processing type: ${typeof rawArtists}, isArray: ${Array.isArray(rawArtists)}`);
-
         if (Array.isArray(rawArtists)) {
             artists.push(...rawArtists
                 .map((a: any) => ({
@@ -345,7 +341,6 @@ export class YTMusicService {
             }
         }
 
-        // console.log(`[normalizeArtists] Result: ${artists.length} artists found`);
         return artists;
     }
 

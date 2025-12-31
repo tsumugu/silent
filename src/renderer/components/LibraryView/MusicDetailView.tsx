@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { MusicDetail, MusicItem } from '../../../shared/types/music';
+import { useTrackAssets } from '../../hooks/useTrackAssets';
+import { getImageCacheKey } from '../../../shared/utils/imageKey';
 
 interface MusicDetailViewProps {
     id: string;
@@ -14,6 +16,32 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
+
+    const thumbnails = data?.thumbnails || initialItem?.thumbnails || [];
+    const rawCoverUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
+
+    const title = data?.title || initialItem?.title || '';
+
+    // Determine the best artist name string
+    const getArtistName = () => {
+        if (data?.artists && data.artists.length > 0) {
+            return data.artists.map(a => a.name).join(', ');
+        }
+        if (initialItem?.artists && initialItem.artists.length > 0) {
+            return initialItem.artists.map(a => a.name).join(', ');
+        }
+        return '';
+    };
+    const artistName = getArtistName();
+
+    // Generate stable cache key
+    const cacheKey = getImageCacheKey(title, artistName, {
+        browseId: id,
+        playlistId: type === 'PLAYLIST' ? id : undefined
+    });
+
+    // Use assets from cache
+    const { blobUrl: coverUrl } = useTrackAssets(rawCoverUrl, cacheKey);
 
 
     useEffect(() => {
@@ -48,21 +76,6 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
         );
     }
 
-    const thumbnails = data?.thumbnails || initialItem?.thumbnails || [];
-    const coverUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
-    const title = data?.title || initialItem?.title || '';
-
-    // Determine the best artist name string
-    const getArtistName = () => {
-        if (data?.artists && data.artists.length > 0) {
-            return data.artists.map(a => a.name).join(', ');
-        }
-        if (initialItem?.artists && initialItem.artists.length > 0) {
-            return initialItem.artists.map(a => a.name).join(', ');
-        }
-        return '';
-    };
-    const artistName = getArtistName();
     const tracks = data?.tracks || [];
 
     // Extract year from subtitle (e.g., "アルバム • 2024")
@@ -105,7 +118,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                         className="w-48 h-48 md:w-64 md:h-64 shrink-0 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-white/5"
                     >
                         {coverUrl ? (
-                            <img src={coverUrl} alt={title} className="w-full h-full object-cover" loading="lazy" />
+                            <img src={coverUrl} alt={title} className="w-full h-full object-cover" />
                         ) : (
                             <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
                                 <span className="text-white/10 text-6xl font-serif">♫</span>

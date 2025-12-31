@@ -23,6 +23,14 @@ export default function App() {
   // Overlay State for Player
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
+  useEffect(() => {
+
+  }, [isPlayerOpen]);
+
+  useEffect(() => {
+
+  }, [viewStack]);
+
   const [selectedItem, setSelectedItem] = useState<MusicItem | null>(null);
 
   // Search State
@@ -36,13 +44,15 @@ export default function App() {
     item: MusicItem | null = null,
     query?: string
   ) => {
-    console.log(`[App] Navigating to ${view}`, item ? `Item: ${item.title} (${item.type})` : '');
 
     if (view === 'player') {
       setIsPlayerOpen(true);
     } else if (view === 'search' && query !== undefined && query.trim().length >= 1) {
       setSearchQuery(query);
-      setViewStack(prev => [...prev, 'search']);
+      // Only push if not already on search with same query
+      if (currentView !== 'search' || searchQuery !== query) {
+        setViewStack(prev => [...prev, 'search']);
+      }
       setIsPlayerOpen(false);
     } else if (view === 'home') {
       setViewStack(['home']);
@@ -50,12 +60,19 @@ export default function App() {
       setSelectedItem(null);
     } else if (view === 'detail') {
       if (item) {
-        setSelectedItem(item);
-        setViewStack(prev => [...prev, 'detail']);
+        // Only push if not already looking at this item
+        const isSameDetail = currentView === 'detail' &&
+          (selectedItem?.youtube_browse_id === item.youtube_browse_id ||
+            selectedItem?.youtube_playlist_id === item.youtube_playlist_id);
+
+        if (!isSameDetail) {
+          setSelectedItem(item);
+          setViewStack(prev => [...prev, 'detail']);
+        }
         setIsPlayerOpen(false);
       }
     }
-  }, []);
+  }, [currentView, searchQuery, selectedItem]);
 
   const goBack = useCallback(() => {
     // If player is open, close it first (like a modal)
@@ -179,7 +196,7 @@ export default function App() {
           {/* Music Detail (Album/Playlist) */}
           {currentView === 'detail' && selectedItem && (
             <motion.div
-              key={`detail-${selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id}`}
+              key={`detail - ${selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id} `}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}

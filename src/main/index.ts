@@ -51,9 +51,9 @@ app.whenReady().then(() => {
   setupIPCHandlers(mainWindow, hiddenWindow);
 
   hiddenWindow.on('hide', () => {
-    console.log('[Main] Hidden window hidden, refreshing YTMusic session...');
+
     ytMusicService.initialize(true).then(() => {
-      console.log('[Main] YTMusic session refreshed, notifying UI...');
+
       mainWindow?.webContents.send('ytmusic:session-updated');
     });
   });
@@ -107,7 +107,7 @@ app.on('window-all-closed', () => {
 
 // Ensure playback stops when the app is explicitly quit (Cmd+Q etc.)
 app.on('before-quit', () => {
-  console.log('App is quitting, stopping playback...');
+
   if (hiddenWindow && !hiddenWindow.isDestroyed()) {
     hiddenWindow.destroy(); // Destroying the background playback window stops the sound
   }
