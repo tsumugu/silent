@@ -29,6 +29,7 @@ declare global {
       checkLogin: () => Promise<boolean>;
       onSessionUpdated: (callback: () => void) => void;
       play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => void;
+      setVibrancy: (vibrancy: 'under-window' | 'content' | 'sidebar' | 'menu' | 'popover' | 'hud' | 'sheet' | 'window' | 'dropdown' | 'tooltip' | 'device-discovery' | 'video' | 'selection' | 'titlebar' | null) => void;
     };
   }
 }

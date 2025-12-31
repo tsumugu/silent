@@ -42,6 +42,12 @@ export function setupIPCHandlers(
     if (!uiWindow.isDestroyed()) uiWindow.close();
   });
 
+  ipcMain.on(IPCChannels.WINDOW_SET_VIBRANCY, (_event, vibrancy: any) => {
+    if (!uiWindow.isDestroyed()) {
+      uiWindow.setVibrancy(vibrancy);
+    }
+  });
+
   // ========================================
   // Playback state updates: Hidden → Main → UI
   // ========================================

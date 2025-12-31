@@ -95,6 +95,15 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isPlayerOpen]);
 
+  // Dynamically control window vibrancy based on player state
+  useEffect(() => {
+    if (isPlayerOpen) {
+      window.electronAPI.setVibrancy(null);
+    } else {
+      window.electronAPI.setVibrancy('under-window');
+    }
+  }, [isPlayerOpen]);
+
   return (
     <div className="w-full h-screen overflow-hidden relative font-sans select-none">
       <div className="draggable absolute top-0 left-0 right-0 h-10 z-50" />

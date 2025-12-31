@@ -27,11 +27,26 @@ export function PlayerView({ onClose }: PlayerViewProps) {
   const { blobUrl, colors } = useTrackAssets(originalArtwork, videoId);
 
   return (
+    /*
+    不透明度の Hex 換算表（よく使うもの）
+    100% — FF
+    90% — E6
+    80% — CC
+    75% — BF
+    70% — B3
+    60% — 99
+    50% — 80
+    40% — 66
+    30% — 4D
+    20% — 33
+    10% — 1A
+    0% — 00
+    */
     <motion.div
       layoutId="player-shell"
       className="absolute inset-0 z-50 w-full h-full flex flex-col items-center pt-16 pb-4 px-8 overflow-hidden"
       style={{
-        background: `linear-gradient(-135deg, ${colors.primary}4D 0%, ${colors.secondary}4D 100%)`
+        background: `linear-gradient(-135deg, ${colors.primary}B3 0%, ${colors.secondary}B3 100%)`
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}

@@ -42,4 +42,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('ytmusic:session-updated', () => callback());
   },
   play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => ipcRenderer.send('ytmusic:play', id, type),
+  setVibrancy: (vibrancy: any) => ipcRenderer.send('window:set-vibrancy', vibrancy),
 });
