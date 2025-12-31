@@ -21,7 +21,9 @@ export class YTMusicService {
             const cookieString = uniqueCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
             this.innertube = await Innertube.create({
-                cookie: cookieString
+                cookie: cookieString,
+                lang: 'ja',
+                location: 'JP'
             });
 
             console.log(`[YTMusicService] Initialized. Cookies: ${uniqueCookies.length}. Login: ${this.innertube.session.logged_in}`);
