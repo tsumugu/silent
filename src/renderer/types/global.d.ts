@@ -22,11 +22,12 @@ declare global {
       proxyFetchImage: (url: string) => Promise<string>;
       // YTMusic API
       getHome: () => Promise<any[]>;
-      getRecommendations: () => Promise<any>;
       getHomeAlbums: () => Promise<any[]>;
       getAlbumDetails: (albumId: string) => Promise<any>;
       getPlaylist: (playlistId: string) => Promise<any>;
       showLogin: () => void;
+      checkLogin: () => Promise<boolean>;
+      onSessionUpdated: (callback: () => void) => void;
       play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => void;
     };
   }

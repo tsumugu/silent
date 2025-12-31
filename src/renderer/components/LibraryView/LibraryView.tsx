@@ -95,10 +95,14 @@ const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlayli
                             </div>
                             <div className="px-1">
                                 <h3 className="text-white font-medium truncate text-sm mb-1">{title}</h3>
-                                <p className="text-white/50 text-xs truncate">{artist}</p>
-                                {item.type && (
-                                    <p className="text-white/30 text-[10px] uppercase tracking-wider mt-1">{item.type}</p>
-                                )}
+                                <div className="flex items-center gap-1.5 overflow-hidden leading-none">
+                                    <p className="text-white/40 text-xs truncate">{artist}</p>
+                                    {item.type && (
+                                        <span className="text-white/20 text-[8px] font-bold uppercase tracking-widest flex-shrink-0 ring-1 ring-white/10 px-1 py-0.5 rounded-[2px]">
+                                            {item.type}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     );
@@ -111,31 +115,76 @@ const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlayli
 export const LibraryView: React.FC<LibraryViewProps> = ({ onAlbumSelect, onPlaylistSelect }) => {
     const [sections, setSections] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+    const checkLoginAndFetch = async () => {
+        setLoading(true);
+        try {
+            const loggedIn = await window.electronAPI.checkLogin();
+            setIsLoggedIn(loggedIn);
+
+            if (loggedIn) {
+                const homeData = await window.electronAPI.getHome();
+                setSections(homeData);
+            }
+        } catch (error) {
+            console.error('Failed to fetch home content:', error);
+            setSections([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchHome = async () => {
-            try {
-                const homeData = await window.electronAPI.getHome();
-                const recommendations = await window.electronAPI.getRecommendations();
-                let combinedData = homeData || [];
-                if (recommendations) {
-                    combinedData = [recommendations, ...combinedData];
-                }
-                setSections(combinedData);
-            } catch (error) {
-                console.error('Failed to fetch home content:', error);
-                setSections([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchHome();
+        checkLoginAndFetch();
+
+        // Listen for session updates (e.g. after login window is hidden)
+        window.electronAPI.onSessionUpdated(() => {
+            console.log('Session updated, re-fetching home...');
+            checkLoginAndFetch();
+        });
     }, []);
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-full text-white/50">
-                Loading Home...
+            <div className="flex flex-col items-center justify-center h-full text-white/50 gap-4">
+                <div className="w-8 h-8 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
+                <span className="text-sm font-medium tracking-wide">Loading Home...</span>
+            </div>
+        );
+    }
+
+    if (isLoggedIn === false) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-white gap-6 px-8 text-center max-w-md mx-auto">
+                <div className="w-20 h-20 bg-white/5 rounded-full flex items-center justify-center mb-2">
+                    <svg className="w-10 h-10 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 className="text-2xl font-bold mb-2">Login Required</h2>
+                    <p className="text-white/60 text-sm leading-relaxed">
+                        YouTube Musicのパーソナライズされた体験を楽しむにはログインが必要です。
+                        ライブラリやおすすめを表示するにはGoogleアカウントでログインしてください。
+                    </p>
+                </div>
+                <button
+                    onClick={() => {
+                        window.electronAPI.showLogin();
+                        // ログイン画面が閉じられたあとのリトライはここでは難しいが、
+                        // 親コンポーネントで監視するか、一定間隔でチェックするなどの検討が必要
+                    }}
+                    className="px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-neutral-200 transition-colors shadow-xl"
+                >
+                    YouTube Musicにログイン
+                </button>
+                <button
+                    onClick={() => checkLoginAndFetch()}
+                    className="text-white/40 text-xs hover:text-white/60 transition-colors"
+                >
+                    ログイン後にここをクリックして更新
+                </button>
             </div>
         );
     }

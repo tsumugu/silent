@@ -23,9 +23,10 @@ export enum IPCChannels {
   // YTMusic API
   YT_GET_HOME_ALBUMS = 'ytmusic:get-home-albums',
   YT_GET_HOME = 'ytmusic:get-home',
-  YT_GET_RECOMMENDATIONS = 'ytmusic:get-recommendations',
   YT_GET_ALBUM_DETAILS = 'ytmusic:get-album-details',
   YT_GET_PLAYLIST = 'ytmusic:get-playlist',
   YT_SHOW_LOGIN = 'ytmusic:show-login',
   YT_PLAY = 'ytmusic:play',
+  YT_CHECK_LOGIN = 'ytmusic:check-login',
+  YT_SESSION_UPDATED = 'ytmusic:session-updated',
 }

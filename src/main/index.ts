@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import { createUIWindow } from './windows/UIWindow';
 import { createHiddenWindow } from './windows/HiddenWindow';
 import { clearIPCHandlers, setupIPCHandlers } from './ipc/handlers';
+import { ytMusicService } from './services/YTMusicService';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) {
@@ -47,6 +48,13 @@ app.whenReady().then(() => {
 
   // Set up IPC handlers for communication between windows
   setupIPCHandlers(mainWindow, hiddenWindow);
+
+  hiddenWindow.on('hide', () => {
+    console.log('Hidden window hidden, refreshing YTMusic session...');
+    ytMusicService.initialize(true).then(() => {
+      mainWindow?.webContents.send('ytmusic:session-updated');
+    });
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;

@@ -139,10 +139,6 @@ export function setupIPCHandlers(
     return await ytMusicService.getHome();
   });
 
-  ipcMain.handle(IPCChannels.YT_GET_RECOMMENDATIONS, async () => {
-    return await ytMusicService.getRecommendations();
-  });
-
   ipcMain.handle(IPCChannels.YT_GET_HOME_ALBUMS, async () => {
     return await ytMusicService.getHomeAlbums();
   });
@@ -158,8 +154,13 @@ export function setupIPCHandlers(
   ipcMain.on(IPCChannels.YT_SHOW_LOGIN, () => {
     hiddenWindow.show();
     hiddenWindow.focus();
-    // Reset initialization so next request fetches fresh cookies
+    // After login window is focused, we likely want to refresh once closed or periodically.
+    // For now, let's ensure we can re-init later.
     ytMusicService.initialize(true);
+  });
+
+  ipcMain.handle(IPCChannels.YT_CHECK_LOGIN, async () => {
+    return await ytMusicService.checkLoginStatus();
   });
 
   ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => {

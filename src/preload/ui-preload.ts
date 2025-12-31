@@ -33,10 +33,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // YTMusic API
   getHome: () => ipcRenderer.invoke('ytmusic:get-home'),
-  getRecommendations: () => ipcRenderer.invoke('ytmusic:get-recommendations'),
   getHomeAlbums: () => ipcRenderer.invoke('ytmusic:get-home-albums'),
   getAlbumDetails: (albumId: string) => ipcRenderer.invoke('ytmusic:get-album-details', albumId),
   getPlaylist: (playlistId: string) => ipcRenderer.invoke('ytmusic:get-playlist', playlistId),
   showLogin: () => ipcRenderer.send('ytmusic:show-login'),
+  checkLogin: () => ipcRenderer.invoke('ytmusic:check-login'),
+  onSessionUpdated: (callback: () => void) => {
+    ipcRenderer.on('ytmusic:session-updated', () => callback());
+  },
   play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => ipcRenderer.send('ytmusic:play', id, type),
 });
