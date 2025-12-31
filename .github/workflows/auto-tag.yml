@@ -8,13 +8,23 @@ on:
       - 'package.json'
 
 jobs:
-  create-tag:
-    runs-on: ubuntu-latest
+  auto-tag-and-release:
+    runs-on: macos-latest
     permissions:
       contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
 
       - name: Extract version
         id: version
@@ -48,3 +58,13 @@ jobs:
           git tag $TAG
           git push origin $TAG
           echo "Pushed tag $TAG"
+
+      - name: Install Dependencies
+        if: steps.check_tag.outputs.exists == 'false'
+        run: pnpm install
+
+      - name: Publish Release
+        if: steps.check_tag.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm run publish
