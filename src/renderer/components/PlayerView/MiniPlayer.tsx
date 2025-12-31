@@ -37,11 +37,9 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
 
     return (
         <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
+            layoutId="player-shell"
             onClick={onClick}
-            className="absolute bottom-4 left-4 right-4 h-16 bg-white/5 backdrop-blur-[80px] backdrop-saturate-150 rounded-xl flex items-center px-4 cursor-pointer transition-all z-40 shadow-xl overflow-hidden group"
+            className="absolute bottom-4 left-4 right-4 h-16 bg-white/5 backdrop-blur-[80px] backdrop-saturate-150 rounded-xl flex items-center px-4 cursor-pointer z-40 shadow-xl overflow-hidden group"
             style={{
                 background: `linear-gradient(135deg, ${colors.primary}cc 0%, ${colors.secondary}cc 100%)`
             }}
@@ -50,7 +48,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
             <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors pointer-events-none" />
 
             {/* Artwork */}
-            <div className={`w-10 h-10 rounded-md overflow-hidden bg-neutral-800 flex-shrink-0 relative z-10 ${isPlaying ? 'animate-pulse-slow' : ''}`}>
+            <motion.div
+                layoutId="player-artwork"
+                className={`w-10 h-10 rounded-md overflow-hidden bg-neutral-800 flex-shrink-0 relative z-10 ${isPlaying ? 'animate-pulse-slow' : ''}`}
+            >
                 {artwork ? (
                     <img src={artwork} alt={title} className="w-full h-full object-cover" />
                 ) : (
@@ -58,7 +59,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                         <span className="text-xs text-white/30">♪</span>
                     </div>
                 )}
-            </div>
+            </motion.div>
 
             {/* Info */}
             <div className="flex-1 mx-4 min-w-0 flex flex-col justify-center relative z-10">
