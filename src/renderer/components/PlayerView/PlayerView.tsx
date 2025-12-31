@@ -82,9 +82,9 @@ export function PlayerView({ onClose }: PlayerViewProps) {
       </AnimatePresence>
 
       {/* Content Container - Centered */}
-      <div className="flex flex-col items-center w-full max-w-[500px] max-h-[800px] h-full">
+      <div className="flex flex-col items-center w-full h-full" style={{ maxWidth: isHovered || isMini ? '500px' : '100%', maxHeight: isHovered || isMini ? '800px' : '100%' }}>
         {/* Top Section: Track Info centered in top area */}
-        <div className="w-full flex items-start justify-center flex-shrink-0" style={{ height: isMini ? '60px' : '100px' }}>
+        <div className="w-full flex items-start justify-center flex-shrink-0" style={{ height: (isHovered || isMini) ? (isMini ? '60px' : '100px') : '0px', overflow: 'hidden' }}>
           <TrackInfo
             title={playbackInfo?.metadata?.title}
             artist={playbackInfo?.metadata?.artist}
@@ -96,7 +96,11 @@ export function PlayerView({ onClose }: PlayerViewProps) {
         {/* Middle Section: Album Art (Primary element) */}
         <motion.div
           layoutId="player-artwork"
-          className="flex-1 min-h-0 flex items-center justify-center h-full"
+          className="aspect-square flex-1 min-h-0 flex items-center justify-center"
+          style={{
+            // maxWidth: isHovered || isMini ? '400px' : '100%',
+            maxHeight: isHovered ? '100%' : '800px'
+          }}
         >
           <AlbumArt
             src={blobUrl}
@@ -106,7 +110,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
         </motion.div>
 
         {/* Bottom Section: Controls centered in bottom area */}
-        <div className="w-full flex-shrink-0 flex flex-col items-center justify-center gap-4" style={{ height: isMini ? '140px' : '160px' }}>
+        <div className="w-full flex-shrink-0 flex flex-col items-center justify-center gap-4" style={{ height: (isHovered || isMini) ? (isMini ? '140px' : '160px') : '0px', overflow: 'hidden' }}>
           <SeekBar
             currentTime={playbackInfo?.position || 0}
             duration={playbackInfo?.duration || 0}
