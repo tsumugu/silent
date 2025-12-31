@@ -25,10 +25,11 @@ export function PlayerView({ onClose }: PlayerViewProps) {
 
   // Use the integrated hook for high-quality blob URL and colors
   const { blobUrl, colors } = useTrackAssets(originalArtwork, videoId);
+
   return (
     <motion.div
       layoutId="player-shell"
-      className="relative w-full h-full flex flex-col items-center pt-16 pb-4 px-8 backdrop-blur-3xl overflow-hidden bg-black/40"
+      className="absolute inset-0 z-50 w-full h-full flex flex-col items-center pt-16 pb-4 px-8 backdrop-blur-3xl overflow-hidden bg-black/40"
       style={{
         background: `radial-gradient(circle at center, ${colors.secondary}88 0%, ${colors.secondary}33 100%)`,
       }}
@@ -65,7 +66,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
       </motion.div>
 
       {/* Bottom Section: Controls centered in bottom area */}
-      <div className="flex-1 w-full flex items-center justify-center min-h-[100px]">
+      <div className="flex-1 w-full flex-shrink-0 flex items-center justify-center min-h-[100px]">
         <ControlBar
           isPlaying={playbackInfo?.playbackState === 'playing'}
           isVisible={isHovered || isMini}

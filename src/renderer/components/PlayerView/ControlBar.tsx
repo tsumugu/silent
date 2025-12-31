@@ -28,6 +28,7 @@ export function ControlBar({ isPlaying, isVisible, isMini }: ControlBarProps) {
     <AnimatePresence>
       {isVisible && (
         <motion.div
+          layoutId="player-controls"
           className="w-full flex items-center justify-center gap-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

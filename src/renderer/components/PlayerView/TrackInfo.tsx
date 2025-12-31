@@ -42,21 +42,23 @@ export function TrackInfo({ title, artist, isVisible, isMini, onClose }: TrackIn
 
           {/* Title Row */}
           <div className="w-full flex items-center justify-center relative">
-            <h1
+            <motion.h1
+              layoutId="player-title"
               className="text-white font-bold drop-shadow-lg truncate max-w-[90%]"
               style={{ fontSize: isMini ? 'clamp(1.25rem, 4vw, 1.75rem)' : 'clamp(2rem, 5vw, 3rem)' }}
             >
               {title}
-            </h1>
+            </motion.h1>
           </div>
 
           {artist && (
-            <p
+            <motion.p
+              layoutId="player-artist"
               className="text-white/80 mt-2 drop-shadow-md w-full truncate text-center"
               style={{ fontSize: isMini ? 'clamp(0.875rem, 3vw, 1.125rem)' : 'clamp(1.25rem, 4vw, 1.75rem)' }}
             >
               {artist}
-            </p>
+            </motion.p>
           )}
         </motion.div>
       )}

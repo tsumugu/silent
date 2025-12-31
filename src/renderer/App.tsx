@@ -161,16 +161,7 @@ export default function App() {
       {/* Player Layers (Full & Mini) */}
       <AnimatePresence mode="popLayout">
         {isPlayerOpen ? (
-          <motion.div
-            key="player-full"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute inset-0 z-50"
-          >
-            <PlayerView onClose={() => setIsPlayerOpen(false)} />
-          </motion.div>
+          <PlayerView onClose={() => setIsPlayerOpen(false)} />
         ) : (
           <MiniPlayer
             key="player-mini"

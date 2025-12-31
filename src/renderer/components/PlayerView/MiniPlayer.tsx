@@ -63,12 +63,25 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
 
             {/* Info */}
             <div className="flex-1 mx-4 min-w-0 flex flex-col justify-center relative z-10">
-                <h4 className="text-white text-sm font-medium truncate shadow-black drop-shadow-md">{title}</h4>
-                <p className="text-white/80 text-xs truncate drop-shadow-sm">{artist}</p>
+                <motion.h4
+                    layoutId="player-title"
+                    className="text-white text-sm font-medium truncate shadow-black drop-shadow-md"
+                >
+                    {title}
+                </motion.h4>
+                <motion.p
+                    layoutId="player-artist"
+                    className="text-white/80 text-xs truncate drop-shadow-sm"
+                >
+                    {artist}
+                </motion.p>
             </div>
 
             {/* Controls */}
-            <div className="flex items-center gap-4 relative z-10">
+            <motion.div
+                layoutId="player-controls"
+                className="flex items-center gap-4 relative z-10"
+            >
                 <button
                     onClick={handlePlayPause}
                     className="w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center transition-colors backdrop-blur-sm"
@@ -92,7 +105,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                     </svg>
                 </button>
-            </div>
+            </motion.div>
         </motion.div>
     );
 };
