@@ -37,11 +37,7 @@ export const MusicCard: React.FC<MusicCardProps> = ({
     } else if (normalizedType === 'song' && item.youtube_video_id) {
       window.electronAPI.play(item.youtube_video_id, 'SONG');
     } else if (normalizedType === 'playlist' && onPlaylistSelect) {
-      if (item.youtube_playlist_id && (item.youtube_playlist_id.startsWith('RDCL') || item.youtube_playlist_id.startsWith('RD'))) {
-        window.electronAPI.play(item.youtube_playlist_id, 'PLAYLIST');
-      } else {
-        onPlaylistSelect(item);
-      }
+      onPlaylistSelect(item);
     }
   };
 

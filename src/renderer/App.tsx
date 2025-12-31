@@ -178,7 +178,7 @@ export default function App() {
             >
               <ViewWrapper>
                 <MusicDetailView
-                  id={(selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id)!}
+                  id={(selectedItem.type === 'PLAYLIST' ? selectedItem.youtube_playlist_id : selectedItem.youtube_browse_id) || selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id || ''}
                   type={selectedItem.type as 'ALBUM' | 'PLAYLIST'}
                   initialItem={selectedItem}
                   onBack={goBack}

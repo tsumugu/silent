@@ -16,7 +16,6 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     const [isEntering, setIsEntering] = useState(true);
 
     useEffect(() => {
-        console.log(`[MusicDetailView] Received initialItem for ${id}:`, initialItem);
         const fetchData = async () => {
             setLoading(true);
             try {
@@ -24,10 +23,9 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                     ? await window.electronAPI.getAlbumDetails(id)
                     : await window.electronAPI.getPlaylist(id);
 
-                console.log(`[MusicDetailView] Fetched data for ${id}:`, result);
                 setData(result);
             } catch (error) {
-                console.error(`[MusicDetailView] Failed to fetch ${type} details:`, error);
+                console.error(`[MusicDetailView] Failed to fetch ${type} details for ${id}:`, error);
             } finally {
                 setLoading(false);
             }
@@ -65,6 +63,14 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     };
     const artistName = getArtistName();
     const tracks = data?.tracks || [];
+
+    // Extract year from subtitle (e.g., "アルバム • 2024")
+    const getYear = (subtitle?: string) => {
+        if (!subtitle) return null;
+        const match = subtitle.match(/\b(19|20)\d{2}\b/);
+        return match ? match[0] : null;
+    };
+    const year = getYear(data?.subtitle || initialItem?.subtitle);
 
     return (
         <motion.div
@@ -117,17 +123,13 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                             {title}
                         </h1>
                         <div className="flex items-center gap-3 text-white/60">
-                            {data?.subtitle ? (
-                                <span className="font-semibold text-white/90">{data.subtitle}</span>
-                            ) : (
-                                type !== 'PLAYLIST' && artistName && (
-                                    <span className="font-semibold text-white/90">{artistName}</span>
-                                )
+                            {year && (
+                                <span className="font-semibold text-white/90">{year}</span>
                             )}
-                            {(data?.subtitle || (type !== 'PLAYLIST' && artistName)) && (
+                            {year && (
                                 <span className="w-1 h-1 rounded-full bg-white/20" />
                             )}
-                            <span className="text-sm">{tracks.length} songs</span>
+                            <span className="text-sm">{tracks.length || 0} songs</span>
                         </div>
                     </div>
                 </div>
@@ -141,49 +143,51 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
 
                 {/* Song List or Loader */}
                 <div className="flex flex-col">
-                    {(loading || isEntering) ? (
+                    {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 text-white/20 gap-4">
-                            {!isEntering && (
-                                <>
-                                    <div className="w-6 h-6 border-2 border-white/5 border-t-white/40 rounded-full animate-spin" />
-                                    <span className="text-xs font-medium uppercase tracking-widest">Loading tracks...</span>
-                                </>
-                            )}
+                            <div className="w-6 h-6 border-2 border-white/5 border-t-white/40 rounded-full animate-spin" />
+                            <span className="text-xs font-medium uppercase tracking-widest">Loading tracks...</span>
                         </div>
                     ) : (
-                        tracks.map((song, index) => {
-                            const songTitle = song.title;
-                            const songArtist = song.artists
-                                .map(a => a.name)
-                                .filter(name => name && name.trim().length > 0)
-                                .join(', ') || artistName || 'Unknown Artist';
+                        tracks.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-white/20">
+                                <span className="text-xs font-medium uppercase tracking-widest">No tracks found</span>
+                            </div>
+                        ) : (
+                            tracks.map((song, index) => {
+                                const songTitle = song.title;
+                                const songArtist = song.artists
+                                    .map(a => a.name)
+                                    .filter(name => name && name.trim().length > 0)
+                                    .join(', ') || artistName || 'Unknown Artist';
 
-                            return (
-                                <motion.div
-                                    key={`${song.youtube_video_id || index}`}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.03 }}
-                                    className="group grid grid-cols-[3rem_1fr_4rem] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-all active:scale-[0.995]"
-                                    onClick={() => onPlaySong(song)}
-                                >
-                                    <div className="text-center text-white/30 font-medium group-hover:text-white/60 transition-colors">
-                                        {index + 1}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <div className="text-white font-medium truncate mb-0.5 group-hover:text-white">
-                                            {songTitle}
+                                return (
+                                    <motion.div
+                                        key={`${song.youtube_video_id || index}`}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.03 }}
+                                        className="group grid grid-cols-[3rem_1fr_4rem] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-all active:scale-[0.995]"
+                                        onClick={() => onPlaySong(song)}
+                                    >
+                                        <div className="text-center text-white/30 font-medium group-hover:text-white/60 transition-colors">
+                                            {index + 1}
                                         </div>
-                                        <div className="text-white/40 text-xs truncate group-hover:text-white/60">
-                                            {songArtist}
+                                        <div className="min-w-0">
+                                            <div className="text-white font-medium truncate mb-0.5 group-hover:text-white">
+                                                {songTitle}
+                                            </div>
+                                            <div className="text-white/40 text-xs truncate group-hover:text-white/60">
+                                                {songArtist}
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="text-right text-white/30 text-xs font-mono group-hover:text-white/60">
-                                        {song.duration?.text || '--:--'}
-                                    </div>
-                                </motion.div>
-                            );
-                        })
+                                        <div className="text-right text-white/30 text-xs font-mono group-hover:text-white/60">
+                                            {song.duration?.text || '--:--'}
+                                        </div>
+                                    </motion.div>
+                                );
+                            })
+                        )
                     )}
                 </div>
             </div>

@@ -87,8 +87,21 @@ export class YTMusicService {
 
         try {
             const album: any = await this.innertube.music.getAlbum(albumId);
+
             const header = album.header;
-            const contents = album.sections?.[0]?.contents || album.contents || [];
+
+            // Smarter content discovery: find the section that actually has MusicItems/Songs
+            let contents = album.contents || album.items || [];
+            if (contents.length === 0 && album.sections) {
+                // Try to find a section that has contents
+                const trackSection = album.sections.find((s: any) => s.contents && s.contents.length > 0);
+                if (trackSection) {
+                    contents = trackSection.contents;
+                    console.log(`[YTMusicService] Found tracks in a section other than the first one.`);
+                } else if (album.sections[0]?.contents) {
+                    contents = album.sections[0].contents;
+                }
+            }
 
             const musicItem = this.mapMusicItem({
                 ...album,
@@ -99,12 +112,22 @@ export class YTMusicService {
 
             if (!musicItem) return null;
 
-            // アーティスト情報の抽出: strapline_text_one も含める
-            const rawArtists = header.artists || album.artists || header.strapline_text_one || header.author || album.author || header.artist || album.artist;
-            console.log(`[YTMusicService] rawArtists for ${albumId}:`, JSON.stringify(rawArtists, null, 2));
+            // アーティスト情報の抽出: より多くのフィールドをチェック
+            const rawArtists = header?.artists || album?.artists || header?.strapline_text_one || header?.author || album?.author || header?.artist || album?.artist || header?.author?.name;
             const fallbackArtists = this.normalizeArtists(rawArtists);
-            console.log(`[YTMusicService] fallbackArtists for ${albumId}:`, JSON.stringify(fallbackArtists, null, 2));
-            const tracks = contents.map((t: any) => this.mapMusicItem(t, fallbackArtists)).filter(Boolean);
+
+            // Map tracks, ensuring we capture as many as possible
+            const tracks = contents.map((t: any) => {
+                const mapped = this.mapMusicItem(t, fallbackArtists);
+                // If it's a track in an album, ensure it has the album info
+                if (mapped && !mapped.album) {
+                    mapped.album = {
+                        youtube_browse_id: albumId,
+                        name: musicItem.title
+                    };
+                }
+                return mapped;
+            }).filter(Boolean);
 
             const result: MusicDetail = {
                 ...musicItem,
@@ -114,8 +137,14 @@ export class YTMusicService {
 
             return JSON.parse(JSON.stringify(result));
         } catch (e) {
-            console.error(`[YTMusicService] Failed to fetch album ${albumId}`, e);
-            return null;
+            console.warn(`[YTMusicService] Failed to fetch as album ${albumId}, trying as playlist...`, e);
+            try {
+                // Failsafe: Try to get as playlist if album fetch fails
+                return await this.getPlaylist(albumId);
+            } catch (playlistError) {
+                console.error(`[YTMusicService] Both album and playlist fetch failed for ${albumId}`, playlistError);
+                return null;
+            }
         }
     }
 
@@ -131,9 +160,7 @@ export class YTMusicService {
 
             // ヘッダーアーティストを先に抽出して正規化
             const rawHeaderArtists = header.artists || playlist.artists || header.author || playlist.author;
-            console.log(`[YTMusicService] rawHeaderArtists for ${playlistId}:`, JSON.stringify(rawHeaderArtists, null, 2));
             const fallbackArtists = this.normalizeArtists(rawHeaderArtists);
-            console.log(`[YTMusicService] fallbackArtists for ${playlistId}:`, JSON.stringify(fallbackArtists, null, 2));
 
             const musicItem = this.mapMusicItem({
                 ...playlist,
@@ -237,7 +264,11 @@ export class YTMusicService {
     }
 
     private normalizeArtists(rawArtists: any): MusicArtist[] {
+        if (!rawArtists) return [];
         const artists: MusicArtist[] = [];
+
+        // 詳細なログを追加して原因を特定する
+        // console.log(`[normalizeArtists] Processing type: ${typeof rawArtists}, isArray: ${Array.isArray(rawArtists)}`);
 
         if (Array.isArray(rawArtists)) {
             artists.push(...rawArtists
@@ -247,20 +278,34 @@ export class YTMusicService {
                 }))
                 .filter(a => a.name.length > 0 && a.name !== 'Unknown Artist' && a.name !== '[object Object]')
             );
-        } else if (rawArtists && typeof rawArtists === 'object') {
-            const name = rawArtists.name?.toString().trim() || rawArtists.text?.toString().trim();
-            if (name && name.length > 0 && name !== 'Unknown Artist') {
-                artists.push({
-                    name,
-                    id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId
-                });
-            } else if (rawArtists.toString() !== '[object Object]') {
-                const toStringName = rawArtists.toString().trim();
-                if (toStringName.length > 0 && toStringName !== 'Unknown Artist') {
+        } else if (typeof rawArtists === 'object') {
+            // runs があればそこから抽出
+            if (rawArtists.runs && Array.isArray(rawArtists.runs)) {
+                artists.push(...rawArtists.runs
+                    .map((a: any) => ({
+                        name: a.text?.toString().trim() || '',
+                        id: a.endpoint?.payload?.browseId || a.id || a.browse_id
+                    }))
+                    .filter((a: any) => a.name.length > 0 && a.name !== 'Unknown Artist')
+                );
+            }
+
+            // それ以外、または runs で取得できなかった場合に単体として処理
+            if (artists.length === 0) {
+                const name = rawArtists.name?.toString().trim() || rawArtists.text?.toString().trim();
+                if (name && name.length > 0 && name !== 'Unknown Artist' && name !== '[object Object]') {
                     artists.push({
-                        name: toStringName,
+                        name,
                         id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId
                     });
+                } else if (rawArtists.toString() !== '[object Object]') {
+                    const toStringName = rawArtists.toString().trim();
+                    if (toStringName.length > 0 && toStringName !== 'Unknown Artist') {
+                        artists.push({
+                            name: toStringName,
+                            id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId
+                        });
+                    }
                 }
             }
         } else if (typeof rawArtists === 'string') {
@@ -268,11 +313,12 @@ export class YTMusicService {
             if (name && name.length > 0 && name !== 'Unknown Artist') {
                 artists.push({
                     name,
-                    id: undefined // 文字列の場合はID不明
+                    id: undefined
                 });
             }
         }
 
+        // console.log(`[normalizeArtists] Result: ${artists.length} artists found`);
         return artists;
     }
 
@@ -288,21 +334,49 @@ export class YTMusicService {
         const thumbnails = this.extractThumbnails(header.thumbnails || header.thumbnail || item.thumbnails || item.thumbnail);
         const subtitle = header.subtitle?.toString();
 
+        // ID の抽出 (タイプ判定の前に ID を取得しておく)
+        let browseId = item.browse_id;
+        let playlistId = item.playlist_id;
+        let videoId = item.video_id;
+
+        // 汎用的な id フィールドを振り分け
+        if (item.id) {
+            if (!videoId && (item.id.length === 11)) videoId = item.id;
+            else if (!browseId && (item.id.startsWith('MPRE') || item.id.startsWith('Fm') || item.id.startsWith('UC'))) browseId = item.id;
+            else if (!playlistId && (item.id.startsWith('PL') || item.id.startsWith('RD') || item.id.startsWith('VL'))) playlistId = item.id;
+        }
+
         // youtubei.js の item_type または type からタイプを判定
         const rawType = (item.item_type || item.type || '').toUpperCase();
         let type: ItemType = 'UNKNOWN';
 
-        if (rawType.includes('ALBUM') || rawType === 'SINGLE' || rawType === 'EP') type = 'ALBUM';
-        else if (rawType.includes('PLAYLIST')) type = 'PLAYLIST';
-        else if (rawType.includes('SONG') || rawType.includes('VIDEO')) type = 'SONG';
-        else if (rawType.includes('ARTIST')) type = 'ARTIST';
-        // フォールバック: プロパティの存在からタイプを推測
-        else if (item.video_id) type = 'SONG';
-        else if (item.playlist_id) type = 'PLAYLIST';
-        else if (item.browse_id) {
-            const bid = item.browse_id;
-            if (bid.startsWith('MPRE') || bid.startsWith('Fm')) type = 'ALBUM';
-            else if (bid.startsWith('VL') || bid.startsWith('PL')) type = 'PLAYLIST';
+        // 1. 強力な ID プレフィックスによる判定 (Mix/Radio は最優先で PLAYLIST)
+        if (playlistId?.startsWith('RD') || browseId?.startsWith('Fm')) {
+            type = 'PLAYLIST';
+        }
+        // 2. 明示的なタイプラベルによる判定
+        else if (rawType.includes('ALBUM') || rawType === 'SINGLE' || rawType === 'EP') {
+            type = 'ALBUM';
+        }
+        else if (rawType.includes('PLAYLIST')) {
+            type = 'PLAYLIST';
+        }
+        else if (rawType.includes('SONG') || rawType.includes('VIDEO')) {
+            type = 'SONG';
+        }
+        else if (rawType.includes('ARTIST')) {
+            type = 'ARTIST';
+        }
+        // 3. ID の存在による判定 (フォールバック)
+        else if (videoId) {
+            type = 'SONG';
+        }
+        else if (playlistId) {
+            type = 'PLAYLIST';
+        }
+        else if (browseId) {
+            if (browseId.startsWith('MPRE')) type = 'ALBUM';
+            else if (browseId.startsWith('VL') || browseId.startsWith('PL')) type = 'PLAYLIST';
             else type = 'ARTIST';
         }
 
@@ -339,27 +413,17 @@ export class YTMusicService {
             subtitle,
         };
 
-        // ID の抽出
-        let browseId = item.browse_id;
-        let playlistId = item.playlist_id;
-        let videoId = item.video_id;
-
-        // 汎用的な id フィールドをタイプに応じて振り分け
-        if (item.id) {
-            if (type === 'SONG' && !videoId) videoId = item.id;
-            else if ((type === 'ALBUM' || type === 'ARTIST') && !browseId) browseId = item.id;
-            else if (type === 'PLAYLIST' && !playlistId) playlistId = item.id;
-            // 未知のタイプで browse_id も playlist_id もない場合、とりあえず browseId に入れる（詳細取得のため）
-            else if (type === 'UNKNOWN' && !browseId && !playlistId && !videoId) browseId = item.id;
-        }
-
         if (videoId && type === 'SONG') mapped.youtube_video_id = videoId;
         if (browseId && (type === 'ALBUM' || type === 'ARTIST')) mapped.youtube_browse_id = browseId;
         if (playlistId && type === 'PLAYLIST') mapped.youtube_playlist_id = playlistId;
 
-        // 特殊ケース: プレイリストなのに browse_id を持っている場合や、動画なのにプレイリスト ID を持っている場合など
+        // 特殊ケース: プレイリストなのに browse_id を持っている場合などは、詳細取得に備えて両方保持しておく
         if (playlistId && !mapped.youtube_playlist_id) mapped.youtube_playlist_id = playlistId;
         if (browseId && !mapped.youtube_browse_id) mapped.youtube_browse_id = browseId;
+        // ミックスリスト(RD)の場合、playlist_id が browse_id に入っていることがある
+        if (type === 'PLAYLIST' && browseId?.startsWith('RD') && !mapped.youtube_playlist_id) {
+            mapped.youtube_playlist_id = browseId;
+        }
         if (videoId && !mapped.youtube_video_id && type === 'SONG') mapped.youtube_video_id = videoId;
 
         if (item.album) {
