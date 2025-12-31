@@ -31,6 +31,11 @@ jobs:
 
       - name: Build and Screenshot
         run: |
+          # Download and set wallpaper
+          curl -L -o wallpaper.jpg "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=2560&q=80"
+          osascript -e 'tell application "System Events" to set picture of every desktop to POSIX file "'$(pwd)/wallpaper.jpg'"'
+          
+          # Build app
           pnpm package
           APP_PATH=$(find out -name "*.app" | head -n 1)
           echo "Found app at $APP_PATH"
