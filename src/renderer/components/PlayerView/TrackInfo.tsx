@@ -47,6 +47,7 @@ export function TrackInfo({ title, artist, album, onAlbumClick, isVisible, isMin
 
             {album && (
               <motion.button
+                layoutId="player-album"
                 onClick={(e) => {
                   e.stopPropagation();
                   onAlbumClick?.();

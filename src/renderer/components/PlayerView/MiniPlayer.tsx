@@ -83,6 +83,14 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                 >
                     {artist}
                 </motion.p>
+                {metadata?.album && (
+                    <motion.p
+                        layoutId="player-album"
+                        className="text-white/60 text-[10px] truncate drop-shadow-sm mt-0.5"
+                    >
+                        {metadata.album}
+                    </motion.p>
+                )}
             </div>
 
             {/* Controls */}

@@ -48,10 +48,40 @@ function observeMediaSession() {
   const hasMetadata = metadata && metadata.title;
 
   if (hasMetadata && metadata) {
+    let albumId: string | undefined;
+
+    try {
+      // Robust extraction: Check internal data properties first
+      const playerBar = document.querySelector('ytmusic-player-bar');
+      const bylineLinks = playerBar?.querySelectorAll('.middle-controls .byline a') || [];
+
+      for (const lin of Array.from(bylineLinks)) {
+        const link = lin as any;
+        // Polymer/Lit elements often store data in .data property
+        const browseId = link.data?.navigationEndpoint?.browseEndpoint?.browseId ||
+          link.navigationEndpoint?.browseEndpoint?.browseId;
+
+        if (browseId && (browseId.startsWith('MPREb') || browseId.startsWith('F'))) {
+          albumId = browseId;
+          break;
+        }
+
+        // Fallback: Check href if data property access fails (e.g. if element isn't fully hydrated in this context)
+        const href = link.getAttribute('href');
+        if (href?.includes('browse/MPREb') || href?.includes('browse/F')) {
+          albumId = href.split('browse/')[1];
+          break;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to extract albumId:', e);
+    }
+
     lastValidMetadata = {
       title: metadata.title,
       artist: metadata.artist,
       album: metadata.album,
+      albumId: albumId,
       artwork: metadata.artwork ? metadata.artwork.map(art => ({
         src: art.src,
         sizes: art.sizes,

@@ -3,6 +3,7 @@ export interface MediaMetadata {
   title?: string;
   artist?: string;
   album?: string;
+  albumId?: string;
   artwork?: MediaImage[];
   videoId?: string;
 }

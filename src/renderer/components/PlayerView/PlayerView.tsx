@@ -25,39 +25,20 @@ export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
   const isMini = height < 450;
 
   // Extract original artwork URL from metadata
+  // Extract original artwork URL from metadata
   const originalArtwork = playbackInfo?.metadata?.artwork?.[0]?.src || null;
   const videoId = playbackInfo?.metadata?.videoId;
 
-  // Fetch album info when videoId changes
-  useEffect(() => {
-    if (!videoId) {
-      setAlbumInfo(null);
-      return;
-    }
-
-    window.electronAPI.getSongDetails(videoId)
-      .then((songDetails) => {
-        if (songDetails?.album) {
-          setAlbumInfo({
-            id: songDetails.album.youtube_browse_id,
-            name: songDetails.album.name
-          });
-        } else {
-          setAlbumInfo(null);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch album info:', err);
-        setAlbumInfo(null);
-      });
-  }, [videoId]);
+  // Extract Album info from metadata
+  const albumName = playbackInfo?.metadata?.album;
+  const albumId = playbackInfo?.metadata?.albumId;
 
   const handleAlbumClick = () => {
-    if (albumInfo && onNavigateToAlbum) {
+    if (albumName && albumId && onNavigateToAlbum) {
       const albumItem: MusicItem = {
         type: 'ALBUM',
-        title: albumInfo.name,
-        youtube_browse_id: albumInfo.id,
+        title: albumName,
+        youtube_browse_id: albumId,
         thumbnails: [],
         artists: []
       };
@@ -143,7 +124,7 @@ export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
             <TrackInfo
               title={playbackInfo?.metadata?.title}
               artist={playbackInfo?.metadata?.artist}
-              album={albumInfo?.name}
+              album={albumName}
               onAlbumClick={handleAlbumClick}
               isVisible={isHovered || isMini}
               isMini={isMini}
