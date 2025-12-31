@@ -45,7 +45,13 @@ export function PlayerView({ onClose }: PlayerViewProps) {
     */
     <motion.div
       layoutId="player-shell"
-      className="absolute inset-0 z-50 w-full h-full flex items-center justify-center pt-16 pb-4 px-8 overflow-hidden"
+      className="absolute inset-0 z-50 w-full h-full flex items-center justify-center overflow-hidden"
+      // animate={{
+      //   paddingTop: (isHovered || isMini) ? '4rem' : '1rem',
+      //   paddingBottom: (isHovered || isMini) ? '1rem' : '1rem',
+      //   paddingLeft: (isHovered || isMini) ? '2rem' : '1rem',
+      //   paddingRight: (isHovered || isMini) ? '2rem' : '1rem',
+      // }}
       style={{
         background: `linear-gradient(-135deg, ${colors.primary}B3 0%, ${colors.secondary}B3 100%)`
       }}
@@ -82,7 +88,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
       </AnimatePresence>
 
       {/* Content Container - Centered */}
-      <div className="flex flex-col items-center w-full h-full" style={{ maxWidth: isHovered || isMini ? '500px' : '100%', maxHeight: isHovered || isMini ? '800px' : '100%' }}>
+      <div className="flex flex-col items-center justify-center w-full h-full" style={{ maxWidth: isHovered || isMini ? '500px' : '100%', maxHeight: isHovered || isMini ? '800px' : '100%' }}>
         {/* Top Section: Track Info centered in top area */}
         <div className="w-full flex items-start justify-center flex-shrink-0" style={{ height: (isHovered || isMini) ? (isMini ? '60px' : '100px') : '0px', overflow: 'hidden' }}>
           <TrackInfo
