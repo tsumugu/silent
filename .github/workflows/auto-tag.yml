@@ -26,6 +26,32 @@ jobs:
         with:
           version: 8
 
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Build and Screenshot
+        run: |
+          pnpm package
+          APP_PATH=$(find out -name "*.app" | head -n 1)
+          echo "Found app at $APP_PATH"
+          open "$APP_PATH" &
+          sleep 15
+          screencapture -x assets/screenshot.png
+          killall Silent || true
+          echo "Screenshot taken"
+
+      - name: Commit Screenshot
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add assets/screenshot.png
+          if git diff --staged --quiet; then
+            echo "No changes to screenshot"
+          else
+            git commit -m "chore: update screenshot [skip ci]"
+            git push origin main
+          fi
+
       - name: Extract version
         id: version
         run: |
