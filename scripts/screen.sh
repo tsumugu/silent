@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# # Build the app (make)
-# echo "Building app..."
-# pnpm make
+# Build the app (make)
+echo "Building app..."
+pnpm make
 
 # Hide desktop icons
 echo "Hiding desktop icons..."
