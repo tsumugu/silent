@@ -6,8 +6,8 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
 export function createUIWindow(): BrowserWindow {
   const win = new BrowserWindow({
-    width: 400,
-    height: 500,
+    width: 1000,
+    height: 800,
     minWidth: 300,
     minHeight: 350,
     frame: false,
@@ -25,11 +25,6 @@ export function createUIWindow(): BrowserWindow {
 
   // Load renderer
   win.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-
-  // Dev tools in development
-  if (!app.isPackaged) {
-    win.webContents.openDevTools({ mode: 'detach' });
-  }
 
   return win;
 }
