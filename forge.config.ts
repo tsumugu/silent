@@ -25,7 +25,8 @@ const config: ForgeConfig = {
         owner: 'tsumugu',
         name: 'silent'
       },
-      prerelease: false
+      prerelease: false,
+      draft: false
     })
   ],
   plugins: [
