@@ -3,13 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { WindowControls } from './components/WindowControls';
 import { PlayerView } from './components/PlayerView/PlayerView';
 import { LibraryView } from './components/LibraryView/LibraryView';
-import { AlbumDetailView } from './components/LibraryView/AlbumDetailView';
+import { MusicDetailView } from './components/LibraryView/MusicDetailView';
 import { useMediaSession } from './hooks/useMediaSession';
-import { PlaylistDetailView } from './components/LibraryView/PlaylistDetailView';
 import { MiniPlayer } from './components/PlayerView/MiniPlayer';
 import { ViewWrapper } from './components/common/ViewWrapper';
 
-type ViewType = 'home' | 'album-detail' | 'playlist-detail';
+type ViewType = 'home' | 'detail';
 
 export default function App() {
   // Initialize MediaSession listener
@@ -22,29 +21,22 @@ export default function App() {
   // Overlay State for Player
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
-  const [selectedAlbumId, setSelectedAlbumId] = useState<string | null>(null);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<{ id: string; type: 'ALBUM' | 'PLAYLIST' } | null>(null);
 
   const currentView = viewStack[viewStack.length - 1];
 
-  const navigateTo = useCallback((view: 'player' | ViewType, id: string | null = null) => {
+  const navigateTo = useCallback((view: 'player' | ViewType, id: string | null = null, type?: 'ALBUM' | 'PLAYLIST') => {
     if (view === 'player') {
       setIsPlayerOpen(true);
     } else if (view === 'home') {
-      // Reset stack to home, close player if open? 
-      // User likely wants to go to Library root.
       setViewStack(['home']);
       setIsPlayerOpen(false);
-    } else if (view === 'album-detail') {
-      setSelectedAlbumId(id);
-      setViewStack(prev => [...prev, 'album-detail']);
-      // Don't auto-close player here, usually we navigate from library so player is likely closed or mini.
-      // If we navigate from somewhere else, we might want to ensure underlying view is correct.
-      setIsPlayerOpen(false);
-    } else if (view === 'playlist-detail') {
-      setSelectedPlaylistId(id);
-      setViewStack(prev => [...prev, 'playlist-detail']);
-      setIsPlayerOpen(false);
+    } else if (view === 'detail') {
+      if (id && type) {
+        setSelectedItem({ id, type });
+        setViewStack(prev => [...prev, 'detail']);
+        setIsPlayerOpen(false);
+      }
     }
   }, []);
 
@@ -116,8 +108,6 @@ export default function App() {
         <AnimatePresence mode="popLayout" initial={false}>
 
 
-          // ... (inside the component)
-
           {/* Home (Library) */}
           {(currentView === 'home' || viewStack.includes('home')) && (
             <motion.div
@@ -135,17 +125,17 @@ export default function App() {
             >
               <ViewWrapper>
                 <LibraryView
-                  onAlbumSelect={(album) => navigateTo('album-detail', album.id)}
-                  onPlaylistSelect={(playlist) => navigateTo('playlist-detail', playlist.playlistId || playlist.browseId)}
+                  onAlbumSelect={(album) => navigateTo('detail', album.id, 'ALBUM')}
+                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist.playlistId || playlist.browseId, 'PLAYLIST')}
                 />
               </ViewWrapper>
             </motion.div>
           )}
 
-          {/* Album Detail */}
-          {currentView === 'album-detail' && selectedAlbumId && (
+          {/* Music Detail (Album/Playlist) */}
+          {currentView === 'detail' && selectedItem && (
             <motion.div
-              key="album-detail"
+              key={`detail-${selectedItem.id}`}
               initial={{ x: '100%', opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
@@ -153,34 +143,12 @@ export default function App() {
               className="absolute inset-0 z-10"
             >
               <ViewWrapper>
-                <AlbumDetailView
-                  albumId={selectedAlbumId}
+                <MusicDetailView
+                  id={selectedItem.id}
+                  type={selectedItem.type}
                   onBack={goBack}
                   onPlaySong={(song) => {
-                    window.electronAPI.play(song.videoId, 'SONG');
-                    setIsPlayerOpen(true);
-                  }}
-                />
-              </ViewWrapper>
-            </motion.div>
-          )}
-
-          {/* Playlist Detail */}
-          {currentView === 'playlist-detail' && selectedPlaylistId && (
-            <motion.div
-              key="playlist-detail"
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 30, stiffness: 250 }}
-              className="absolute inset-0 z-10"
-            >
-              <ViewWrapper>
-                <PlaylistDetailView
-                  playlistId={selectedPlaylistId}
-                  onBack={goBack}
-                  onPlaySong={(song) => {
-                    window.electronAPI.play(song.videoId, 'SONG');
+                    window.electronAPI.play(song.videoId || song.id, 'SONG');
                     setIsPlayerOpen(true);
                   }}
                 />
