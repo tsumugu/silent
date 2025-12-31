@@ -31,7 +31,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
       layoutId="player-shell"
       className="absolute inset-0 z-50 w-full h-full flex flex-col items-center pt-16 pb-4 px-8 backdrop-blur-3xl overflow-hidden bg-black/40"
       style={{
-        background: `radial-gradient(circle at center, ${colors.secondary}88 0%, ${colors.secondary}33 100%)`,
+        background: `radial-gradient(circle at center, ${colors.secondary}88 0%, ${colors.secondary}88 100%)`,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
