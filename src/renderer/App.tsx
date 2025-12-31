@@ -113,9 +113,9 @@ export default function App() {
             <motion.div
               key="home"
               initial={{ opacity: 0 }}
-              animate={{ opacity: currentView === 'home' ? 1 : 0 }}
+              animate={{ opacity: currentView === 'home' ? 1 : 0.001 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.4, ease: "easeInOut" }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-0 z-0"
               style={{
                 pointerEvents: currentView === 'home' ? 'auto' : 'none'
@@ -144,7 +144,7 @@ export default function App() {
                 <MusicDetailView
                   id={selectedItem.id}
                   type={selectedItem.type}
-                  onBack={() => navigateTo('home')}
+                  onBack={goBack}
                   onPlaySong={(song) => {
                     window.electronAPI.play(song.videoId || song.id, 'SONG');
                     setIsPlayerOpen(true);

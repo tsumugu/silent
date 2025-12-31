@@ -24,10 +24,10 @@ interface SectionProps {
 
 const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlaylistSelect }) => {
     const breakpointColumnsObj = {
-        default: 5,
-        1400: 4,
-        1100: 3,
-        700: 2,
+        default: 6,
+        1400: 5,
+        1100: 4,
+        700: 3,
         500: 2
     };
 
