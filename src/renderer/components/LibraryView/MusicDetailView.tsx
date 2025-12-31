@@ -5,16 +5,18 @@ import { MusicDetail, MusicItem } from '../../../shared/types/music';
 interface MusicDetailViewProps {
     id: string;
     type: 'ALBUM' | 'PLAYLIST';
+    initialItem?: MusicItem;
     onBack: () => void;
     onPlaySong: (song: MusicItem) => void;
 }
 
-export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBack, onPlaySong }) => {
+export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, initialItem, onBack, onPlaySong }) => {
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
 
     useEffect(() => {
+        console.log(`[MusicDetailView] Received initialItem for ${id}:`, initialItem);
         const fetchData = async () => {
             setLoading(true);
             try {
@@ -22,6 +24,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
                     ? await window.electronAPI.getAlbumDetails(id)
                     : await window.electronAPI.getPlaylist(id);
 
+                console.log(`[MusicDetailView] Fetched data for ${id}:`, result);
                 setData(result);
             } catch (error) {
                 console.error(`[MusicDetailView] Failed to fetch ${type} details:`, error);
@@ -32,7 +35,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
         fetchData();
     }, [id, type]);
 
-    if (!data && !loading && !isEntering) {
+    if (!data && !loading && !isEntering && !initialItem) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-white/50 gap-4">
                 <p>Failed to load {type.toLowerCase()}</p>
@@ -46,10 +49,21 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
         );
     }
 
-    const thumbnails = data?.thumbnails || [];
+    const thumbnails = data?.thumbnails || initialItem?.thumbnails || [];
     const coverUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
-    const title = data?.title || '';
-    const artistName = (data?.artists && data.artists.length > 0) ? data.artists.map(a => a.name).join(', ') : '';
+    const title = data?.title || initialItem?.title || '';
+
+    // Determine the best artist name string
+    const getArtistName = () => {
+        if (data?.artists && data.artists.length > 0) {
+            return data.artists.map(a => a.name).join(', ');
+        }
+        if (initialItem?.artists && initialItem.artists.length > 0) {
+            return initialItem.artists.map(a => a.name).join(', ');
+        }
+        return '';
+    };
+    const artistName = getArtistName();
     const tracks = data?.tracks || [];
 
     return (

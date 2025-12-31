@@ -99,8 +99,11 @@ export class YTMusicService {
 
             if (!musicItem) return null;
 
-            const rawArtists = header.artists || album.artists || header.author || album.author || header.artist || album.artist;
-            const fallbackArtists = this.normalizeArtists(rawArtists); // 正規化したアーティストを使用
+            // アーティスト情報の抽出: strapline_text_one も含める
+            const rawArtists = header.artists || album.artists || header.strapline_text_one || header.author || album.author || header.artist || album.artist;
+            console.log(`[YTMusicService] rawArtists for ${albumId}:`, JSON.stringify(rawArtists, null, 2));
+            const fallbackArtists = this.normalizeArtists(rawArtists);
+            console.log(`[YTMusicService] fallbackArtists for ${albumId}:`, JSON.stringify(fallbackArtists, null, 2));
             const tracks = contents.map((t: any) => this.mapMusicItem(t, fallbackArtists)).filter(Boolean);
 
             const result: MusicDetail = {
@@ -128,7 +131,9 @@ export class YTMusicService {
 
             // ヘッダーアーティストを先に抽出して正規化
             const rawHeaderArtists = header.artists || playlist.artists || header.author || playlist.author;
+            console.log(`[YTMusicService] rawHeaderArtists for ${playlistId}:`, JSON.stringify(rawHeaderArtists, null, 2));
             const fallbackArtists = this.normalizeArtists(rawHeaderArtists);
+            console.log(`[YTMusicService] fallbackArtists for ${playlistId}:`, JSON.stringify(fallbackArtists, null, 2));
 
             const musicItem = this.mapMusicItem({
                 ...playlist,
@@ -237,17 +242,33 @@ export class YTMusicService {
         if (Array.isArray(rawArtists)) {
             artists.push(...rawArtists
                 .map((a: any) => ({
-                    name: a.name?.toString().trim() || '',
-                    id: a.id || a.browse_id || a.channel_id
+                    name: a.name?.toString().trim() || a.text?.toString().trim() || a.toString().trim() || '',
+                    id: a.id || a.browse_id || a.channel_id || a.endpoint?.payload?.browseId
                 }))
-                .filter(a => a.name.length > 0 && a.name !== 'Unknown Artist')
+                .filter(a => a.name.length > 0 && a.name !== 'Unknown Artist' && a.name !== '[object Object]')
             );
         } else if (rawArtists && typeof rawArtists === 'object') {
-            const name = rawArtists.name?.toString().trim();
+            const name = rawArtists.name?.toString().trim() || rawArtists.text?.toString().trim();
             if (name && name.length > 0 && name !== 'Unknown Artist') {
                 artists.push({
                     name,
-                    id: rawArtists.id || rawArtists.browse_id
+                    id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId
+                });
+            } else if (rawArtists.toString() !== '[object Object]') {
+                const toStringName = rawArtists.toString().trim();
+                if (toStringName.length > 0 && toStringName !== 'Unknown Artist') {
+                    artists.push({
+                        name: toStringName,
+                        id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId
+                    });
+                }
+            }
+        } else if (typeof rawArtists === 'string') {
+            const name = rawArtists.trim();
+            if (name && name.length > 0 && name !== 'Unknown Artist') {
+                artists.push({
+                    name,
+                    id: undefined // 文字列の場合はID不明
                 });
             }
         }
@@ -292,8 +313,6 @@ export class YTMusicService {
         // フォールバック
         let finalArtists = artists;
         if (finalArtists.length === 0) {
-            console.log(`[YTMusicService] No structural artists for: "${title}". FallbackArtists:`, fallbackArtists);
-
             // フォールバックアーティストを検証してから使用
             if (fallbackArtists && fallbackArtists.length > 0) {
                 const validFallbacks = fallbackArtists.filter(a => a.name && a.name.trim().length > 0);
@@ -310,11 +329,6 @@ export class YTMusicService {
                     finalArtists = [{ name: 'Unknown Artist' }];
                 }
             }
-        }
-
-        // デバッグ用の警告
-        if (finalArtists.some(a => a.name === 'Unknown Artist')) {
-            console.warn(`[YTMusicService] Mapping resulted in Unknown Artist for "${title}". RawArtists:`, rawArtists ? JSON.stringify(rawArtists).substring(0, 200) : 'none');
         }
 
         const mapped: MusicItem = {

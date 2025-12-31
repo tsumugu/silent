@@ -24,7 +24,7 @@ export default function App() {
   // Overlay State for Player
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
-  const [selectedItem, setSelectedItem] = useState<{ id: string; type: 'ALBUM' | 'PLAYLIST' } | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MusicItem | null>(null);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -34,10 +34,11 @@ export default function App() {
 
   const navigateTo = useCallback((
     view: 'player' | ViewType,
-    id: string | null = null,
-    type?: 'ALBUM' | 'PLAYLIST',
+    item: MusicItem | null = null,
     query?: string
   ) => {
+    console.log(`[App] Navigating to ${view}`, item ? `Item: ${item.title} (${item.type})` : '');
+
     if (view === 'player') {
       setIsPlayerOpen(true);
     } else if (view === 'search' && query !== undefined && query.trim().length >= 2) {
@@ -47,9 +48,10 @@ export default function App() {
     } else if (view === 'home') {
       setViewStack(['home']);
       setIsPlayerOpen(false);
+      setSelectedItem(null);
     } else if (view === 'detail') {
-      if (id && type) {
-        setSelectedItem({ id, type });
+      if (item) {
+        setSelectedItem(item);
         setViewStack(prev => [...prev, 'detail']);
         setIsPlayerOpen(false);
       }
@@ -156,9 +158,9 @@ export default function App() {
             >
               <ViewWrapper>
                 <LibraryView
-                  onAlbumSelect={(album) => navigateTo('detail', album.youtube_browse_id || null, 'ALBUM')}
-                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist.youtube_playlist_id || playlist.youtube_browse_id || null, 'PLAYLIST')}
-                  onSearch={(query) => navigateTo('search', null, undefined, query)}
+                  onAlbumSelect={(album) => navigateTo('detail', album)}
+                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist)}
+                  onSearch={(query) => navigateTo('search', null, query)}
                 />
               </ViewWrapper>
             </motion.div>
@@ -167,7 +169,7 @@ export default function App() {
           {/* Music Detail (Album/Playlist) */}
           {currentView === 'detail' && selectedItem && (
             <motion.div
-              key={`detail-${selectedItem.id}`}
+              key={`detail-${selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -176,8 +178,9 @@ export default function App() {
             >
               <ViewWrapper>
                 <MusicDetailView
-                  id={selectedItem.id}
-                  type={selectedItem.type}
+                  id={(selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id)!}
+                  type={selectedItem.type as 'ALBUM' | 'PLAYLIST'}
+                  initialItem={selectedItem}
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
                     if (song.youtube_video_id) {
@@ -206,8 +209,8 @@ export default function App() {
                   results={searchResults}
                   onResultsChange={setSearchResults}
                   onBack={goBack}
-                  onAlbumSelect={(album) => navigateTo('detail', album.youtube_browse_id || null, 'ALBUM')}
-                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist.youtube_playlist_id || playlist.youtube_browse_id || null, 'PLAYLIST')}
+                  onAlbumSelect={(album) => navigateTo('detail', album)}
+                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist)}
                   onSongSelect={(song) => {
                     if (song.youtube_video_id) {
                       window.electronAPI.play(song.youtube_video_id, 'SONG');
