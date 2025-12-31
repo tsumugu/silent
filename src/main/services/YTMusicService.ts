@@ -117,8 +117,8 @@ export class YTMusicService {
                     name: t.title?.toString(),
                     title: t.title?.toString(),
                     artist: {
-                        name: t.author?.name || authorName,
-                        artistId: t.author?.id || artistId
+                        name: this.extractArtistName(t) || authorName,
+                        artistId: t.author?.id || t.artist?.id || artistId
                     },
                     duration: t.duration?.text || t.duration?.seconds,
                     thumbnails: thumbnails
@@ -127,7 +127,7 @@ export class YTMusicService {
                     videoId: t.id || t.video_id,
                     name: t.title?.toString(),
                     title: t.title?.toString(),
-                    artist: t.author?.name || authorName,
+                    artist: this.extractArtistName(t) || authorName,
                     duration: t.duration?.text,
                     thumbnails: thumbnails
                 }))
@@ -162,7 +162,7 @@ export class YTMusicService {
                     name: item.title?.toString(),
                     title: item.title?.toString(),
                     artist: {
-                        name: item.author?.name || item.artists?.[0]?.name || item.subtitle?.toString() || authorName
+                        name: this.extractArtistName(item) || authorName
                     },
                     duration: item.duration?.text,
                     thumbnails: itemThumbnails.length > 0 ? itemThumbnails : thumbnails
@@ -190,28 +190,93 @@ export class YTMusicService {
         }
     }
 
+    async search(query: string) {
+        console.log(`[YTMusicService] Searching for: ${query}`);
+        await this.initialize();
+        if (!this.innertube) return { songs: [], albums: [], playlists: [] };
+
+        try {
+            const searchResults: any = await this.innertube.music.search(query);
+
+            const songs: any[] = [];
+            const albums: any[] = [];
+            const playlists: any[] = [];
+
+            // Parse results from different possible structures
+            if (searchResults.results) {
+                for (const result of searchResults.results) {
+                    const mappedItem = this.mapMusicItem(result);
+                    if (!mappedItem) continue;
+
+                    if (mappedItem.type === 'SONG') songs.push(mappedItem);
+                    else if (mappedItem.type === 'ALBUM') albums.push(mappedItem);
+                    else if (mappedItem.type === 'PLAYLIST') playlists.push(mappedItem);
+                }
+            }
+
+            // Alternative structure: check for shelf properties
+            if (searchResults.songs?.contents) {
+                songs.push(...searchResults.songs.contents.map((item: any) => this.mapMusicItem(item)).filter(Boolean));
+            }
+            if (searchResults.albums?.contents) {
+                albums.push(...searchResults.albums.contents.map((item: any) => this.mapMusicItem(item)).filter(Boolean));
+            }
+            if (searchResults.playlists?.contents) {
+                playlists.push(...searchResults.playlists.contents.map((item: any) => this.mapMusicItem(item)).filter(Boolean));
+            }
+
+            const result = {
+                songs: songs.slice(0, 20),
+                albums: albums.slice(0, 20),
+                playlists: playlists.slice(0, 20),
+            };
+
+            console.log(`[YTMusicService] Search parsed: ${result.songs.length} songs, ${result.albums.length} albums, ${result.playlists.length} playlists`);
+
+            return JSON.parse(JSON.stringify(result));
+        } catch (e) {
+            console.error(`[YTMusicService] Search failed for query "${query}"`, e);
+            return { songs: [], albums: [], playlists: [] };
+        }
+    }
+
     private extractArtistName(header: any): string {
         if (!header) return 'Unknown Artist';
 
-        // 1. YouTube Music specific properties
+        // 1. Precise Check: Look for runs with Artist pageType
+        if (header.subtitle?.runs && Array.isArray(header.subtitle.runs)) {
+            const artistRun = header.subtitle.runs.find((r: any) =>
+                r.endpoint?.payload?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType === 'MUSIC_PAGE_TYPE_ARTIST'
+            );
+            if (artistRun && artistRun.text) return artistRun.text.toString();
+
+            // Fallback: Filter out known labels from runs
+            const labels = ['Album', 'Single', 'Playlist', 'EP', 'Video', 'Song', 'アルバム', 'シングル', 'プレイリスト', 'Mix', 'ミックス', 'アーティスト', '曲', 'ビデオ'];
+            const potentialArtists = header.subtitle.runs
+                .filter((r: any) => r.text && !labels.some(l => r.text.trim().toLowerCase() === l.toLowerCase()))
+                .filter((r: any) => r.text.trim() !== '•' && r.text.trim() !== '·');
+
+            if (potentialArtists.length > 0) return potentialArtists[0].text.toString();
+        }
+
+        // 2. YouTube Music specific properties (Author/Artist objects)
         if (header.author?.name) return header.author.name.toString();
         if (header.artist?.name) return header.artist.name.toString();
         if (header.artists?.[0]?.name) return header.artists[0].name.toString();
 
-        // 2. Strapline
-        if (header.strapline_text_one?.toString()) return header.strapline_text_one.toString();
-
-        // 3. Subtitle parsing (Extract artist from "Album • Artist")
+        // 3. Subtitle parsing (If it's just a string or runs failed)
         const subtitle = header.subtitle?.toString();
         if (subtitle) {
             const parts = subtitle.split(/[•·]/).map((s: string) => s.trim());
-            const categories = ['Album', 'Single', 'Playlist', 'EP', 'Video', 'Song', 'アルバム', 'シングル', 'プレイリスト'];
+            const categories = ['Album', 'Single', 'Playlist', 'EP', 'Video', 'Song', 'アルバム', 'シングル', 'プレイリスト', 'アーティスト', '曲', 'Mix', 'ミックス'];
 
-            // If the first part is a category, the second is likely the artist
-            if (categories.some(cat => parts[0].toLowerCase() === cat.toLowerCase())) {
-                return parts[1] || parts[0];
+            // Filter out categories and find the first likely artist name
+            for (const part of parts) {
+                if (part && !categories.some(cat => part.toLowerCase() === cat.toLowerCase()) && !/^\d+(,\d+)*$/.test(part)) {
+                    return part;
+                }
             }
-
+            if (parts.length > 1) return parts[1];
             return parts[0];
         }
 

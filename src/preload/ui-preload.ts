@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getHomeAlbums: () => ipcRenderer.invoke('ytmusic:get-home-albums'),
   getAlbumDetails: (albumId: string) => ipcRenderer.invoke('ytmusic:get-album-details', albumId),
   getPlaylist: (playlistId: string) => ipcRenderer.invoke('ytmusic:get-playlist', playlistId),
+  search: (query: string) => ipcRenderer.invoke('ytmusic:search', query),
   showLogin: () => ipcRenderer.send('ytmusic:show-login'),
   checkLogin: () => ipcRenderer.invoke('ytmusic:check-login'),
   onSessionUpdated: (callback: () => void) => {

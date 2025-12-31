@@ -4,11 +4,12 @@ import { WindowControls } from './components/WindowControls';
 import { PlayerView } from './components/PlayerView/PlayerView';
 import { LibraryView } from './components/LibraryView/LibraryView';
 import { MusicDetailView } from './components/LibraryView/MusicDetailView';
+import { SearchResultsView } from './components/LibraryView/SearchResultsView';
 import { useMediaSession } from './hooks/useMediaSession';
 import { MiniPlayer } from './components/PlayerView/MiniPlayer';
 import { ViewWrapper } from './components/common/ViewWrapper';
 
-type ViewType = 'home' | 'detail';
+type ViewType = 'home' | 'detail' | 'search';
 
 export default function App() {
   // Initialize MediaSession listener
@@ -23,11 +24,24 @@ export default function App() {
 
   const [selectedItem, setSelectedItem] = useState<{ id: string; type: 'ALBUM' | 'PLAYLIST' } | null>(null);
 
+  // Search State
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<any>(null);
+
   const currentView = viewStack[viewStack.length - 1];
 
-  const navigateTo = useCallback((view: 'player' | ViewType, id: string | null = null, type?: 'ALBUM' | 'PLAYLIST') => {
+  const navigateTo = useCallback((
+    view: 'player' | ViewType,
+    id: string | null = null,
+    type?: 'ALBUM' | 'PLAYLIST',
+    query?: string
+  ) => {
     if (view === 'player') {
       setIsPlayerOpen(true);
+    } else if (view === 'search' && query !== undefined && query.trim().length >= 2) {
+      setSearchQuery(query);
+      setViewStack(prev => [...prev, 'search']);
+      setIsPlayerOpen(false);
     } else if (view === 'home') {
       setViewStack(['home']);
       setIsPlayerOpen(false);
@@ -49,9 +63,17 @@ export default function App() {
 
     // Otherwise navigate back in the stack
     if (viewStack.length > 1) {
+      const poppedView = viewStack[viewStack.length - 1];
+
+      // Clear search state when leaving search view
+      if (poppedView === 'search') {
+        setSearchQuery('');
+        setSearchResults(null);
+      }
+
       setViewStack(prev => prev.slice(0, -1));
     }
-  }, [isPlayerOpen, viewStack.length]);
+  }, [isPlayerOpen, viewStack]);
 
   // Handle scroll to switch between Player and Main View
   useEffect(() => {
@@ -134,6 +156,7 @@ export default function App() {
                 <LibraryView
                   onAlbumSelect={(album) => navigateTo('detail', album.id, 'ALBUM')}
                   onPlaylistSelect={(playlist) => navigateTo('detail', playlist.playlistId || playlist.browseId, 'PLAYLIST')}
+                  onSearch={(query) => navigateTo('search', null, undefined, query)}
                 />
               </ViewWrapper>
             </motion.div>
@@ -156,6 +179,33 @@ export default function App() {
                   onBack={goBack}
                   onPlaySong={(song) => {
                     window.electronAPI.play(song.videoId || song.id, 'SONG');
+                    setIsPlayerOpen(true);
+                  }}
+                />
+              </ViewWrapper>
+            </motion.div>
+          )}
+
+          {/* Search Results */}
+          {currentView === 'search' && (
+            <motion.div
+              key="search"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 z-10"
+            >
+              <ViewWrapper>
+                <SearchResultsView
+                  query={searchQuery}
+                  results={searchResults}
+                  onResultsChange={setSearchResults}
+                  onBack={goBack}
+                  onAlbumSelect={(album) => navigateTo('detail', album.id, 'ALBUM')}
+                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist.playlistId, 'PLAYLIST')}
+                  onSongSelect={(song) => {
+                    window.electronAPI.play(song.videoId, 'SONG');
                     setIsPlayerOpen(true);
                   }}
                 />

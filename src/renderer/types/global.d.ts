@@ -25,6 +25,11 @@ declare global {
       getHomeAlbums: () => Promise<any[]>;
       getAlbumDetails: (albumId: string) => Promise<any>;
       getPlaylist: (playlistId: string) => Promise<any>;
+      search: (query: string) => Promise<{
+        songs: any[];
+        albums: any[];
+        playlists: any[];
+      }>;
       showLogin: () => void;
       checkLogin: () => Promise<boolean>;
       onSessionUpdated: (callback: () => void) => void;

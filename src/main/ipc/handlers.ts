@@ -157,6 +157,10 @@ export function setupIPCHandlers(
     return await ytMusicService.getPlaylist(playlistId);
   });
 
+  ipcMain.handle(IPCChannels.YT_SEARCH, async (_event, query: string) => {
+    return await ytMusicService.search(query);
+  });
+
   ipcMain.on(IPCChannels.YT_SHOW_LOGIN, () => {
     hiddenWindow.show();
     hiddenWindow.focus();
