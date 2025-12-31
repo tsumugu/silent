@@ -29,18 +29,15 @@ export function PlayerView({ onClose }: PlayerViewProps) {
   return (
     <motion.div
       layoutId="player-shell"
-      className="absolute inset-0 z-50 w-full h-full flex flex-col items-center pt-16 pb-4 px-8 backdrop-blur-3xl overflow-hidden bg-black/40"
+      className="absolute inset-0 z-50 w-full h-full flex flex-col items-center pt-16 pb-4 px-8 overflow-hidden"
       style={{
-        background: `radial-gradient(circle at center, ${colors.secondary}88 0%, ${colors.secondary}88 100%)`,
+        background: `linear-gradient(-135deg, ${colors.primary}4D 0%, ${colors.secondary}4D 100%)`
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div
         className="absolute inset-0 opacity-20 transition-all duration-1000"
-        style={{
-          background: `linear-gradient(45deg, ${colors.primary}88 0%, transparent 100%)`,
-        }}
       />
 
       {/* Top Section: Track Info centered in top area */}

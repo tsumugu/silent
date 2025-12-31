@@ -108,8 +108,8 @@ class MediaCache extends EventEmitter {
                     const v = new (VibrantConstructor as any)(currentUrl);
                     const palette = await v.getPalette();
 
-                    const primary = palette.Vibrant?.hex || '#1a1a1a';
-                    const secondary = palette.DarkVibrant?.hex || '#2a2a2a';
+                    const primary = palette.Vibrant?.hex || palette.LightVibrant?.hex || '#ffffff';
+                    const secondary = palette.DarkVibrant?.hex || palette.Muted?.hex || palette.DarkMuted?.hex || '#1a1a1a';
 
                     this.setColors(id, primary, secondary);
                 }

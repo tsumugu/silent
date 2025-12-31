@@ -29,4 +29,5 @@ export enum IPCChannels {
   YT_PLAY = 'ytmusic:play',
   YT_CHECK_LOGIN = 'ytmusic:check-login',
   YT_SESSION_UPDATED = 'ytmusic:session-updated',
+  WINDOW_SET_VIBRANCY = 'window:set-vibrancy',
 }
