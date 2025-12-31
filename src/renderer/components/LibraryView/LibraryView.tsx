@@ -48,30 +48,36 @@ const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlayli
                     const title = item.name || item.title;
                     const artist = item.artist?.name || item.subtitle || (item.artists ? item.artists.map((a: any) => a.name).join(', ') : '');
 
+                    const normalizedType = item.type === 'ALBUM' || (item.album && item.album.albumId) ? 'album' :
+                        (item.type === 'PLAYLIST' || item.browseId || item.playlistId) ? 'playlist' : null;
+                    const canonicalId = normalizedType === 'album' ? (item.type === 'ALBUM' ? item.albumId : item.album.albumId) :
+                        normalizedType === 'playlist' ? (item.browseId || item.playlistId) : null;
+
                     return (
                         <motion.div
                             key={`${item.videoId || item.browseId || itemIdx}`}
-                            className="mb-8 cursor-pointer group"
+                            layoutId={normalizedType && canonicalId ? `card-${normalizedType}-${canonicalId}` : undefined}
+                            className="mb-8 cursor-pointer group bg-white/0 rounded-xl overflow-hidden"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => {
-                                if (item.type === 'ALBUM' || (item.album && item.album.albumId)) {
-                                    const albumId = item.type === 'ALBUM' ? item.albumId : item.album.albumId;
-                                    onAlbumSelect({ ...item, id: albumId, name: title, artist } as any);
+                                if (normalizedType === 'album') {
+                                    onAlbumSelect({ ...item, id: canonicalId, name: title, artist } as any);
                                 } else if (item.type === 'SONG' || item.videoId) {
                                     window.electronAPI.play(item.videoId, 'SONG');
-                                } else if (item.type === 'PLAYLIST' || item.browseId || item.playlistId) {
-                                    const id = item.browseId || item.playlistId;
-                                    // Special IDs (Charts/Radios) often fail in Detail View, so play them directly
-                                    if (id && (id.startsWith('RDCL') || id.startsWith('RD'))) {
-                                        window.electronAPI.play(id, 'PLAYLIST');
+                                } else if (normalizedType === 'playlist') {
+                                    if (canonicalId && (canonicalId.startsWith('RDCL') || canonicalId.startsWith('RD'))) {
+                                        window.electronAPI.play(canonicalId, 'PLAYLIST');
                                     } else {
-                                        onPlaylistSelect({ ...item, playlistId: id });
+                                        onPlaylistSelect({ ...item, playlistId: canonicalId });
                                     }
                                 }
                             }}
                         >
-                            <div className="relative aspect-square overflow-hidden rounded-md shadow-lg bg-white/5 mb-3 group-hover:shadow-2xl transition-shadow">
+                            <motion.div
+                                layoutId={normalizedType && canonicalId ? `art-${normalizedType}-${canonicalId}` : undefined}
+                                className="relative aspect-square overflow-hidden rounded-md shadow-lg bg-white/5 mb-3 group-hover:shadow-2xl transition-shadow"
+                            >
                                 {imageUrl ? (
                                     <img
                                         src={imageUrl}
@@ -92,7 +98,7 @@ const Section: React.FC<SectionProps> = ({ title, items, onAlbumSelect, onPlayli
                                         </svg>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
                             <div className="px-1">
                                 <h3 className="text-white font-medium truncate text-sm mb-1">{title}</h3>
                                 <div className="flex items-center gap-1.5 overflow-hidden leading-none">

@@ -62,7 +62,10 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
     const songs = data.songs || data.tracks || data.contents || [];
 
     return (
-        <div className="h-full overflow-y-auto scrollbar-hide">
+        <motion.div
+            layoutId={`card-${type.toLowerCase()}-${id}`}
+            className="h-full overflow-y-auto scrollbar-hide"
+        >
             {/* Sticky Header with Back Button */}
             <div className="sticky top-0 z-30 px-8 py-4 pointer-events-none">
                 <div className="flex items-center">
@@ -85,7 +88,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
                 <div className="flex flex-col md:flex-row gap-10 mb-12">
                     {/* Cover Art */}
                     <motion.div
-                        layoutId={`${type.toLowerCase()}-${id}`}
+                        layoutId={`art-${type.toLowerCase()}-${id}`}
                         className="w-56 h-56 md:w-72 md:h-72 shrink-0 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-white/5"
                     >
                         {coverUrl ? (
@@ -162,6 +165,6 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
                     })}
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };

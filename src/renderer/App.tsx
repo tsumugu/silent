@@ -109,18 +109,16 @@ export default function App() {
 
 
           {/* Home (Library) */}
-          {(currentView === 'home' || viewStack.includes('home')) && (
+          {(currentView === 'home' || (currentView === 'detail' && viewStack.includes('home'))) && (
             <motion.div
               key="home"
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              animate={{ opacity: currentView === 'home' ? 1 : 0 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className={`absolute inset-0 ${currentView === 'home' ? 'block' : 'hidden'}`}
-              // If detailed view is active, we might want to hide home strictly or keep it for perf
-              // With opacity/z-index management.
+              transition={{ duration: 0.4, ease: "easeInOut" }}
+              className="absolute inset-0 z-0"
               style={{
-                zIndex: 0
+                pointerEvents: currentView === 'home' ? 'auto' : 'none'
               }}
             >
               <ViewWrapper>
@@ -136,17 +134,17 @@ export default function App() {
           {currentView === 'detail' && selectedItem && (
             <motion.div
               key={`detail-${selectedItem.id}`}
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{ type: 'spring', damping: 30, stiffness: 250 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
               className="absolute inset-0 z-10"
             >
               <ViewWrapper>
                 <MusicDetailView
                   id={selectedItem.id}
                   type={selectedItem.type}
-                  onBack={goBack}
+                  onBack={() => navigateTo('home')}
                   onPlaySong={(song) => {
                     window.electronAPI.play(song.videoId || song.id, 'SONG');
                     setIsPlayerOpen(true);
