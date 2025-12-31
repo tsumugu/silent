@@ -96,9 +96,8 @@ export function PlayerView({ onClose }: PlayerViewProps) {
         {/* Middle Section: Album Art (Primary element) */}
         <motion.div
           layoutId="player-artwork"
-          className="aspect-square flex-1 min-h-0 flex items-center justify-center"
+          className="aspect-square flex-1 min-h-0 flex items-center justify-center max-w-full"
           style={{
-            // maxWidth: isHovered || isMini ? '400px' : '100%',
             maxHeight: isHovered ? '100%' : '800px'
           }}
         >
