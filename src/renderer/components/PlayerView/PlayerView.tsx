@@ -81,20 +81,29 @@ export function PlayerView({ onClose }: PlayerViewProps) {
         )}
       </AnimatePresence>
 
-      {/* Content Container - Centered */}
-      <div className="flex flex-col items-center justify-center w-full h-full" style={{ maxWidth: isHovered || isMini ? '500px' : '100%', maxHeight: isHovered || isMini ? '800px' : '100%' }}>
-        {/* Top Section: Track Info centered in top area */}
-        <div className="w-full flex items-start justify-center flex-shrink-0" style={{ height: (isHovered || isMini) ? (isMini ? '60px' : '100px') : '0px', overflow: 'hidden' }}>
-          <TrackInfo
-            title={playbackInfo?.metadata?.title}
-            artist={playbackInfo?.metadata?.artist}
-            isVisible={isHovered || isMini}
-            isMini={isMini}
-          />
-        </div>
+      {/* Content Container - Centered with Gap-based spacing */}
+      <div
+        className="flex flex-col items-center justify-center w-full h-full gap-8 md:gap-10 transition-all duration-500 pt-12 pb-12"
+        style={{
+          maxWidth: isHovered || isMini ? '500px' : '100%',
+          maxHeight: isHovered || isMini ? '800px' : '100%'
+        }}
+      >
+        {/* Top Section: Track Info - only present when needed to keep center clean */}
+        {(isHovered || isMini) && (
+          <motion.div layout className="w-full h-min flex flex-col items-center">
+            <TrackInfo
+              title={playbackInfo?.metadata?.title}
+              artist={playbackInfo?.metadata?.artist}
+              isVisible={isHovered || isMini}
+              isMini={isMini}
+            />
+          </motion.div>
+        )}
 
         {/* Middle Section: Album Art (Primary element) */}
         <motion.div
+          layout
           layoutId="player-artwork"
           className="aspect-square flex-1 min-h-0 flex items-center justify-center max-w-full"
           style={{
@@ -108,20 +117,22 @@ export function PlayerView({ onClose }: PlayerViewProps) {
           />
         </motion.div>
 
-        {/* Bottom Section: Controls centered in bottom area */}
-        <div className="w-full flex-shrink-0 flex flex-col items-center justify-center gap-4" style={{ height: (isHovered || isMini) ? (isMini ? '140px' : '160px') : '0px', overflow: 'hidden' }}>
-          <SeekBar
-            currentTime={playbackInfo?.position || 0}
-            duration={playbackInfo?.duration || 0}
-            isVisible={isHovered || isMini}
-            isMini={isMini}
-          />
-          <ControlBar
-            isPlaying={playbackInfo?.playbackState === 'playing'}
-            isVisible={isHovered || isMini}
-            isMini={isMini}
-          />
-        </div>
+        {/* Bottom Section: Controls - only present when needed */}
+        {(isHovered || isMini) && (
+          <motion.div layout className="w-full flex-shrink-0 flex flex-col items-center gap-6">
+            <SeekBar
+              currentTime={playbackInfo?.position || 0}
+              duration={playbackInfo?.duration || 0}
+              isVisible={isHovered || isMini}
+              isMini={isMini}
+            />
+            <ControlBar
+              isPlaying={playbackInfo?.playbackState === 'playing'}
+              isVisible={isHovered || isMini}
+              isMini={isMini}
+            />
+          </motion.div>
+        )}
       </div>
     </motion.div>
   );
