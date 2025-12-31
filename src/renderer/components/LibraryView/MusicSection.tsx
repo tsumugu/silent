@@ -29,8 +29,8 @@ export const MusicSection: React.FC<MusicSectionProps> = ({
   };
 
   return (
-    <div className="mb-12 relative">
-      <h2 className="text-2xl font-bold text-white mb-6 sticky top-0 z-10 py-2 bg-transparent opacity-90">
+    <div className="mb-6 relative">
+      <h2 className="text-2xl px-0 py-2 mb-6 text-white font-bold transition-all duration-300">
         {title}
         {showCount && (
           <span className="text-white/30 text-lg ml-3">({items.length})</span>

@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { WindowControls } from './components/WindowControls';
 import { PlayerView } from './components/PlayerView/PlayerView';
-import { LibraryView } from './components/LibraryView/LibraryView';
+import { ListView } from './components/LibraryView/ListView';
 import { MusicDetailView } from './components/LibraryView/MusicDetailView';
-import { SearchResultsView } from './components/LibraryView/SearchResultsView';
 import { useMediaSession } from './hooks/useMediaSession';
 import { MiniPlayer } from './components/PlayerView/MiniPlayer';
 import { ViewWrapper } from './components/common/ViewWrapper';
@@ -41,7 +40,7 @@ export default function App() {
 
     if (view === 'player') {
       setIsPlayerOpen(true);
-    } else if (view === 'search' && query !== undefined && query.trim().length >= 2) {
+    } else if (view === 'search' && query !== undefined && query.trim().length >= 1) {
       setSearchQuery(query);
       setViewStack(prev => [...prev, 'search']);
       setIsPlayerOpen(false);
@@ -143,24 +142,33 @@ export default function App() {
         <AnimatePresence mode="popLayout" initial={false}>
 
 
-          {/* Home (Library) */}
-          {(currentView === 'home' || (currentView === 'detail' && viewStack.includes('home'))) && (
+          {/* Home & Search Results (Unified ListView) */}
+          {(currentView === 'home' || currentView === 'search' || (currentView === 'detail' && viewStack.includes('home'))) && (
             <motion.div
-              key="home"
+              key="library-main"
               initial={{ opacity: 0 }}
-              animate={{ opacity: currentView === 'home' ? 1 : 0.001 }}
+              animate={{ opacity: (currentView === 'home' || currentView === 'search') ? 1 : 0.001 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-0 z-0"
               style={{
-                pointerEvents: currentView === 'home' ? 'auto' : 'none'
+                pointerEvents: (currentView === 'home' || currentView === 'search') ? 'auto' : 'none'
               }}
             >
               <ViewWrapper>
-                <LibraryView
+                <ListView
+                  query={currentView === 'search' ? searchQuery : undefined}
                   onAlbumSelect={(album) => navigateTo('detail', album)}
                   onPlaylistSelect={(playlist) => navigateTo('detail', playlist)}
+                  onSongSelect={(song) => {
+                    if (song.youtube_video_id) {
+                      window.electronAPI.play(song.youtube_video_id, 'SONG');
+                    }
+                  }}
                   onSearch={(query) => navigateTo('search', null, query)}
+                  onBack={goBack}
+                  searchResults={searchResults}
+                  onResultsChange={setSearchResults}
                 />
               </ViewWrapper>
             </motion.div>
@@ -185,36 +193,6 @@ export default function App() {
                   onPlaySong={(song: MusicItem) => {
                     if (song.youtube_video_id) {
                       window.electronAPI.play(song.youtube_video_id, 'SONG');
-                      setIsPlayerOpen(true);
-                    }
-                  }}
-                />
-              </ViewWrapper>
-            </motion.div>
-          )}
-
-          {/* Search Results */}
-          {currentView === 'search' && (
-            <motion.div
-              key="search"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute inset-0 z-10"
-            >
-              <ViewWrapper>
-                <SearchResultsView
-                  query={searchQuery}
-                  results={searchResults}
-                  onResultsChange={setSearchResults}
-                  onBack={goBack}
-                  onAlbumSelect={(album) => navigateTo('detail', album)}
-                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist)}
-                  onSongSelect={(song) => {
-                    if (song.youtube_video_id) {
-                      window.electronAPI.play(song.youtube_video_id, 'SONG');
-                      setIsPlayerOpen(true);
                     }
                   }}
                 />

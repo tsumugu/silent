@@ -195,32 +195,55 @@ export class YTMusicService {
         try {
             const searchResults: any = await this.innertube.music.search(query);
 
+            console.log(`[YTMusicService] Search raw result keys:`, Object.keys(searchResults));
+
             const songs: MusicItem[] = [];
             const albums: MusicItem[] = [];
             const playlists: MusicItem[] = [];
 
-            // Parse results from different possible structures
-            if (searchResults.results) {
-                for (const result of searchResults.results) {
-                    const mappedItem = this.mapMusicItem(result);
+            const processItems = (items: any[]) => {
+                if (!Array.isArray(items)) return;
+                for (const item of items) {
+                    const mappedItem = this.mapMusicItem(item);
                     if (!mappedItem) continue;
 
                     if (mappedItem.type === 'SONG') songs.push(mappedItem);
                     else if (mappedItem.type === 'ALBUM') albums.push(mappedItem);
                     else if (mappedItem.type === 'PLAYLIST') playlists.push(mappedItem);
                 }
-            }
+            };
 
-            // Alternative structure: check for shelf properties
-            if (searchResults.songs?.contents) {
-                songs.push(...searchResults.songs.contents.map((item: any) => this.mapMusicItem(item)).filter((i: any): i is MusicItem => i !== null));
-            }
-            if (searchResults.albums?.contents) {
-                albums.push(...searchResults.albums.contents.map((item: any) => this.mapMusicItem(item)).filter((i: any): i is MusicItem => i !== null));
-            }
-            if (searchResults.playlists?.contents) {
-                playlists.push(...searchResults.playlists.contents.map((item: any) => this.mapMusicItem(item)).filter((i: any): i is MusicItem => i !== null));
-            }
+            // 1. 深層探索: shelf/contents を探す
+            const findAndProcessShelves = (obj: any) => {
+                if (!obj || typeof obj !== 'object') return;
+
+                // 直接的な結果
+                if (obj.results && Array.isArray(obj.results)) processItems(obj.results);
+                if (obj.contents && Array.isArray(obj.contents)) {
+                    // contents が直接アイテムの配列である場合と、Section/Shelf の配列である場合がある
+                    const firstItem = obj.contents[0];
+                    if (firstItem && (firstItem.type || firstItem.item_type || firstItem.contents)) {
+                        // Section/Shelf の可能性が高い
+                        for (const section of obj.contents) {
+                            if (section.contents) processItems(section.contents);
+                            else if (section.items) processItems(section.items);
+                            // もし section 自体がアイテムなら
+                            else processItems([section]);
+                        }
+                    } else {
+                        processItems(obj.contents);
+                    }
+                }
+
+                // 特定のカテゴリーシェルフ
+                if (obj.songs?.contents) processItems(obj.songs.contents);
+                if (obj.albums?.contents) processItems(obj.albums.contents);
+                if (obj.playlists?.contents) processItems(obj.playlists.contents);
+            };
+
+            findAndProcessShelves(searchResults);
+
+            console.log(`[YTMusicService] Search summary for "${query}": ${songs.length} songs, ${albums.length} albums, ${playlists.length} playlists`);
 
             const result = {
                 songs: songs.slice(0, 20),

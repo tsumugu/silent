@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { MusicDetail, MusicItem } from '../../../shared/types/music';
 
@@ -14,6 +14,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
+
 
     useEffect(() => {
         const fetchData = async () => {
@@ -78,8 +79,8 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
             onLayoutAnimationComplete={() => setIsEntering(false)}
             className="h-full overflow-y-auto scrollbar-hide"
         >
-            {/* Sticky Header with Back Button */}
-            <div className="sticky top-0 z-30 px-8 py-4 pointer-events-none">
+            {/* Header with Back Button */}
+            <div className="px-8 pt-4 pb-4">
                 <div className="flex items-center">
                     <button
                         onClick={onBack}

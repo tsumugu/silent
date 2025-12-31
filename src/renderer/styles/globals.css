@@ -18,3 +18,15 @@ body {
 .draggable {
   -webkit-app-region: drag;
 }
+
+@layer components {
+  .sticky-glass-header {
+    @apply sticky top-0 z-30 transition-all duration-300 text-white font-bold;
+    background-color: transparent;
+    backdrop-filter: blur(0px);
+  }
+
+  .sticky-glass-header.is-stuck {
+    @apply backdrop-blur-md bg-black/40 shadow-lg;
+  }
+}
