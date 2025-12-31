@@ -9,6 +9,8 @@ import { useMediaSession } from './hooks/useMediaSession';
 import { MiniPlayer } from './components/PlayerView/MiniPlayer';
 import { ViewWrapper } from './components/common/ViewWrapper';
 
+import { MusicItem } from '../shared/types/music';
+
 type ViewType = 'home' | 'detail' | 'search';
 
 export default function App() {
@@ -154,8 +156,8 @@ export default function App() {
             >
               <ViewWrapper>
                 <LibraryView
-                  onAlbumSelect={(album) => navigateTo('detail', album.id, 'ALBUM')}
-                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist.playlistId || playlist.browseId, 'PLAYLIST')}
+                  onAlbumSelect={(album) => navigateTo('detail', album.youtube_browse_id || null, 'ALBUM')}
+                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist.youtube_playlist_id || playlist.youtube_browse_id || null, 'PLAYLIST')}
                   onSearch={(query) => navigateTo('search', null, undefined, query)}
                 />
               </ViewWrapper>
@@ -177,9 +179,11 @@ export default function App() {
                   id={selectedItem.id}
                   type={selectedItem.type}
                   onBack={goBack}
-                  onPlaySong={(song) => {
-                    window.electronAPI.play(song.videoId || song.id, 'SONG');
-                    setIsPlayerOpen(true);
+                  onPlaySong={(song: MusicItem) => {
+                    if (song.youtube_video_id) {
+                      window.electronAPI.play(song.youtube_video_id, 'SONG');
+                      setIsPlayerOpen(true);
+                    }
                   }}
                 />
               </ViewWrapper>
@@ -202,11 +206,13 @@ export default function App() {
                   results={searchResults}
                   onResultsChange={setSearchResults}
                   onBack={goBack}
-                  onAlbumSelect={(album) => navigateTo('detail', album.id, 'ALBUM')}
-                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist.playlistId, 'PLAYLIST')}
+                  onAlbumSelect={(album) => navigateTo('detail', album.youtube_browse_id || null, 'ALBUM')}
+                  onPlaylistSelect={(playlist) => navigateTo('detail', playlist.youtube_playlist_id || playlist.youtube_browse_id || null, 'PLAYLIST')}
                   onSongSelect={(song) => {
-                    window.electronAPI.play(song.videoId, 'SONG');
-                    setIsPlayerOpen(true);
+                    if (song.youtube_video_id) {
+                      window.electronAPI.play(song.youtube_video_id, 'SONG');
+                      setIsPlayerOpen(true);
+                    }
                   }}
                 />
               </ViewWrapper>

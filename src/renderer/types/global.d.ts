@@ -1,4 +1,5 @@
 import { PlaybackInfo } from '../../shared/types';
+import { MusicItem, MusicDetail } from '../../shared/types/music';
 
 declare global {
   interface Window {
@@ -21,14 +22,14 @@ declare global {
       // Image Proxy
       proxyFetchImage: (url: string) => Promise<string>;
       // YTMusic API
-      getHome: () => Promise<any[]>;
-      getHomeAlbums: () => Promise<any[]>;
-      getAlbumDetails: (albumId: string) => Promise<any>;
-      getPlaylist: (playlistId: string) => Promise<any>;
+      getHome: () => Promise<any[]>; // Home sections are complex, any[] is fine for now
+      getHomeAlbums: () => Promise<MusicItem[]>;
+      getAlbumDetails: (albumId: string) => Promise<MusicDetail | null>;
+      getPlaylist: (playlistId: string) => Promise<MusicDetail | null>;
       search: (query: string) => Promise<{
-        songs: any[];
-        albums: any[];
-        playlists: any[];
+        songs: MusicItem[];
+        albums: MusicItem[];
+        playlists: MusicItem[];
       }>;
       showLogin: () => void;
       checkLogin: () => Promise<boolean>;

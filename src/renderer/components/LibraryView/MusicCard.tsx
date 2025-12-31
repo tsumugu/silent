@@ -1,11 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { MusicItem } from '../../../shared/types/music';
 
 interface MusicCardProps {
-  item: any;
-  onAlbumSelect?: (album: any) => void;
-  onPlaylistSelect?: (playlist: any) => void;
-  onSongSelect?: (song: any) => void;
+  item: MusicItem;
+  onAlbumSelect?: (album: MusicItem) => void;
+  onPlaylistSelect?: (playlist: MusicItem) => void;
+  onSongSelect?: (song: MusicItem) => void;
 }
 
 export const MusicCard: React.FC<MusicCardProps> = ({
@@ -14,39 +15,39 @@ export const MusicCard: React.FC<MusicCardProps> = ({
   onPlaylistSelect,
   onSongSelect,
 }) => {
-  const thumbnails = item.thumbnails || item.thumbnail;
-  const imageUrl = thumbnails?.[thumbnails.length - 1]?.url || thumbnails?.[0]?.url;
-  const title = item.name || item.title;
-  const artist = item.artist?.name || item.subtitle || (item.artists ? item.artists.map((a: any) => a.name).join(', ') : '');
+  const thumbnails = item.thumbnails || [];
+  const imageUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
+  const title = item.title;
+  const artist = item.artists
+    ?.map((a: any) => a.name)
+    .filter((name: string) => name && name.trim().length > 0)
+    .join(', ') || '';
 
-  const normalizedType = item.type === 'ALBUM' || (item.album && item.album.albumId) ? 'album' :
-    (item.type === 'PLAYLIST' || item.browseId || item.playlistId) ? 'playlist' :
-      (item.type === 'SONG' || item.videoId) ? 'song' : null;
+  const normalizedType = item.type === 'ALBUM' ? 'album' :
+    item.type === 'PLAYLIST' ? 'playlist' :
+      item.type === 'SONG' ? 'song' : item.type === 'ARTIST' ? 'artist' : null;
 
-  const canonicalId = normalizedType === 'album' ? (item.type === 'ALBUM' ? item.albumId : item.album?.albumId) :
-    normalizedType === 'playlist' ? (item.browseId || item.playlistId) :
-      normalizedType === 'song' ? item.videoId : null;
+  const canonicalId = item.youtube_browse_id || item.youtube_playlist_id || item.youtube_video_id;
 
   const handleClick = () => {
     if (normalizedType === 'album' && onAlbumSelect) {
-      onAlbumSelect({ ...item, id: canonicalId, name: title, artist });
+      onAlbumSelect(item);
     } else if (normalizedType === 'song' && onSongSelect) {
       onSongSelect(item);
-    } else if (normalizedType === 'song' && item.videoId) {
-      // Fallback for songs when onSongSelect is not provided
-      window.electronAPI.play(item.videoId, 'SONG');
+    } else if (normalizedType === 'song' && item.youtube_video_id) {
+      window.electronAPI.play(item.youtube_video_id, 'SONG');
     } else if (normalizedType === 'playlist' && onPlaylistSelect) {
-      if (canonicalId && (canonicalId.startsWith('RDCL') || canonicalId.startsWith('RD'))) {
-        window.electronAPI.play(canonicalId, 'PLAYLIST');
+      if (item.youtube_playlist_id && (item.youtube_playlist_id.startsWith('RDCL') || item.youtube_playlist_id.startsWith('RD'))) {
+        window.electronAPI.play(item.youtube_playlist_id, 'PLAYLIST');
       } else {
-        onPlaylistSelect({ ...item, playlistId: canonicalId });
+        onPlaylistSelect(item);
       }
     }
   };
 
   return (
     <motion.div
-      key={`${item.videoId || item.browseId || item.id}`}
+      key={canonicalId}
       layoutId={normalizedType && canonicalId ? `card-${normalizedType}-${canonicalId}` : undefined}
       className="mb-8 cursor-pointer group bg-white/0 rounded-xl overflow-hidden"
       whileHover={{ scale: 1.02 }}
@@ -85,7 +86,7 @@ export const MusicCard: React.FC<MusicCardProps> = ({
       <div className="px-1">
         <h3 className="text-white font-medium truncate text-sm mb-1">{title}</h3>
         <div className="flex items-center gap-1.5 overflow-hidden leading-none">
-          <p className="text-white/40 text-xs truncate">{artist}</p>
+          {artist && <p className="text-white/40 text-xs truncate">{artist}</p>}
           {item.type && (
             <span className="text-white/20 text-[8px] font-bold uppercase tracking-widest flex-shrink-0 ring-1 ring-white/10 px-1 py-0.5 rounded-[2px]">
               {item.type}

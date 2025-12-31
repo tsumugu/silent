@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { MusicDetail, MusicItem } from '../../../shared/types/music';
 
 interface MusicDetailViewProps {
     id: string;
     type: 'ALBUM' | 'PLAYLIST';
     onBack: () => void;
-    onPlaySong: (song: any) => void;
+    onPlaySong: (song: MusicItem) => void;
 }
 
 export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBack, onPlaySong }) => {
-    const [data, setData] = useState<any>(null);
+    const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
 
@@ -17,12 +18,10 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
         const fetchData = async () => {
             setLoading(true);
             try {
-                console.log(`[MusicDetailView] Fetching ${type}: ${id}`);
                 const result = type === 'ALBUM'
                     ? await window.electronAPI.getAlbumDetails(id)
                     : await window.electronAPI.getPlaylist(id);
 
-                console.log(`[MusicDetailView] Received ${type} data:`, result);
                 setData(result);
             } catch (error) {
                 console.error(`[MusicDetailView] Failed to fetch ${type} details:`, error);
@@ -32,9 +31,6 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
         };
         fetchData();
     }, [id, type]);
-
-    // Don't show loading until entry animation starts/is in progress to avoid flicker
-    // We'll show the actual content structure (header) as early as possible for layoutId
 
     if (!data && !loading && !isEntering) {
         return (
@@ -52,9 +48,9 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
 
     const thumbnails = data?.thumbnails || [];
     const coverUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
-    const title = data?.name || data?.title || '';
-    const artistName = data?.artist?.name || data?.author?.name || '...';
-    const songs = data?.songs || data?.tracks || data?.contents || [];
+    const title = data?.title || '';
+    const artistName = (data?.artists && data.artists.length > 0) ? data.artists.map(a => a.name).join(', ') : '';
+    const tracks = data?.tracks || [];
 
     return (
         <motion.div
@@ -107,15 +103,17 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
                             {title}
                         </h1>
                         <div className="flex items-center gap-3 text-white/60">
-                            <span className="font-semibold text-white/90">{artistName}</span>
-                            <span className="w-1 h-1 rounded-full bg-white/20" />
-                            <span className="text-sm">{songs.length} songs</span>
-                            {data?.year && (
-                                <>
-                                    <span className="w-1 h-1 rounded-full bg-white/20" />
-                                    <span className="text-sm">{data?.year}</span>
-                                </>
+                            {data?.subtitle ? (
+                                <span className="font-semibold text-white/90">{data.subtitle}</span>
+                            ) : (
+                                type !== 'PLAYLIST' && artistName && (
+                                    <span className="font-semibold text-white/90">{artistName}</span>
+                                )
                             )}
+                            {(data?.subtitle || (type !== 'PLAYLIST' && artistName)) && (
+                                <span className="w-1 h-1 rounded-full bg-white/20" />
+                            )}
+                            <span className="text-sm">{tracks.length} songs</span>
                         </div>
                     </div>
                 </div>
@@ -139,13 +137,16 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
                             )}
                         </div>
                     ) : (
-                        songs.map((song: any, index: number) => {
-                            const songTitle = song.name || song.title;
-                            const songArtist = song.artist?.name || song.author?.name || artistName;
+                        tracks.map((song, index) => {
+                            const songTitle = song.title;
+                            const songArtist = song.artists
+                                .map(a => a.name)
+                                .filter(name => name && name.trim().length > 0)
+                                .join(', ') || artistName || 'Unknown Artist';
 
                             return (
                                 <motion.div
-                                    key={`${song.videoId || index}`}
+                                    key={`${song.youtube_video_id || index}`}
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: index * 0.03 }}
@@ -164,7 +165,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, onBa
                                         </div>
                                     </div>
                                     <div className="text-right text-white/30 text-xs font-mono group-hover:text-white/60">
-                                        {song.duration || '--:--'}
+                                        {song.duration?.text || '--:--'}
                                     </div>
                                 </motion.div>
                             );

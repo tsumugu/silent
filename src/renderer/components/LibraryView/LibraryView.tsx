@@ -1,18 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { MusicSection } from './MusicSection';
 import { SearchBar } from './SearchBar';
-
-interface Album {
-    id: string;
-    name: string;
-    artist: string;
-    thumbnails: any[];
-    type: string;
-}
+import { MusicItem } from '../../../shared/types/music';
 
 interface LibraryViewProps {
-    onAlbumSelect: (album: Album) => void;
-    onPlaylistSelect: (playlist: any) => void;
+    onAlbumSelect: (album: MusicItem) => void;
+    onPlaylistSelect: (playlist: MusicItem) => void;
     onSearch?: (query: string) => void;
 }
 

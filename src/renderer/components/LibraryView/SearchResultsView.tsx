@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { MusicSection } from './MusicSection';
+import { MusicItem } from '../../../shared/types/music';
 
 interface SearchResults {
-  songs: any[];
-  albums: any[];
-  playlists: any[];
+  songs: MusicItem[];
+  albums: MusicItem[];
+  playlists: MusicItem[];
 }
 
 interface SearchResultsViewProps {
@@ -12,9 +13,9 @@ interface SearchResultsViewProps {
   results: SearchResults | null;
   onResultsChange: (results: SearchResults | null) => void;
   onBack: () => void;
-  onAlbumSelect?: (album: any) => void;
-  onPlaylistSelect?: (playlist: any) => void;
-  onSongSelect?: (song: any) => void;
+  onAlbumSelect?: (album: MusicItem) => void;
+  onPlaylistSelect?: (playlist: MusicItem) => void;
+  onSongSelect?: (song: MusicItem) => void;
 }
 
 const LoadingState: React.FC = () => (

@@ -1,14 +1,15 @@
 import React from 'react';
 import Masonry from 'react-masonry-css';
 import { MusicCard } from './MusicCard';
+import { MusicItem } from '../../../shared/types/music';
 
 interface MusicSectionProps {
   title: string;
-  items: any[];
+  items: MusicItem[];
   showCount?: boolean;
-  onAlbumSelect?: (album: any) => void;
-  onPlaylistSelect?: (playlist: any) => void;
-  onSongSelect?: (song: any) => void;
+  onAlbumSelect?: (album: MusicItem) => void;
+  onPlaylistSelect?: (playlist: MusicItem) => void;
+  onSongSelect?: (song: MusicItem) => void;
 }
 
 export const MusicSection: React.FC<MusicSectionProps> = ({
@@ -41,9 +42,9 @@ export const MusicSection: React.FC<MusicSectionProps> = ({
         className="flex -ml-4 w-auto"
         columnClassName="pl-4 bg-clip-padding"
       >
-        {items.map((item: any, itemIdx: number) => (
+        {items.map((item, itemIdx) => (
           <MusicCard
-            key={`${item.videoId || item.browseId || item.id || itemIdx}`}
+            key={item.youtube_video_id || item.youtube_browse_id || item.youtube_playlist_id || itemIdx}
             item={item}
             onAlbumSelect={onAlbumSelect}
             onPlaylistSelect={onPlaylistSelect}
