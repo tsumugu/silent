@@ -96,7 +96,7 @@ export function PlayerView({ onClose }: PlayerViewProps) {
         {/* Middle Section: Album Art (Primary element) */}
         <motion.div
           layoutId="player-artwork"
-          className="flex-1 min-h-0 flex items-center justify-center w-full"
+          className="flex-1 min-h-0 flex items-center justify-center h-full"
         >
           <AlbumArt
             src={blobUrl}
