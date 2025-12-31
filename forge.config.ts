@@ -8,6 +8,8 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
 
+import { PublisherGithub } from '@electron-forge/publisher-github';
+
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
@@ -16,6 +18,15 @@ const config: ForgeConfig = {
   rebuildConfig: {},
   makers: [
     new MakerZIP({}, ['darwin']),
+  ],
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: 'tsumugu',
+        name: 'silent'
+      },
+      prerelease: false
+    })
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),
