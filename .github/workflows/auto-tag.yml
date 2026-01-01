@@ -8,10 +8,13 @@ on:
       - 'package.json'
 
 jobs:
-  auto-tag-and-release:
-    runs-on: macos-14
+  tagging:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      TAG: ${{ steps.version.outputs.TAG }}
+      exists: ${{ steps.check_tag.outputs.exists }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,6 +36,7 @@ jobs:
         env:
           TAG: ${{ steps.version.outputs.TAG }}
         run: |
+          git fetch --tags
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG"; then
             echo "exists=true" >> $GITHUB_OUTPUT
             echo "Tag $TAG already exists on remote."
@@ -54,18 +58,33 @@ jobs:
           git push origin $TAG
           echo "Pushed tag $TAG"
 
+  releasing:
+    needs: tagging
+    if: needs.tagging.outputs.exists == 'false'
+    runs-on: macos-14
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Install pnpm
-        if: steps.check_tag.outputs.exists == 'false'
         uses: pnpm/action-setup@v2
         with:
-          version: 8
+          version: 10
 
       - name: Install Dependencies
-        if: steps.check_tag.outputs.exists == 'false'
         run: pnpm install
 
       - name: Publish Release
-        if: steps.check_tag.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: pnpm run publish
+        run: pnpm run publish --arch=${{ matrix.arch }}

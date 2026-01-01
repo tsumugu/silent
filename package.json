@@ -1,14 +1,14 @@
 {
   "name": "silent",
   "productName": "Silent",
-  "version": "1.0.33",
+  "version": "1.0.34",
   "description": "My Electron application description",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "publish": "electron-forge publish --arch=x64,arm64",
+    "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "prepare": "husky"
   },
