@@ -2,6 +2,8 @@ export type DisplayMode = 'dock' | 'menuBar';
 
 export interface TraySettings {
   showTrackTitle: boolean;
+  enableAnimation: boolean;
+  enableScrolling: boolean; // Marquee scrolling for long track names
 }
 
 export interface AppSettings {
@@ -15,5 +17,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   launchAtLogin: false,
   tray: {
     showTrackTitle: true,
+    enableAnimation: true,
+    enableScrolling: true,
   }
 };

@@ -45,7 +45,6 @@ export class SettingsService extends EventEmitter {
 
     try {
       const settings = this.getSettings();
-      console.log('[SettingsService] Loaded settings:', settings);
     } catch (error) {
       console.error('[SettingsService] Settings corrupted, resetting to defaults:', error);
       (this.store as any).clear();
@@ -85,7 +84,6 @@ export class SettingsService extends EventEmitter {
     const updated = this.getSettings();
     this.emit('settings-changed', updated);
 
-    console.log('[SettingsService] Settings updated:', updated);
     return updated;
   }
 

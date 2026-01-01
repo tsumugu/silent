@@ -201,6 +201,7 @@ export function setupIPCHandlers(
     hiddenWindow.webContents.executeJavaScript('navigator.mediaSession.playbackState = "none"; block_updates = true;')
       .catch(() => { }); // Ignore errors if script fails
 
+    trayService.showLoading();
     hiddenWindow.loadURL(url);
   });
 
@@ -229,7 +230,6 @@ export function setupIPCHandlers(
     // In development mode, app.relaunch() doesn't work properly
     // We need to quit and let the user restart manually
     if (process.env.NODE_ENV === 'development') {
-      console.log('[Main] Development mode: please restart the app manually');
       // Just quit in development mode
       setTimeout(() => {
         app.quit();

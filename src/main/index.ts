@@ -24,14 +24,10 @@ let preferencesWindow: BrowserWindow | null = null;
 app.whenReady().then(() => {
   // Load settings and apply displayMode BEFORE creating windows
   const settings = settingsService.getSettings();
-  console.log('[Main] Loaded settings:', settings);
 
   // Apply display mode (dock vs menuBar)
   if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
     app.dock?.hide();
-    console.log('[Main] Running in Menu Bar mode (dock hidden)');
-  } else {
-    console.log('[Main] Running in Dock mode');
   }
 
   // Apply auto-launch setting
@@ -139,8 +135,6 @@ app.whenReady().then(() => {
 
   // Listen for settings changes
   settingsService.on('settings-changed', (newSettings) => {
-    console.log('[Main] Settings changed:', newSettings);
-
     // Auto-launch can be updated immediately
     try {
       app.setLoginItemSettings({

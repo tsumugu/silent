@@ -50,9 +50,9 @@ const MenuBarSection: React.FC<MenuBarSectionProps> = ({ settings, onUpdate }) =
         {/* Enable Animation */}
         <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 flex items-center justify-between">
           <div className="flex-1">
-            <label className="text-white font-medium text-sm block">Enable animation</label>
+            <label className="text-white font-medium text-sm block">Enable tray icon animation</label>
             <p className="text-white/30 text-xs mt-1">
-              Animate menu bar icon when track changes
+              Animate menu bar icon during playback
             </p>
           </div>
           <button
@@ -70,12 +70,12 @@ const MenuBarSection: React.FC<MenuBarSectionProps> = ({ settings, onUpdate }) =
           </button>
         </div>
 
-        {/* Enable Scrolling */}
+        {/* Enable Marquee Scrolling */}
         <div className="bg-white/5 backdrop-blur-md rounded-xl p-5 flex items-center justify-between">
           <div className="flex-1">
-            <label className="text-white font-medium text-sm block">Enable scrolling to change tracks</label>
+            <label className="text-white font-medium text-sm block">Enable marquee scrolling</label>
             <p className="text-white/30 text-xs mt-1">
-              Scroll on menu bar icon to skip tracks (experimental)
+              Scroll long track titles in menu bar
             </p>
           </div>
           <button

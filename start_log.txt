@@ -1,0 +1,34 @@
+
+> silent@1.0.227 start /Users/tsumugu/Desktop/dev/cursor/silent
+> electron-forge start
+
+❯ Checking your system
+❯ Checking package manager version
+✔ Found pnpm@10.26.2
+✔ Checking your system
+[?25h❯ Locating application
+✔ Locating application
+❯ Loading configuration
+✔ Loading configuration
+❯ Preparing native dependencies
+✔ Preparing native dependencies
+❯ Running generateAssets hook
+✔ Running generateAssets hook
+❯ Running preStart hook
+❯ [plugin-webpack] Preparing webpack bundles
+
+An unhandled exception has occurred inside Forge:
+listen EADDRINUSE: address already in use :::9000
+Error: listen EADDRINUSE: address already in use :::9000
+    at Server.setupListenHandle [as _listen2] (node:net:1937:16)
+    at listenInCluster (node:net:1994:12)
+    at Server.listen (node:net:2099:7)
+    at Function.serverListen [as listen] (/Users/tsumugu/Desktop/dev/cursor/silent/node_modules/express-ws/lib/index.js:42:40)
+    at /Users/tsumugu/Desktop/dev/cursor/silent/node_modules/@electron-forge/web-multi-logger/dist/Logger.js:47:36
+    at new Promise (<anonymous>)
+    at Logger.start (/Users/tsumugu/Desktop/dev/cursor/silent/node_modules/@electron-forge/web-multi-logger/dist/Logger.js:46:16)
+    at /Users/tsumugu/Desktop/dev/cursor/silent/node_modules/@electron-forge/plugin-webpack/dist/WebpackPlugin.js:275:34
+    at async /Users/tsumugu/Desktop/dev/cursor/silent/node_modules/@electron-forge/core/dist/util/plugin-interface.js:93:44
+    at async _Task.taskFn (/Users/tsumugu/Desktop/dev/cursor/silent/node_modules/@electron-forge/tracer/dist/index.js:58:20)
+    at async _Task.run (/Users/tsumugu/Desktop/dev/cursor/silent/node_modules/listr2/dist/index.cjs:2063:11)
+ ELIFECYCLE  Command failed with exit code 1.
