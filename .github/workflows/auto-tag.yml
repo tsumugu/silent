@@ -9,7 +9,7 @@ on:
 
 jobs:
   auto-tag-and-release:
-    runs-on: macos-latest
+    runs-on: macos-14
     permissions:
       contents: write
     steps:
