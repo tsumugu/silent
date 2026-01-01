@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# Build the app (make)
-echo "Building app..."
-pnpm make
-
-sleep 1
-
 # Hide desktop icons
 echo "Hiding desktop icons..."
 defaults write com.apple.finder CreateDesktop false
@@ -19,7 +13,9 @@ osascript -e 'tell application "System Events" to set visible of every process w
 echo "Setting wallpaper..."
 curl -L -o /tmp/silent-wallpaper.jpg "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?ixlib=rb-4.0.3&auto=format&fit=crop&w=2560&q=80"
 
-sleep 1
+# Build the app (make)
+echo "Building app..."
+pnpm make
 
 # Start the app
 echo "Starting app..."
