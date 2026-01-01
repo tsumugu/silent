@@ -13,7 +13,34 @@ import { PublisherGithub } from '@electron-forge/publisher-github';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    icon: './assets/icon.icns'
+    icon: './assets/icon.icns',
+    osxSign: {
+      identity: '-', // Ad-Hoc Signing (Required base config)
+    },
+  },
+  hooks: {
+    postPackage: async (config, { outputPaths, platform }) => {
+      if (platform !== 'darwin' || !outputPaths || outputPaths.length === 0) return;
+
+      const path = require('path');
+      const appPath = path.join(outputPaths[0], 'Silent.app');
+      console.log(`[Manual Signing] Signing app at: ${appPath}`);
+
+      const { execSync } = require('child_process');
+      try {
+        // Sign the internal binary first
+        execSync(`codesign --force --deep --options runtime --entitlements ./entitlements.plist --sign - "${appPath}/Contents/MacOS/Silent"`, { stdio: 'inherit' });
+        // Sign the whole bundle
+        execSync(`codesign --force --deep --options runtime --entitlements ./entitlements.plist --sign - "${appPath}"`, { stdio: 'inherit' });
+
+        console.log('[Manual Signing] Verification:');
+        execSync(`codesign -dvvv --entitlements - "${appPath}"`, { stdio: 'inherit' });
+        console.log('[Manual Signing] Complete.');
+      } catch (e) {
+        console.error('[Manual Signing] Failed:', e);
+        throw e;
+      }
+    },
   },
   rebuildConfig: {},
   makers: [
@@ -75,8 +102,8 @@ const config: ForgeConfig = {
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: false, // Disabled for Ad-Hoc signing
+      [FuseV1Options.OnlyLoadAppFromAsar]: false, // Disabled for Ad-Hoc signing
     }),
   ],
 };
