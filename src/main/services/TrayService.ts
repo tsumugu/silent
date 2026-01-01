@@ -108,21 +108,38 @@ export class TrayService {
   }
 
 
+  private contextMenu: Menu | null = null;
+
   initialize(settings: TraySettings, callbacks: TrayCallbacks): void {
     this.settings = settings;
     this.callbacks = callbacks;
 
     try {
-      const img = this.generateTrayImage("Loading...", true);
+      const img = this.generateTrayImage("Silent...", true);
       this.tray = new Tray(img);
-      this.currentTrackText = "Loading...";
+      this.currentTrackText = "Silent...";
       this.tray.setTitle('');
       this.tray.setToolTip('Silent');
 
       this.updateContextMenu();
 
       this.tray.on('click', () => {
-        callbacks.onShowWindow();
+        if (process.platform === 'darwin') {
+          // On macOS, show BOTH window and menu
+          callbacks.onShowWindow();
+          if (this.contextMenu) {
+            this.tray?.popUpContextMenu(this.contextMenu);
+          }
+        } else {
+          // On other platforms, default click behavior
+          callbacks.onShowWindow();
+        }
+      });
+
+      this.tray.on('right-click', () => {
+        if (process.platform === 'darwin' && this.contextMenu) {
+          this.tray?.popUpContextMenu(this.contextMenu);
+        }
       });
     } catch (error) {
       console.error('[TrayService] Failed to initialize tray:', error);
@@ -279,7 +296,7 @@ export class TrayService {
     this.currentMetadata = null;
     this.isLoading = false;
     this.stopMarquee();
-    const img = this.generateTrayImage("Loading...", true);
+    const img = this.generateTrayImage("Silent...", true);
     this.tray.setImage(img);
     this.tray.setTitle('');
     this.tray.setToolTip('Silent');
@@ -395,12 +412,7 @@ export class TrayService {
   private updateContextMenu(): void {
     if (!this.tray || !this.callbacks) return;
 
-    const contextMenu = Menu.buildFromTemplate([
-      {
-        label: 'Show Silent',
-        click: () => this.callbacks?.onShowWindow()
-      },
-      { type: 'separator' },
+    this.contextMenu = Menu.buildFromTemplate([
       {
         label: 'Preferences...',
         click: () => this.callbacks?.onShowPreferences()
@@ -416,7 +428,9 @@ export class TrayService {
       }
     ]);
 
-    this.tray.setContextMenu(contextMenu);
+    if (process.platform !== 'darwin') {
+      this.tray.setContextMenu(this.contextMenu);
+    }
   }
 }
 

@@ -10,63 +10,56 @@ import { trayService } from '../services/TrayService';
 // Persist the last known playback state to restore it when UI window is recreated
 let lastPlaybackInfo: PlaybackInfo | null = null;
 
-export function clearIPCHandlers() {
-  Object.values(IPCChannels).forEach(channel => {
-    ipcMain.removeAllListeners(channel);
-    ipcMain.removeHandler(channel);
-  });
-}
-
 export function setupIPCHandlers(
-  uiWindow: BrowserWindow,
   hiddenWindow: BrowserWindow
 ) {
-  // Clear existing listeners and handlers to avoid duplication when window is recreated
-  clearIPCHandlers();
-
   // ========================================
-  // Window controls
+  // Window controls (Generic for any window)
   // ========================================
 
-  ipcMain.on(IPCChannels.WINDOW_MINIMIZE, () => {
-    if (!uiWindow.isDestroyed()) uiWindow.minimize();
+  ipcMain.on(IPCChannels.WINDOW_MINIMIZE, (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) win.minimize();
   });
 
-  ipcMain.on(IPCChannels.WINDOW_MAXIMIZE, () => {
-    if (uiWindow.isDestroyed()) return;
-    if (uiWindow.isFullScreen()) {
-      uiWindow.setFullScreen(false);
+  ipcMain.on(IPCChannels.WINDOW_MAXIMIZE, (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win || win.isDestroyed()) return;
+    if (win.isFullScreen()) {
+      win.setFullScreen(false);
     } else {
-      uiWindow.setFullScreen(true);
+      win.setFullScreen(true);
     }
   });
 
   ipcMain.on(IPCChannels.WINDOW_CLOSE, (event) => {
-    // Close the window that sent the event, not always the main window
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win && !win.isDestroyed()) {
       win.close();
     }
   });
 
-  ipcMain.on(IPCChannels.WINDOW_SET_VIBRANCY, (_event, vibrancy: any) => {
-    if (!uiWindow.isDestroyed()) {
-      uiWindow.setVibrancy(vibrancy);
+  ipcMain.on(IPCChannels.WINDOW_SET_VIBRANCY, (event, vibrancy: any) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+      win.setVibrancy(vibrancy);
     }
   });
 
   // ========================================
-  // Playback state updates: Hidden → Main → UI
+  // Playback state updates: Hidden → All Windows
   // ========================================
 
   ipcMain.on(IPCChannels.PLAYBACK_STATE_CHANGED, (_event, playbackInfo: PlaybackInfo) => {
     // Persist for state recovery
     lastPlaybackInfo = playbackInfo;
 
-    // Forward playback state from hidden window to UI window
-    if (!uiWindow.isDestroyed()) {
-      uiWindow.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, playbackInfo);
-    }
+    // Forward playback state from hidden window to ALL open windows (UI, Preferences, etc.)
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
+        win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, playbackInfo);
+      }
+    });
 
     // Update tray with track info
     const settings = settingsService.getSettings();
@@ -84,6 +77,7 @@ export function setupIPCHandlers(
   // ========================================
 
   const sendMediaKey = (keyCode: string, fallbackChar?: string) => {
+    if (hiddenWindow.isDestroyed()) return;
     // 1. Send the primary media key
     hiddenWindow.webContents.sendInputEvent({ type: 'keyDown', keyCode });
     hiddenWindow.webContents.sendInputEvent({ type: 'keyUp', keyCode });
@@ -97,26 +91,31 @@ export function setupIPCHandlers(
   };
 
   ipcMain.on(IPCChannels.PLAYBACK_PLAY, () => {
+    if (hiddenWindow.isDestroyed()) return;
     sendMediaKey('MediaPlayPause', 'Space');
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_PLAY);
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_PAUSE, () => {
+    if (hiddenWindow.isDestroyed()) return;
     sendMediaKey('MediaPlayPause', 'Space');
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_PAUSE);
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_NEXT, () => {
+    if (hiddenWindow.isDestroyed()) return;
     sendMediaKey('MediaNextTrack', 'n');
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_NEXT);
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_PREVIOUS, () => {
+    if (hiddenWindow.isDestroyed()) return;
     sendMediaKey('MediaPreviousTrack', 'p');
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_PREVIOUS);
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_SEEK, (_event, seekTime: number) => {
+    if (hiddenWindow.isDestroyed()) return;
     // Seeking still needs IPC as there's no native "seek" media key
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_SEEK, seekTime);
   });
@@ -179,6 +178,7 @@ export function setupIPCHandlers(
   });
 
   ipcMain.on(IPCChannels.YT_SHOW_LOGIN, () => {
+    if (hiddenWindow.isDestroyed()) return;
     hiddenWindow.show();
     hiddenWindow.focus();
     // After login window is focused, we likely want to refresh once closed or periodically.
@@ -191,6 +191,7 @@ export function setupIPCHandlers(
   });
 
   ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => {
+    if (hiddenWindow.isDestroyed()) return;
     const url = type === 'SONG'
       ? `https://music.youtube.com/watch?v=${id}`
       : type === 'PLAYLIST'

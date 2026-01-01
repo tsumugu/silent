@@ -5,7 +5,7 @@ import { createUIWindow } from './windows/UIWindow';
 import { createHiddenWindow } from './windows/HiddenWindow';
 import { createAboutWindow } from './windows/AboutWindow';
 import { createPreferencesWindow } from './windows/PreferencesWindow';
-import { clearIPCHandlers, setupIPCHandlers } from './ipc/handlers';
+import { setupIPCHandlers } from './ipc/handlers';
 import { ytMusicService } from './services/YTMusicService';
 import { settingsService } from './services/SettingsService';
 import { trayService } from './services/TrayService';
@@ -93,18 +93,19 @@ app.whenReady().then(() => {
   mainWindow = createUIWindow();
   hiddenWindow = createHiddenWindow();
 
-  // Set up IPC handlers for communication between windows
-  setupIPCHandlers(mainWindow, hiddenWindow);
+  // Set up IPC handlers for communication - Register once for the lifetime of the app
+  setupIPCHandlers(hiddenWindow);
 
   // Initialize tray if in Menu Bar mode
   if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
     try {
       trayService.initialize(settings.tray, {
         onShowWindow: () => {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.show();
-            mainWindow.focus();
+          if (!mainWindow || mainWindow.isDestroyed()) {
+            mainWindow = createUIWindow();
           }
+          mainWindow.show();
+          mainWindow.focus();
         },
         onShowPreferences: () => {
           if (!preferencesWindow || preferencesWindow.isDestroyed()) {
@@ -160,17 +161,12 @@ app.whenReady().then(() => {
     });
   });
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
-
   mainWindow.on('leave-full-screen', () => {
     mainWindow?.webContents.send('fullscreen-changed', false);
   });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    clearIPCHandlers();
   });
 
   // Window controls are now handled in setupIPCHandlers to keep logic unified
@@ -179,10 +175,7 @@ app.whenReady().then(() => {
     if (mainWindow === null) {
       const newWin = createUIWindow();
       mainWindow = newWin;
-      // Re-setup handlers for the new window
-      if (hiddenWindow) {
-        setupIPCHandlers(newWin, hiddenWindow);
-      }
+      // Re-setup handlers for the new window is no longer needed as they are registered once
 
       // Re-setup fullscreen listeners
       newWin.on('enter-full-screen', () => {
@@ -195,7 +188,6 @@ app.whenReady().then(() => {
 
       newWin.on('closed', () => {
         mainWindow = null;
-        clearIPCHandlers();
       });
     }
   });
