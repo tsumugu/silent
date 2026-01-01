@@ -92,8 +92,8 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
             onLayoutAnimationComplete={() => setIsEntering(false)}
             className="h-full overflow-y-auto scrollbar-hide"
         >
-            {/* Header with Back Button */}
-            <div className="px-8 pt-4 pb-4">
+            {/* Header with Back Button (Fixed/Sticky) */}
+            <div className="sticky top-0 z-20 px-8 pt-4 pb-4 bg-black/5 backdrop-blur-xl ring-1 ring-white/5">
                 <div className="flex items-center">
                     <button
                         onClick={onBack}
