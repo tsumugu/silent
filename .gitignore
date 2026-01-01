@@ -91,4 +91,4 @@ typings/
 # Electron-Forge
 out/
 
-docs/
+# docs/ (Remove this to allow documentation in repo)

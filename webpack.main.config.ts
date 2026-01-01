@@ -11,6 +11,8 @@ export const mainConfig: Configuration = {
   entry: {
     index: './src/main/index.ts',
     'preload/hidden-preload': './src/preload/hidden-preload.ts',
+    'preload/about-preload': './src/preload/about-preload.ts',
+    'preload/preferences-preload': './src/preload/preferences-preload.ts',
   },
   output: {
     filename: '[name].js',

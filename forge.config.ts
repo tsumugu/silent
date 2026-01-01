@@ -45,6 +45,22 @@ const config: ForgeConfig = {
               js: './src/preload/ui-preload.ts',
             },
           },
+          {
+            html: './src/renderer/about.html',
+            js: './src/renderer/about.tsx',
+            name: 'about_window',
+            preload: {
+              js: './src/preload/about-preload.ts',
+            },
+          },
+          {
+            html: './src/renderer/preferences.html',
+            js: './src/renderer/preferences.tsx',
+            name: 'preferences_window',
+            preload: {
+              js: './src/preload/preferences-preload.ts',
+            },
+          },
         ],
       },
     }),

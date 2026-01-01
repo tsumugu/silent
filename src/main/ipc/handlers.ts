@@ -1,8 +1,11 @@
-import { BrowserWindow, ipcMain, net } from 'electron';
+import { BrowserWindow, ipcMain, net, app } from 'electron';
 import { IPCChannels } from './types';
 import { PlaybackInfo } from '../../shared/types';
+import { AppSettings } from '../../shared/types/settings';
 
 import { ytMusicService } from '../services/YTMusicService';
+import { settingsService } from '../services/SettingsService';
+import { trayService } from '../services/TrayService';
 
 // Persist the last known playback state to restore it when UI window is recreated
 let lastPlaybackInfo: PlaybackInfo | null = null;
@@ -38,8 +41,12 @@ export function setupIPCHandlers(
     }
   });
 
-  ipcMain.on(IPCChannels.WINDOW_CLOSE, () => {
-    if (!uiWindow.isDestroyed()) uiWindow.close();
+  ipcMain.on(IPCChannels.WINDOW_CLOSE, (event) => {
+    // Close the window that sent the event, not always the main window
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+      win.close();
+    }
   });
 
   ipcMain.on(IPCChannels.WINDOW_SET_VIBRANCY, (_event, vibrancy: any) => {
@@ -59,6 +66,12 @@ export function setupIPCHandlers(
     // Forward playback state from hidden window to UI window
     if (!uiWindow.isDestroyed()) {
       uiWindow.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, playbackInfo);
+    }
+
+    // Update tray with track info
+    const settings = settingsService.getSettings();
+    if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
+      trayService.updateTrack(playbackInfo.metadata);
     }
   });
 
@@ -191,5 +204,40 @@ export function setupIPCHandlers(
     hiddenWindow.loadURL(url);
   });
 
+  // ========================================
+  // Settings Handlers
+  // ========================================
 
+  ipcMain.handle(IPCChannels.SETTINGS_GET, async () => {
+    return settingsService.getSettings();
+  });
+
+  ipcMain.handle(IPCChannels.SETTINGS_UPDATE, async (_event, partial: Partial<AppSettings>) => {
+    const updated = settingsService.updateSettings(partial);
+
+    // Broadcast settings change to all windows
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed()) {
+        win.webContents.send(IPCChannels.SETTINGS_CHANGED, updated);
+      }
+    });
+
+    return updated;
+  });
+
+  ipcMain.handle(IPCChannels.SETTINGS_REQUEST_RESTART, async () => {
+    // In development mode, app.relaunch() doesn't work properly
+    // We need to quit and let the user restart manually
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Main] Development mode: please restart the app manually');
+      // Just quit in development mode
+      setTimeout(() => {
+        app.quit();
+      }, 100);
+    } else {
+      // In production, relaunch works properly
+      app.relaunch();
+      app.quit();
+    }
+  });
 }

@@ -1,5 +1,6 @@
 import { PlaybackInfo } from '../../shared/types';
 import { MusicItem, MusicDetail } from '../../shared/types/music';
+import { AppSettings } from '../../shared/types/settings';
 
 declare global {
   interface Window {
@@ -37,6 +38,11 @@ declare global {
       onSessionUpdated: (callback: () => void) => () => void;
       play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => void;
       setVibrancy: (vibrancy: 'under-window' | 'content' | 'sidebar' | 'menu' | 'popover' | 'hud' | 'sheet' | 'window' | 'dropdown' | 'tooltip' | 'device-discovery' | 'video' | 'selection' | 'titlebar' | null) => void;
+      // Settings
+      getSettings: () => Promise<AppSettings>;
+      updateSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>;
+      onSettingsChanged: (callback: (settings: AppSettings) => void) => () => void;
+      requestRestart: () => Promise<void>;
     };
   }
 }

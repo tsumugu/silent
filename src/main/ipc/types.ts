@@ -32,4 +32,12 @@ export enum IPCChannels {
   YT_CHECK_LOGIN = 'ytmusic:check-login',
   YT_SESSION_UPDATED = 'ytmusic:session-updated',
   WINDOW_SET_VIBRANCY = 'window:set-vibrancy',
+
+  // Settings
+  SETTINGS_GET = 'settings:get',
+  SETTINGS_UPDATE = 'settings:update',
+  SETTINGS_CHANGED = 'settings:changed',
+  SETTINGS_SHOW_ABOUT = 'settings:show-about',
+  SETTINGS_SHOW_PREFERENCES = 'settings:show-preferences',
+  SETTINGS_REQUEST_RESTART = 'settings:request-restart',
 }
