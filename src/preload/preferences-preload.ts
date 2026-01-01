@@ -15,4 +15,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('settings:changed', listener);
   },
   requestRestart: () => ipcRenderer.invoke('settings:request-restart'),
+  getVersion: () => ipcRenderer.invoke('app:get-version'),
 });

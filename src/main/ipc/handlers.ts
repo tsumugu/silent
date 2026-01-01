@@ -241,4 +241,8 @@ export function setupIPCHandlers(
       app.quit();
     }
   });
+
+  ipcMain.handle(IPCChannels.APP_GET_VERSION, () => {
+    return app.getVersion();
+  });
 }

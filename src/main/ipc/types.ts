@@ -40,4 +40,5 @@ export enum IPCChannels {
   SETTINGS_SHOW_ABOUT = 'settings:show-about',
   SETTINGS_SHOW_PREFERENCES = 'settings:show-preferences',
   SETTINGS_REQUEST_RESTART = 'settings:request-restart',
+  APP_GET_VERSION = 'app:get-version',
 }

@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 
 const AboutView: React.FC = () => {
-  const version = '1.0.227';
+  const [version, setVersion] = useState<string>('');
   const [isHovered, setIsHovered] = useState(false);
+
+  React.useEffect(() => {
+    window.electronAPI.getVersion().then(setVersion);
+  }, []);
 
   const handleClose = () => {
     window.electronAPI.closeWindow();
