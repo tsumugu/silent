@@ -1,6 +1,3 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
 # Check if package.json is being committed
 if git diff --cached --name-only | grep -q "package.json"; then
   # Extract version from staged package.json
