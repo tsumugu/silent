@@ -30,10 +30,6 @@ export class SettingsService extends EventEmitter {
               type: 'boolean',
               default: true
             },
-            enableAnimation: {
-              type: 'boolean',
-              default: true
-            },
             enableScrolling: {
               type: 'boolean',
               default: true

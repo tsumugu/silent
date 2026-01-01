@@ -22,7 +22,7 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ settings, onUpdate }) =
     // Show restart dialog after a short delay
     setTimeout(() => {
       const isDevelopment = window.electronAPI.platform === 'darwin' &&
-                           window.location.hostname === 'localhost';
+        window.location.hostname === 'localhost';
 
       const message = isDevelopment
         ? 'Display mode changed. Silent needs to restart for this change to take effect.\n\nThe app will quit now. Please restart it manually from your terminal or IDE.'
@@ -42,29 +42,27 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ settings, onUpdate }) =
   };
 
   return (
-    <div className="pt-4">
-      <div className="space-y-6">
+    <div>
+      <div className="space-y-4">
         {/* Display Mode */}
         <div className="bg-white/5 backdrop-blur-md rounded-xl p-5">
           <label className="text-white font-medium text-sm block mb-3">Display Mode</label>
           <div className="flex items-center space-x-3">
             <button
               onClick={() => handleDisplayModeChange('dock')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                settings.displayMode === 'dock'
+              className={`px-4 py-2 rounded-lg transition-colors ${settings.displayMode === 'dock'
                   ? 'bg-white/20 text-white'
                   : 'bg-white/5 text-white/40 hover:bg-white/10'
-              }`}
+                }`}
             >
               Dock App
             </button>
             <button
               onClick={() => handleDisplayModeChange('menuBar')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
-                settings.displayMode === 'menuBar'
+              className={`px-4 py-2 rounded-lg transition-colors ${settings.displayMode === 'menuBar'
                   ? 'bg-white/20 text-white'
                   : 'bg-white/5 text-white/40 hover:bg-white/10'
-              }`}
+                }`}
             >
               Menu Bar App
             </button>
@@ -88,15 +86,13 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ settings, onUpdate }) =
           <label className="text-white font-medium text-sm">Launch at Login</label>
           <button
             onClick={handleLaunchAtLoginToggle}
-            className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
-              settings.launchAtLogin ? 'bg-white/20' : 'bg-white/5'
-            }`}
+            className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${settings.launchAtLogin ? 'bg-white/20' : 'bg-white/5'
+              }`}
             aria-label="Toggle launch at login"
           >
             <div
-              className={`absolute top-1 w-4 h-4 rounded-full bg-white/80 transition-transform duration-200 ${
-                settings.launchAtLogin ? 'translate-x-7' : 'translate-x-1'
-              }`}
+              className={`absolute top-1 w-4 h-4 rounded-full bg-white/80 transition-transform duration-200 ${settings.launchAtLogin ? 'translate-x-7' : 'translate-x-1'
+                }`}
             />
           </button>
         </div>

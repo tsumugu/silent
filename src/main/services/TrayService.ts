@@ -18,7 +18,6 @@ export class TrayService {
   private callbacks: TrayCallbacks | null = null;
   private currentMetadata: MediaMetadata | null = null;
   private marqueeInterval: NodeJS.Timeout | null = null;
-  private animationInterval: NodeJS.Timeout | null = null;
   private marqueeOffset: number = 0;
   private currentTrackText: string = '';
   private clearTimer: NodeJS.Timeout | null = null;
@@ -35,7 +34,6 @@ export class TrayService {
   constructor() {
     this.settings = {
       showTrackTitle: true,
-      enableAnimation: true,
       enableScrolling: true,
     };
 
@@ -115,9 +113,9 @@ export class TrayService {
     this.callbacks = callbacks;
 
     try {
-      const img = this.generateTrayImage("Silent...", true);
+      const img = this.generateTrayImage("♫ Silent", true);
       this.tray = new Tray(img);
-      this.currentTrackText = "Silent...";
+      this.currentTrackText = "♫ Silent";
       this.tray.setTitle('');
       this.tray.setToolTip('Silent');
 
@@ -246,8 +244,16 @@ export class TrayService {
       }
       this.currentMetadata = metadata;
 
-      if (this.settings.showTrackTitle && (metadata?.title || this.isLoading)) {
-        const text = this.isLoading ? 'Loading...' : metadata?.title || '';
+      // Behavior when track title display is disabled: Always show "♫ Silent"
+      if (!this.settings.showTrackTitle) {
+        if (this.currentTrackText !== '♫ Silent' || this.marqueeInterval) {
+          this.clearTrack();
+        }
+        return;
+      }
+
+      if (metadata?.title || this.isLoading) {
+        const text = this.isLoading ? '♫ Silent' : metadata?.title || '';
         if (!text) return;
 
         const visualWidth = this.getVisualWidth(text);
@@ -266,7 +272,16 @@ export class TrayService {
 
               let truncated = text;
               if (visualWidth > 14) {
-                truncated = [...text].slice(0, 7).join('') + '...';
+                // Truncate to fit within visual limits when marquee is disabled
+                let currentWidth = 0;
+                let truncatedText = '';
+                for (const char of [...text]) {
+                  const charWidth = char.match(/[^\x00-\xff]/) ? 2 : 1;
+                  if (currentWidth + charWidth > 11) break; // Leave room for "..."
+                  truncatedText += char;
+                  currentWidth += charWidth;
+                }
+                truncated = truncatedText + '...';
               }
 
               const img = this.generateTrayImage(truncated, true);
@@ -277,7 +292,7 @@ export class TrayService {
         }
         this.tray.setToolTip(text);
       } else {
-        if (this.currentTrackText !== '' || this.marqueeInterval) {
+        if (this.currentTrackText !== '♫ Silent' || this.marqueeInterval) {
           if (!this.clearTimer) {
             this.clearTimer = setTimeout(() => {
               this.clearTrack();
@@ -296,7 +311,7 @@ export class TrayService {
     this.currentMetadata = null;
     this.isLoading = false;
     this.stopMarquee();
-    const img = this.generateTrayImage("Silent...", true);
+    const img = this.generateTrayImage("♫ Silent", true);
     this.tray.setImage(img);
     this.tray.setTitle('');
     this.tray.setToolTip('Silent');
@@ -399,10 +414,6 @@ export class TrayService {
 
   destroy(): void {
     this.stopMarquee();
-    if (this.animationInterval) {
-      clearInterval(this.animationInterval);
-      this.animationInterval = null;
-    }
     if (this.tray) {
       this.tray.destroy();
       this.tray = null;

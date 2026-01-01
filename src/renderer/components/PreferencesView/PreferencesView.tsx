@@ -3,12 +3,10 @@ import { AppSettings } from '../../../shared/types/settings';
 import GeneralSection from './GeneralSection';
 import MenuBarSection from './MenuBarSection';
 
-type Tab = 'general' | 'menubar';
-
 const PreferencesView: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>('general');
+  const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
     // Load settings
@@ -20,14 +18,10 @@ const PreferencesView: React.FC = () => {
     // Listen for settings changes
     const cleanup = window.electronAPI.onSettingsChanged((newSettings: AppSettings) => {
       setSettings(newSettings);
-      // If switched to Dock mode while on Menu Bar tab, switch to General tab
-      if (newSettings.displayMode === 'dock' && activeTab === 'menubar') {
-        setActiveTab('general');
-      }
     });
 
     return cleanup;
-  }, [activeTab]);
+  }, []);
 
   const handleClose = () => {
     window.electronAPI.closeWindow();
@@ -50,62 +44,61 @@ const PreferencesView: React.FC = () => {
       {/* Custom title bar with draggable area */}
       <div className="draggable flex-none h-14 flex items-center justify-between px-4">
         <div className="flex items-center space-x-2">
-          <div className="flex space-x-2">
+          <div
+            className="flex space-x-2"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+          >
             <button
               onClick={handleClose}
-              className="w-3 h-3 rounded-full bg-gray-500/60 hover:bg-gray-500/80 transition-colors"
+              className="w-3 h-3 rounded-full bg-gray-500/60 hover:bg-gray-500/80 transition-colors flex items-center justify-center group"
               style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
               aria-label="Close"
+            >
+              {isHovered && (
+                <svg
+                  className="w-1.5 h-1.5 text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                  viewBox="0 0 43 43"
+                  stroke="currentColor"
+                  strokeWidth="0"
+                  fill="currentColor"
+                >
+                  <path fillRule="evenodd" clipRule="evenodd" d="M1.05001 36.35L36.35 1.05C37.75 -0.35 39.95 -0.35 41.35 1.05L41.45 1.15C42.85 2.55 42.85 4.75 41.45 6.15L6.15001 41.45C4.75001 42.85 2.55001 42.85 1.15001 41.45L1.05001 41.35C-0.249988 39.95 -0.249988 37.75 1.05001 36.35Z" />
+                  <path fillRule="evenodd" clipRule="evenodd" d="M6.15 1.05001L41.45 36.35C42.85 37.75 42.85 39.95 41.45 41.35L41.35 41.45C39.95 42.85 37.75 42.85 36.35 41.45L1.05 6.15001C-0.35 4.75001 -0.35 2.55001 1.05 1.15001L1.15 1.05001C2.55 -0.249988 4.75 -0.249988 6.15 1.05001Z" />
+                </svg>
+              )}
+            </button>
+            <button
+              className="w-3 h-3 rounded-full bg-gray-500/20 cursor-default"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              disabled
             />
-            <div className="w-3 h-3 rounded-full bg-gray-500/60" />
-            <div className="w-3 h-3 rounded-full bg-gray-500/60" />
+            <button
+              className="w-3 h-3 rounded-full bg-gray-500/20 cursor-default"
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+              disabled
+            />
           </div>
         </div>
         <h2 className="text-white/60 text-sm font-medium">Preferences</h2>
         <div className="w-14" /> {/* Spacer for centering */}
       </div>
 
-      {/* Tab toolbar - macOS style */}
-      <div className="flex-none flex justify-center items-center space-x-1 py-4 px-6">
-        <button
-          onClick={() => setActiveTab('general')}
-          className={`flex flex-col items-center justify-center w-20 h-20 rounded-lg transition-all ${activeTab === 'general'
-            ? 'bg-white/10'
-            : 'hover:bg-white/5'
-            }`}
-        >
-          <svg className={`w-7 h-7 mb-1 transition-colors ${activeTab === 'general' ? 'text-white' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          <span className={`text-xs transition-colors ${activeTab === 'general' ? 'text-white' : 'text-white/40'}`}>General</span>
-        </button>
+      {/* Content area: Consolidated view */}
+      <div className="flex-1 overflow-hidden px-6 pb-6">
+        <div className="space-y-8 py-4">
+          {/* General Section */}
+          <section>
+            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">General</h3>
+            <GeneralSection settings={settings} onUpdate={handleSettingsUpdate} />
+          </section>
 
-        <button
-          onClick={() => settings.displayMode === 'menuBar' && setActiveTab('menubar')}
-          disabled={settings.displayMode !== 'menuBar'}
-          className={`flex flex-col items-center justify-center w-20 h-20 rounded-lg transition-all ${settings.displayMode !== 'menuBar'
-            ? 'opacity-30 cursor-not-allowed'
-            : activeTab === 'menubar'
-              ? 'bg-white/10'
-              : 'hover:bg-white/5'
-            }`}
-        >
-          <svg className={`w-7 h-7 mb-1 transition-colors ${activeTab === 'menubar' && settings.displayMode === 'menuBar' ? 'text-white' : 'text-white/40'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-          <span className={`text-xs transition-colors ${activeTab === 'menubar' && settings.displayMode === 'menuBar' ? 'text-white' : 'text-white/40'}`}>Menu Bar</span>
-        </button>
-      </div>
-
-      {/* Content area */}
-      <div className="flex-1 overflow-y-auto px-6 pb-6">
-        {activeTab === 'general' && (
-          <GeneralSection settings={settings} onUpdate={handleSettingsUpdate} />
-        )}
-        {activeTab === 'menubar' && (
-          <MenuBarSection settings={settings} onUpdate={handleSettingsUpdate} />
-        )}
+          {/* Menu Bar Section - Only show header if settings exist, implementation of visibility can be inside MenuBarSection if preferred, but here we show it if the component doesn't return null */}
+          <section>
+            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">Menu Bar</h3>
+            <MenuBarSection settings={settings} onUpdate={handleSettingsUpdate} />
+          </section>
+        </div>
       </div>
     </div>
   );

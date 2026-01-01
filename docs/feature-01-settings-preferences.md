@@ -11,7 +11,6 @@
     - `launchAtLogin`: `boolean` (デフォルト: `false`)
     - `tray`:
         - `showTrackTitle`: `boolean` (デフォルト: `true`)
-        - `enableAnimation`: `boolean` (デフォルト: `true`)
         - `enableScrolling`: `boolean` (デフォルト: `true`)
 
 ### 2. アプリ基盤の制御 (`src/main/index.ts`)
