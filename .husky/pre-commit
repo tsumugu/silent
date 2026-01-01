@@ -10,7 +10,7 @@ if git diff --cached --name-only | grep -q "package.json"; then
     ./scripts/screen.sh
     
     if [ $? -eq 0 ]; then
-      git add assets/screenshot.png
+      git add assets/screenshot.jpg
       echo "📸 Screenshot updated and added to commit."
     else
       echo "⚠️ Failed to capture screenshot. Proceeding without update."

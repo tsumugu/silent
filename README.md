@@ -2,7 +2,7 @@
 
 A beautiful, transparent YouTube Music player for macOS.
 
-![App Screenshot](assets/screenshot.png)
+![App Screenshot](assets/screenshot.jpg)
 
 ## Features
 

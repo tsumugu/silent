@@ -1,7 +1,7 @@
 {
   "name": "silent",
   "productName": "Silent",
-  "version": "1.0.3",
+  "version": "1.0.32",
   "description": "My Electron application description",
   "main": ".webpack/main",
   "scripts": {

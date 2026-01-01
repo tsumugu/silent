@@ -24,18 +24,29 @@ open -a "$(pwd)/out/Silent-darwin-arm64/Silent.app"
 # Wait for app to launch
 sleep 5
 
-# Capture full screen
+# Capture full screen (PNG first, then convert for quality control)
 echo "Capturing full screen screenshot..."
 screencapture -x assets/screenshot.png
 
-echo "Screenshot saved to assets/screenshot.png"
+# Convert to High Quality JPEG
+# JPEG is MUCH smaller than PNG for screenshots with wallpapers
+# We resize to 1200px and set quality to 85%
+echo "Converting to high-quality JPEG and resizing..."
+sips -s format jpeg -s formatOptions 85 --resampleWidth 1200 assets/screenshot.png --out assets/screenshot.jpg
+
+# Clean up temporary PNG
+rm assets/screenshot.png
+
+echo "Screenshot saved and optimized: assets/screenshot.jpg"
 
 sleep 1
 
 # Kill the app
 APP_PID=$(pgrep -f "Silent")
-kill $APP_PID
-rm /tmp/silent-wallpaper.jpg
+if [ ! -z "$APP_PID" ]; then
+    kill $APP_PID
+fi
+rm -f /tmp/silent-wallpaper.jpg
 
 # Restore apps (Show all)
 echo "Restoring apps..."
