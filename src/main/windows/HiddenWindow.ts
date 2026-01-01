@@ -30,5 +30,11 @@ export function createHiddenWindow(): BrowserWindow {
     console.log('[HiddenWindow] Page loaded');
   });
 
+  // Prevent closing the hidden window, just hide it
+  win.on('close', (e) => {
+    e.preventDefault();
+    win.hide();
+  });
+
   return win;
 }
