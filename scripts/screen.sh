@@ -4,6 +4,8 @@
 echo "Building app..."
 pnpm make
 
+sleep 1
+
 # Hide desktop icons
 echo "Hiding desktop icons..."
 defaults write com.apple.finder CreateDesktop false
