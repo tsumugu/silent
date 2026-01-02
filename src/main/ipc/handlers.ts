@@ -312,4 +312,38 @@ export function setupIPCHandlers(
   ipcMain.handle(IPCChannels.APP_GET_VERSION, () => {
     return app.getVersion();
   });
+
+  ipcMain.handle(IPCChannels.APP_CHECK_FOR_UPDATES, async () => {
+    try {
+      const response = await net.fetch('https://api.github.com/repos/tsumugu/silent/releases/latest', {
+        headers: {
+          'User-Agent': `Silent/${app.getVersion()}`,
+          'Accept': 'application/vnd.github.v3+json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest release from GitHub');
+      }
+
+      const latestRelease = await response.json();
+      const latestVersion = latestRelease.tag_name.replace(/^v/, '');
+      const currentVersion = app.getVersion();
+
+      const semver = require('semver');
+      const hasUpdate = semver.gt(latestVersion, currentVersion);
+
+      return {
+        hasUpdate,
+        latestVersion,
+        currentVersion,
+        url: latestRelease.html_url,
+        publishedAt: latestRelease.published_at,
+        notes: latestRelease.body
+      };
+    } catch (error) {
+      console.error('[Main] Update check failed:', error);
+      throw error;
+    }
+  });
 }

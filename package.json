@@ -1,8 +1,9 @@
 {
   "name": "silent",
   "productName": "Silent",
-  "version": "1.0.38",
+  "version": "1.0.38.1",
   "description": "My Electron application description",
+  "repository": "https://github.com/tsumugu/silent",
   "main": ".webpack/main",
   "scripts": {
     "start": "electron-forge start",
@@ -37,6 +38,7 @@
     "@electron/fuses": "^1.8.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "@types/semver": "^7.7.1",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "@vercel/webpack-asset-relocator-loader": "1.7.3",
@@ -67,6 +69,8 @@
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-masonry-css": "^1.0.16",
+    "semver": "^7.7.3",
+    "update-electron-app": "^3.1.2",
     "youtubei.js": "^16.0.1",
     "zustand": "^5.0.9"
   }

@@ -45,6 +45,7 @@ declare global {
       onSettingsChanged: (callback: (settings: AppSettings) => void) => () => void;
       requestRestart: () => Promise<void>;
       getVersion: () => Promise<string>;
+      checkForUpdates: () => Promise<any>;
     };
   }
 }

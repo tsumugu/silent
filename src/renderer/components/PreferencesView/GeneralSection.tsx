@@ -8,6 +8,26 @@ interface GeneralSectionProps {
 
 const GeneralSection: React.FC<GeneralSectionProps> = ({ settings, onUpdate }) => {
   const [pendingDisplayMode, setPendingDisplayMode] = useState<DisplayMode | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<{
+    loading: boolean;
+    error: string | null;
+    result: any | null;
+  }>({
+    loading: false,
+    error: null,
+    result: null
+  });
+
+  const checkUpdates = async () => {
+    setUpdateStatus({ loading: true, error: null, result: null });
+    try {
+      const result = await window.electronAPI.checkForUpdates();
+      setUpdateStatus({ loading: false, error: null, result });
+    } catch (error) {
+      console.error('[GeneralSection] Update check failed:', error);
+      setUpdateStatus({ loading: false, error: 'Failed to check for updates.', result: null });
+    }
+  };
 
   const handleDisplayModeChange = async (newMode: DisplayMode) => {
     if (newMode === settings.displayMode) {
@@ -44,6 +64,61 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ settings, onUpdate }) =
   return (
     <div>
       <div className="space-y-4">
+        {/* Software Update */}
+        <div className="bg-white/5 backdrop-blur-md rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <label className="text-white font-medium text-sm block">Software Update</label>
+              <p className="text-white/30 text-xs mt-1">
+                Current Version: <span className="text-white/60">{updateStatus.result?.currentVersion || '...'}</span>
+              </p>
+            </div>
+            <button
+              onClick={checkUpdates}
+              disabled={updateStatus.loading}
+              className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${updateStatus.loading
+                ? 'bg-white/5 text-white/20'
+                : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}
+            >
+              {updateStatus.loading ? 'Checking...' : 'Check for Updates'}
+            </button>
+          </div>
+
+          {updateStatus.error && (
+            <p className="text-red-400/80 text-xs mt-2">{updateStatus.error}</p>
+          )}
+
+          {updateStatus.result && (
+            <div className="mt-3 pt-3 border-t border-white/5">
+              {updateStatus.result.hasUpdate ? (
+                <div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-green-400 font-medium">New version available: v{updateStatus.result.latestVersion}</span>
+                    <a
+                      href={updateStatus.result.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white/60 hover:text-white underline"
+                    >
+                      View on GitHub
+                    </a>
+                  </div>
+                  {updateStatus.result.notes && (
+                    <div className="mt-2 p-3 bg-black/20 rounded-lg max-h-32 overflow-y-auto">
+                      <pre className="text-[10px] text-white/40 whitespace-pre-wrap font-sans">
+                        {updateStatus.result.notes}
+                      </pre>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-white/30 text-xs text-center">Your version is up to date.</p>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Display Mode */}
         <div className="bg-white/5 backdrop-blur-md rounded-xl p-5">
           <label className="text-white font-medium text-sm block mb-3">Display Mode</label>
@@ -51,8 +126,8 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ settings, onUpdate }) =
             <button
               onClick={() => handleDisplayModeChange('dock')}
               className={`px-4 py-2 rounded-lg transition-colors ${settings.displayMode === 'dock'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-white/5 text-white/40 hover:bg-white/10'
+                ? 'bg-white/20 text-white'
+                : 'bg-white/5 text-white/40 hover:bg-white/10'
                 }`}
             >
               Dock App
@@ -60,8 +135,8 @@ const GeneralSection: React.FC<GeneralSectionProps> = ({ settings, onUpdate }) =
             <button
               onClick={() => handleDisplayModeChange('menuBar')}
               className={`px-4 py-2 rounded-lg transition-colors ${settings.displayMode === 'menuBar'
-                  ? 'bg-white/20 text-white'
-                  : 'bg-white/5 text-white/40 hover:bg-white/10'
+                ? 'bg-white/20 text-white'
+                : 'bg-white/5 text-white/40 hover:bg-white/10'
                 }`}
             >
               Menu Bar App
