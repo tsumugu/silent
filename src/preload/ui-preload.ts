@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { MusicArtist } from '../shared/types/music';
+import { MusicArtist, ItemType } from '../shared/types/music';
 import { PlaybackInfo } from '../shared/types/playback';
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -51,7 +51,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('ytmusic:session-updated', listener);
     return () => { ipcRenderer.removeListener('ytmusic:session-updated', listener); };
   },
-  play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST', contextId?: string, artists?: MusicArtist[], albumId?: string) => ipcRenderer.send('ytmusic:play', id, type, contextId, artists, albumId),
+  play: (id: string, type: ItemType, contextId?: string, artists?: MusicArtist[], albumId?: string) => ipcRenderer.send('ytmusic:play', id, type, contextId, artists, albumId),
   setVibrancy: (vibrancy: any) => ipcRenderer.send('window:set-vibrancy', vibrancy),
   getVersion: () => ipcRenderer.invoke('app:get-version'),
   checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),

@@ -236,7 +236,7 @@ export function setupIPCHandlers(
     return await ytMusicService.checkLoginStatus();
   });
 
-  ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST', contextId?: string, artists?: MusicArtist[], albumId?: string) => {
+  ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST' | 'RADIO', contextId?: string, artists?: MusicArtist[], albumId?: string) => {
     if (hiddenWindow.isDestroyed()) return;
 
     // Store context for later enrichment
@@ -250,6 +250,12 @@ export function setupIPCHandlers(
       }
     } else if (type === 'PLAYLIST') {
       url = `https://music.youtube.com/watch?list=${id}`;
+    } else if (type === 'RADIO') {
+      // For radio, we want to play the seed video and then continue as a radio/mix
+      url = `https://music.youtube.com/watch?v=${id}`;
+      if (contextId) {
+        url += `&list=${contextId}`;
+      }
     } else {
       url = `https://music.youtube.com/browse/${id}`;
     }

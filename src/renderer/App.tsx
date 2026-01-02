@@ -155,11 +155,14 @@ export default function App() {
                   onAlbumSelect={(album) => navigateTo('detail', album)}
                   onPlaylistSelect={(playlist) => navigateTo('detail', playlist)}
                   onArtistSelect={(artist) => navigateTo('artist', artist)}
-                  onSongSelect={(song) => {
-                    if (isSongItem(song)) {
-                      const artists = song.artists;
-                      const albumId = song.album?.youtube_browse_id;
-                      window.electronAPI.play(song.youtube_video_id, 'SONG', undefined, artists, albumId);
+                  onSongSelect={(item) => {
+                    if (isSongItem(item)) {
+                      const artists = item.artists;
+                      const albumId = item.album?.youtube_browse_id;
+                      window.electronAPI.play(item.youtube_video_id, 'SONG', undefined, artists, albumId);
+                    } else if (isRadioItem(item)) {
+                      const videoId = item.seed_video_id || '';
+                      window.electronAPI.play(videoId || item.youtube_playlist_id, 'RADIO', videoId ? item.youtube_playlist_id : undefined);
                     }
                   }}
                   onSearch={(query) => navigateTo('search', null, query)}

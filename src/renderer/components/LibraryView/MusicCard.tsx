@@ -47,15 +47,21 @@ export const MusicCard: React.FC<MusicCardProps> = ({
 
   const normalizedType = item.type === 'ALBUM' ? 'album' :
     item.type === 'PLAYLIST' ? 'playlist' :
-      item.type === 'SONG' ? 'song' : item.type === 'ARTIST' ? 'artist' : null;
+      item.type === 'SONG' || item.type === 'RADIO' ? 'song' : item.type === 'ARTIST' ? 'artist' : null;
 
   const handleClick = () => {
     if (normalizedType === 'album' && onAlbumSelect) {
       onAlbumSelect(item);
-    } else if (normalizedType === 'song' && onSongSelect) {
-      onSongSelect(item);
-    } else if (normalizedType === 'song' && isSongItem(item)) {
-      window.electronAPI.play(item.youtube_video_id, 'SONG');
+    } else if (normalizedType === 'song') {
+      if (onSongSelect) {
+        onSongSelect(item);
+      } else if (isSongItem(item)) {
+        window.electronAPI.play(item.youtube_video_id, 'SONG');
+      } else if (isRadioItem(item)) {
+        // Use seed_video_id as the primary ID and youtube_playlist_id as the context
+        const videoId = item.seed_video_id || '';
+        window.electronAPI.play(videoId || item.youtube_playlist_id, 'RADIO', videoId ? item.youtube_playlist_id : undefined);
+      }
     } else if (normalizedType === 'playlist' && onPlaylistSelect) {
       onPlaylistSelect(item);
     } else if (normalizedType === 'artist' && onArtistSelect) {
