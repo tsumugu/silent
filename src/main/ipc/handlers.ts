@@ -323,7 +323,9 @@ export function setupIPCHandlers(
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch latest release from GitHub');
+        const errorText = await response.text();
+        console.error(`[Main] GitHub API error: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`Failed to fetch latest release from GitHub: ${response.status}`);
       }
 
       const latestRelease = await response.json();
@@ -331,7 +333,7 @@ export function setupIPCHandlers(
       const currentVersion = app.getVersion();
 
       const semver = require('semver');
-      const hasUpdate = semver.gt(latestVersion, currentVersion);
+      const hasUpdate = semver.gt(semver.coerce(latestVersion), semver.coerce(currentVersion));
 
       return {
         hasUpdate,
