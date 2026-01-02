@@ -113,6 +113,20 @@ export class YTMusicService {
 
             if (!musicItem) return null;
 
+            // Improved playlistId extraction
+            let playlistId = album.playlist_id ||
+                header?.play_button?.endpoint?.payload?.playlistId ||
+                header?.play_button?.button_renderer?.navigation_endpoint?.watch_playlist_endpoint?.playlist_id;
+
+            // Fallback: try to extract from URL if possible
+            if (!playlistId && album.url?.includes('list=')) {
+                try {
+                    const url = new URL(album.url, 'https://music.youtube.com');
+                    playlistId = url.searchParams.get('list');
+                } catch (e) { /* ignore */ }
+            }
+
+
             // アーティスト情報の抽出: より多くのフィールドをチェック
             const rawArtists = header?.artists || album?.artists || header?.strapline_text_one || header?.author || album?.author || header?.artist || album?.artist || header?.author?.name;
             const fallbackArtists = this.normalizeArtists(rawArtists);
@@ -127,13 +141,18 @@ export class YTMusicService {
                         name: musicItem.title
                     };
                 }
+                // Propagate playlistId for continuous playback
+                if (mapped && playlistId) {
+                    mapped.youtube_playlist_id = playlistId;
+                }
                 return mapped;
             }).filter(Boolean);
 
             const result: MusicDetail = {
                 ...musicItem,
                 description: header?.description?.toString(),
-                tracks: tracks
+                tracks: tracks,
+                youtube_playlist_id: playlistId // Ensure playlist ID is on the detail object
             };
 
             return JSON.parse(JSON.stringify(result));
@@ -178,7 +197,8 @@ export class YTMusicService {
             const result: MusicDetail = {
                 ...musicItem,
                 description: header?.description?.toString(),
-                tracks: tracks
+                tracks: tracks,
+                youtube_playlist_id: playlistId // Ensure playlist ID is on the detail object
             };
 
             return JSON.parse(JSON.stringify(result));

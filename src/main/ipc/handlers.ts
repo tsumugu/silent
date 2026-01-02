@@ -190,13 +190,21 @@ export function setupIPCHandlers(
     return await ytMusicService.checkLoginStatus();
   });
 
-  ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => {
+  ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST', contextId?: string) => {
     if (hiddenWindow.isDestroyed()) return;
-    const url = type === 'SONG'
-      ? `https://music.youtube.com/watch?v=${id}`
-      : type === 'PLAYLIST'
-        ? `https://music.youtube.com/watch?list=${id}` // Playlists should play immediately
-        : `https://music.youtube.com/browse/${id}`;
+
+    let url: string;
+    if (type === 'SONG') {
+      url = `https://music.youtube.com/watch?v=${id}`;
+      if (contextId) {
+        url += `&list=${contextId}`;
+      }
+    } else if (type === 'PLAYLIST') {
+      url = `https://music.youtube.com/watch?list=${id}`;
+    } else {
+      url = `https://music.youtube.com/browse/${id}`;
+    }
+
 
     // Stop current playback before loading new URL to prevent "stuck" states
     hiddenWindow.webContents.executeJavaScript('navigator.mediaSession.playbackState = "none"; block_updates = true;')

@@ -211,7 +211,11 @@ export default function App() {
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
                     if (song.youtube_video_id) {
-                      window.electronAPI.play(song.youtube_video_id, 'SONG');
+                      window.electronAPI.play(
+                        song.youtube_video_id,
+                        'SONG',
+                        song.youtube_playlist_id || (selectedItem.type === 'PLAYLIST' ? selectedItem.youtube_playlist_id : selectedItem.youtube_browse_id)
+                      );
                     }
                   }}
                 />

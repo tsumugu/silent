@@ -49,7 +49,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('ytmusic:session-updated', listener);
     return () => { ipcRenderer.removeListener('ytmusic:session-updated', listener); };
   },
-  play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST') => ipcRenderer.send('ytmusic:play', id, type),
+  play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST', contextId?: string) => ipcRenderer.send('ytmusic:play', id, type, contextId),
   setVibrancy: (vibrancy: any) => ipcRenderer.send('window:set-vibrancy', vibrancy),
   getVersion: () => ipcRenderer.invoke('app:get-version'),
 });
