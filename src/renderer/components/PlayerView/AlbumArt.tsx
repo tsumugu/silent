@@ -32,7 +32,7 @@ export function AlbumArt({ src, isHovered, isMini }: AlbumArtProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-white/5 rounded-3xl flex items-center justify-center backdrop-blur-sm shadow-inner"
+              className="absolute inset-0 rounded-3xl flex items-center justify-center shadow-inner"
             >
               <div className="text-white/10 text-6xl animate-pulse">
                 ♪
@@ -55,7 +55,7 @@ export function AlbumArt({ src, isHovered, isMini }: AlbumArtProps) {
               duration: 0.4,
               ease: 'easeOut',
             }}
-            className="w-full h-full rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] object-contain bg-gray-900"
+            className="w-full h-full rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] object-contain"
             onError={() => {
               console.warn('[AlbumArt] Image failed to load:', src);
             }}

@@ -131,11 +131,10 @@ export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
           </motion.div>
         )}
 
-        {/* Middle Section: Album Art (Primary element) */}
         <motion.div
           layout
           layoutId="player-artwork"
-          className="aspect-square flex-1 min-h-0 flex items-center justify-center w-full max-w-[500px]"
+          className="flex-1 min-h-0 flex items-center justify-center w-full max-w-[500px]"
           style={{
             maxHeight: isHovered ? '100%' : '800px'
           }}
