@@ -1,16 +1,17 @@
 import { ipcRenderer } from 'electron';
 import { PlaybackInfo } from '../shared/types';
-import { getImageCacheKey } from '../shared/utils/imageKey';
+
+// Forced global variables for control from main process
+(window as any).block_updates = false;
 
 let lastValidMetadata: any = null;
 let lastState: string | null = null;
+let lastStateTime = 0;
 type MSHandler = (details: any) => void;
 const msHandlers: Record<string, MSHandler> = {};
 
 /**
  * PURE MEDIASESSION HOOK (SELECTOR-LESS)
- * Since contextIsolation is false, we are in the main world.
- * We override setActionHandler to capture YTM's own callback logic.
  */
 if (navigator.mediaSession) {
   const ms = navigator.mediaSession;
@@ -21,7 +22,6 @@ if (navigator.mediaSession) {
     } else {
       delete msHandlers[action];
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return originalSetHandler(action as any, handler as any);
   };
 }
@@ -39,8 +39,44 @@ function triggerAction(action: string, details?: any): boolean {
   return false;
 }
 
-// Poll MediaSession every 500ms
+// Global error handling to catch playback failures
+window.addEventListener('error', (e) => {
+  console.error('[HiddenWindow] Global Error:', e.message);
+  if (e.message.includes('playback') || e.message.includes('load')) {
+    forceUpdateState('paused');
+  }
+}, true);
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.warn('[HiddenWindow] Unhandled Promise Rejection:', e.reason);
+});
+
+// Forced global variables for control from main process
+(window as any).block_updates = false;
+
+function forceUpdateState(state?: string) {
+  lastState = null; // Force next poll to send update
+  if (state) lastStateTime = 0;
+}
+
+// Cleanup on load
+function handleLoadFinish() {
+  (window as any).block_updates = false;
+  forceUpdateState();
+}
+
+window.addEventListener('load', handleLoadFinish);
+window.addEventListener('DOMContentLoaded', handleLoadFinish);
+
+// Reset on navigation start
+window.addEventListener('beforeunload', () => {
+  (window as any).block_updates = true;
+});
+
+// Poll MediaSession every 100ms
 function observeMediaSession() {
+  if ((window as any).block_updates) return;
+
   const mediaSession = navigator.mediaSession;
   if (!mediaSession) return;
 
@@ -51,13 +87,11 @@ function observeMediaSession() {
     let albumId: string | undefined;
 
     try {
-      // Robust extraction: Check internal data properties first
       const playerBar = document.querySelector('ytmusic-player-bar');
       const bylineLinks = playerBar?.querySelectorAll('.middle-controls .byline a') || [];
 
       for (const lin of Array.from(bylineLinks)) {
         const link = lin as any;
-        // Polymer/Lit elements often store data in .data property
         const browseId = link.data?.navigationEndpoint?.browseEndpoint?.browseId ||
           link.navigationEndpoint?.browseEndpoint?.browseId;
 
@@ -66,7 +100,6 @@ function observeMediaSession() {
           break;
         }
 
-        // Fallback: Check href if data property access fails (e.g. if element isn't fully hydrated in this context)
         const href = link.getAttribute('href');
         if (href?.includes('browse/MPREb') || href?.includes('browse/F')) {
           albumId = href.split('browse/')[1];
@@ -88,7 +121,6 @@ function observeMediaSession() {
         type: art.type,
       })) : [],
       videoId: (() => {
-        // Extract actual YouTube video ID from URL
         try {
           const urlParams = new URLSearchParams(window.location.search);
           const videoId = urlParams.get('v');
@@ -103,20 +135,25 @@ function observeMediaSession() {
   const activeMetadata = hasMetadata ? lastValidMetadata : (lastValidMetadata || null);
   if (!activeMetadata) return;
 
+  // Use video element as source of truth for playback state if possible
+  const video = document.querySelector('video');
+  let playbackState = mediaSession.playbackState || 'none';
+  if (video) {
+    // If video is strictly paused/playing, overwrite MediaSession state which can lag
+    playbackState = video.paused ? 'paused' : 'playing';
+  }
+
   const playbackInfo: PlaybackInfo = {
     metadata: activeMetadata,
-    playbackState: mediaSession.playbackState || 'none',
+    playbackState: playbackState as any,
     position: 0,
     duration: 0,
   };
 
-  // Try to get position and duration from video element directly
-  const video = document.querySelector('video');
   if (video && !isNaN(video.currentTime) && !isNaN(video.duration)) {
     playbackInfo.position = video.currentTime;
     playbackInfo.duration = video.duration;
   } else if ("getPositionState" in mediaSession) {
-    // Fallback to MediaSession API
     try {
       const positionState = (mediaSession as any).getPositionState();
       if (positionState) {
@@ -127,7 +164,6 @@ function observeMediaSession() {
   }
 
   // Optimization: Only send update if significant changes occurred
-  // We compare position with a 1s threshold if metadata is same
   let shouldUpdate = false;
   if (!lastState) {
     shouldUpdate = true;
@@ -136,11 +172,9 @@ function observeMediaSession() {
     const metadataChanged = JSON.stringify(playbackInfo.metadata) !== JSON.stringify(last.metadata);
     const stateChanged = playbackInfo.playbackState !== last.playbackState;
     const durationChanged = Math.abs(playbackInfo.duration - last.duration) > 1;
-    const positionJump = Math.abs(playbackInfo.position - last.position) > 1.5; // Large jump (seek or lag)
+    const positionJump = Math.abs(playbackInfo.position - last.position) > 1.5;
 
-    // Update if metadata/state/duration changed, or if it's a "significant" position update
-    // We also update every 2 seconds regardless to keep progress bar smooth but not spammy
-    const timeSinceLastUpdate = Date.now() - (lastStateTime || 0);
+    const timeSinceLastUpdate = Date.now() - lastStateTime;
 
     if (metadataChanged || stateChanged || durationChanged || positionJump || timeSinceLastUpdate > 2000) {
       shouldUpdate = true;
@@ -154,8 +188,6 @@ function observeMediaSession() {
     ipcRenderer.send('playback:state-changed', playbackInfo);
   }
 }
-
-let lastStateTime = 0;
 
 // Start polling
 setInterval(observeMediaSession, 100);
