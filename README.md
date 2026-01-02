@@ -1,15 +1,14 @@
 # Silent
 
-A beautiful, transparent YouTube Music player for macOS.
+A minimalist YouTube Music player for macOS that stays out of your way.
+
+## Glassmorphism
+The translucent, frosted-glass interface blends beautifully with your wallpaper and other windows. It lets you keep your music within reach without cluttering your workspace.
 
 ![App Screenshot](assets/screenshot.jpg)
 
-## Features
+## Simplicity
+Stop hunting for browser tabs. We've stripped away the complexity of the web interface to give you a focused experience—just the essential controls for the music you love.
 
-- **YouTube Music**: Built on top of YouTube Music for a vast library.
-- **Transparent UI**: Designed to blend seamlessly with your desktop.
-- **Minimalist**: Focused on what matters - the music.
-
-## Download
-
-Download the latest version from the [Releases](https://github.com/tsumugu/silent/releases) page.
+## Usage
+Download the latest version from [Releases](https://github.com/tsumugu/silent/releases).
