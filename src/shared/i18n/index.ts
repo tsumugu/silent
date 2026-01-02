@@ -16,6 +16,7 @@ export const translations = {
 
         // Preferences - General
         preferences: "Preferences",
+        general: "General",
         software: "Software",
         update_check: "Check for Updates",
         update_checking: "Checking...",
@@ -25,8 +26,8 @@ export const translations = {
 
         // Preferences - Mode
         mode: "Mode",
-        dock_app: "Dock App",
-        menu_bar_app: "Menu Bar App",
+        dock_app: "Dock",
+        menu_bar_app: "Menu Bar",
         restart_required_notice: "Restart required to apply changes",
 
         // Preferences - Content
@@ -72,6 +73,7 @@ export const translations = {
 
         // Preferences - General
         preferences: "設定",
+        general: "一般",
         software: "ソフトウェア",
         update_check: "アップデートを確認",
         update_checking: "確認中...",
@@ -81,8 +83,8 @@ export const translations = {
 
         // Preferences - Mode
         mode: "表示モード",
-        dock_app: "Dockアプリ",
-        menu_bar_app: "メニューバーアプリ",
+        dock_app: "Dock",
+        menu_bar_app: "メニューバー",
         restart_required_notice: "変更を適用するには再起動が必要です",
 
         // Preferences - Content

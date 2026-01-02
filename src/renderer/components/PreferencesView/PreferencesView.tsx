@@ -115,7 +115,7 @@ const PreferencesView: React.FC = () => {
         <div className="space-y-8 py-4">
           {/* Update Section */}
           <section className="space-y-4">
-            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">{t.software}</h3>
+            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">{t.general}</h3>
             <UpdateSection currentVersion={version} />
             <ContentSection
               settings={settings}
