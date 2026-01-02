@@ -7,6 +7,7 @@ import { PlaybackInfo } from '../shared/types';
 let lastValidMetadata: any = null;
 let lastState: string | null = null;
 let lastStateTime = 0;
+let hasInteracted = false;
 type MSHandler = (details: any) => void;
 const msHandlers: Record<string, MSHandler> = {};
 
@@ -27,6 +28,7 @@ if (navigator.mediaSession) {
 }
 
 function triggerAction(action: string, details?: any): boolean {
+  hasInteracted = true; // Any triggered action counts as interaction
   const handler = msHandlers[action];
   if (handler && typeof handler === 'function') {
     try {
@@ -43,7 +45,7 @@ function triggerAction(action: string, details?: any): boolean {
 window.addEventListener('error', (e) => {
   console.error('[HiddenWindow] Global Error:', e.message);
   if (e.message.includes('playback') || e.message.includes('load')) {
-    forceUpdateState('paused');
+    forceUpdateState();
   }
 }, true);
 
@@ -54,9 +56,9 @@ window.addEventListener('unhandledrejection', (e) => {
 // Forced global variables for control from main process
 (window as any).block_updates = false;
 
-function forceUpdateState(state?: string) {
+function forceUpdateState() {
   lastState = null; // Force next poll to send update
-  if (state) lastStateTime = 0;
+  lastStateTime = 0;
 }
 
 // Cleanup on load
@@ -143,6 +145,14 @@ function observeMediaSession() {
     playbackState = video.paused ? 'paused' : 'playing';
   }
 
+  // Initial state suppression
+  // If we haven't interacted yet and the state is not 'playing', 
+  // assume it's a restored session and ignore it to keep Miniplayer empty.
+  if (!hasInteracted && playbackState !== 'playing') {
+    return;
+  }
+  hasInteracted = true;
+
   const playbackInfo: PlaybackInfo = {
     metadata: activeMetadata,
     playbackState: playbackState as any,
@@ -168,15 +178,19 @@ function observeMediaSession() {
   if (!lastState) {
     shouldUpdate = true;
   } else {
-    const last = JSON.parse(lastState) as PlaybackInfo;
-    const metadataChanged = JSON.stringify(playbackInfo.metadata) !== JSON.stringify(last.metadata);
-    const stateChanged = playbackInfo.playbackState !== last.playbackState;
-    const durationChanged = Math.abs(playbackInfo.duration - last.duration) > 1;
-    const positionJump = Math.abs(playbackInfo.position - last.position) > 1.5;
+    try {
+      const last = JSON.parse(lastState) as PlaybackInfo;
+      const metadataChanged = JSON.stringify(playbackInfo.metadata) !== JSON.stringify(last.metadata);
+      const stateChanged = playbackInfo.playbackState !== last.playbackState;
+      const durationChanged = Math.abs(playbackInfo.duration - last.duration) > 1;
+      const positionJump = Math.abs(playbackInfo.position - last.position) > 1.5;
 
-    const timeSinceLastUpdate = Date.now() - lastStateTime;
+      const timeSinceLastUpdate = Date.now() - lastStateTime;
 
-    if (metadataChanged || stateChanged || durationChanged || positionJump || timeSinceLastUpdate > 2000) {
+      if (metadataChanged || stateChanged || durationChanged || positionJump || timeSinceLastUpdate > 2000) {
+        shouldUpdate = true;
+      }
+    } catch (e) {
       shouldUpdate = true;
     }
   }
@@ -194,6 +208,7 @@ setInterval(observeMediaSession, 100);
 
 // Playback Controls (STRICTLY Selector-less via MediaSession Hook)
 ipcRenderer.on('playback:play', () => {
+  hasInteracted = true;
   if (!triggerAction('play')) {
     // Standard HTML5 Video API (Not a UI selector)
     document.querySelector('video')?.play().catch(() => { /* ignore */ });
@@ -201,20 +216,24 @@ ipcRenderer.on('playback:play', () => {
 });
 
 ipcRenderer.on('playback:pause', () => {
+  hasInteracted = true;
   if (!triggerAction('pause')) {
     document.querySelector('video')?.pause();
   }
 });
 
 ipcRenderer.on('playback:next', () => {
+  hasInteracted = true;
   triggerAction('nexttrack');
 });
 
 ipcRenderer.on('playback:previous', () => {
+  hasInteracted = true;
   triggerAction('previoustrack');
 });
 
 ipcRenderer.on('playback:seek', (_event, seekTime: number) => {
+  hasInteracted = true;
   // Use the MediaSession 'seekto' action if available (modern API way)
   if (!triggerAction('seekto', { seekTime })) {
     // Fallback to direct video manipulation
