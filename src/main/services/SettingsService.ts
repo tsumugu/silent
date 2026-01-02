@@ -23,6 +23,14 @@ export class SettingsService extends EventEmitter {
           type: 'boolean',
           default: false
         },
+        language: {
+          type: 'string',
+          default: 'en'
+        },
+        location: {
+          type: 'string',
+          default: 'US'
+        },
         tray: {
           type: 'object',
           properties: {
@@ -56,6 +64,8 @@ export class SettingsService extends EventEmitter {
     return {
       displayMode: (this.store as any).get('displayMode'),
       launchAtLogin: (this.store as any).get('launchAtLogin'),
+      language: (this.store as any).get('language'),
+      location: (this.store as any).get('location'),
       tray: (this.store as any).get('tray')
     };
   }
@@ -67,6 +77,12 @@ export class SettingsService extends EventEmitter {
     }
     if (partial.launchAtLogin !== undefined) {
       (this.store as any).set('launchAtLogin', partial.launchAtLogin);
+    }
+    if (partial.language !== undefined) {
+      (this.store as any).set('language', partial.language);
+    }
+    if (partial.location !== undefined) {
+      (this.store as any).set('location', partial.location);
     }
     if (partial.tray !== undefined) {
       const currentTray = (this.store as any).get('tray');

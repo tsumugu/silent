@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { MusicArtist, MusicItem } from '../shared/types/music';
+import { AppSettings } from '../shared/types/settings';
 import { PlaybackInfo } from '../shared/types/playback';
 import { IPCChannels } from '../main/ipc/types';
 
@@ -56,4 +57,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setVibrancy: (vibrancy: any) => ipcRenderer.send('window:set-vibrancy', vibrancy),
   getVersion: () => ipcRenderer.invoke('app:get-version'),
   checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
+
+  // Settings API
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  updateSettings: (settings: Partial<AppSettings>) =>
+    ipcRenderer.invoke('settings:update', settings),
+  onSettingsChanged: (callback: (settings: AppSettings) => void) => {
+    const listener = (_: any, settings: AppSettings) => callback(settings);
+    ipcRenderer.on('settings:changed', listener);
+    return () => ipcRenderer.removeListener('settings:changed', listener);
+  },
+  requestRestart: () => ipcRenderer.invoke('settings:request-restart'),
 });

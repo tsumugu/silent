@@ -28,10 +28,13 @@ export class YTMusicClient {
             const cookieString = uniqueCookies.map(c => `${c.name}=${c.value}`).join('; ');
 
             // Innertube インスタンスを作成
+            const { settingsService } = require('../services/SettingsService');
+            const settings = settingsService.getSettings();
+
             this.innertube = await Innertube.create({
                 cookie: cookieString,
-                lang: 'ja',
-                location: 'JP'
+                lang: settings.language || 'en',
+                location: settings.location || 'US'
             });
 
             this.isInitialized = true;

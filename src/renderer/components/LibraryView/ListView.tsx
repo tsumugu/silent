@@ -4,6 +4,8 @@ import { SearchBar } from './SearchBar';
 import { MusicItem } from '../../../shared/types/music';
 import { LoadingState, ErrorState, EmptyState } from '../common/StateViews';
 
+import { useTranslation } from '../../hooks/useTranslation';
+
 interface ListViewProps {
     query?: string;
     onAlbumSelect: (album: MusicItem) => void;
@@ -27,6 +29,7 @@ export const ListView: React.FC<ListViewProps> = ({
     searchResults,
     onResultsChange
 }) => {
+    const { t } = useTranslation();
     const [sections, setSections] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -53,9 +56,9 @@ export const ListView: React.FC<ListViewProps> = ({
 
                 const mappedSections = [];
                 if (results) {
-                    if (results.songs.length > 0) mappedSections.push({ title: 'Songs', contents: results.songs });
-                    if (results.albums.length > 0) mappedSections.push({ title: 'Albums', contents: results.albums });
-                    if (results.playlists.length > 0) mappedSections.push({ title: 'Playlists', contents: results.playlists });
+                    if (results.songs.length > 0) mappedSections.push({ title: t.songs, contents: results.songs });
+                    if (results.albums.length > 0) mappedSections.push({ title: t.albums, contents: results.albums });
+                    if (results.playlists.length > 0) mappedSections.push({ title: t.playlists, contents: results.playlists });
                 }
                 setSections(mappedSections);
             } else {
@@ -96,16 +99,16 @@ export const ListView: React.FC<ListViewProps> = ({
                     </svg>
                 </div>
                 <div>
-                    <h2 className="text-2xl font-bold mb-2">Login Required</h2>
+                    <h2 className="text-2xl font-bold mb-2">{t.login_required}</h2>
                     <p className="text-white/40 text-sm leading-relaxed">
-                        YouTube Musicのパーソナライズされた体験を楽しむにはログインが必要です。
+                        {t.login_message}
                     </p>
                 </div>
                 <button
                     onClick={() => window.electronAPI.showLogin()}
                     className="px-8 py-3 bg-white text-black rounded-full font-bold hover:bg-neutral-200 transition-colors shadow-xl active:scale-95"
                 >
-                    Login to YouTube Music
+                    {t.login_button}
                 </button>
             </div>
         );
@@ -120,7 +123,7 @@ export const ListView: React.FC<ListViewProps> = ({
                     <button
                         onClick={onBack}
                         className="text-white/60 hover:text-white transition-colors p-2 -ml-2 rounded-lg hover:bg-white/5 active:scale-90"
-                        title="Back"
+                        title={t.back}
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -132,7 +135,7 @@ export const ListView: React.FC<ListViewProps> = ({
                 <div className="flex-1">
                     <SearchBar
                         onSearch={onSearch || (() => { })}
-                        placeholder="曲、アルバム、プレイリストを検索..."
+                        placeholder={t.search_placeholder}
                         value={query}
                     />
                 </div>
@@ -140,14 +143,14 @@ export const ListView: React.FC<ListViewProps> = ({
 
             {/* List Content */}
             <div className="p-8 pb-32 pt-2">
-                {loading && <LoadingState message={isSearchMode ? "検索中..." : "コンテンツ取得中..."} />}
+                {loading && <LoadingState message={isSearchMode ? t.searching : t.fetching} />}
 
                 {error && <ErrorState error={error} />}
 
                 {!loading && !error && isSearchMode && sections.length === 0 && (
                     <EmptyState
-                        message="No results found"
-                        subMessage={`No songs, albums, or playlists found for "${query}"`}
+                        message={t.no_results}
+                        subMessage={t.no_results_sub(query)}
                     />
                 )}
 

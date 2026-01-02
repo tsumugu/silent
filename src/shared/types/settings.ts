@@ -8,12 +8,16 @@ export interface TraySettings {
 export interface AppSettings {
   displayMode: DisplayMode;
   launchAtLogin: boolean;
+  language: string;
+  location: string;
   tray: TraySettings;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   displayMode: 'menuBar',
   launchAtLogin: false,
+  language: 'en',
+  location: 'US',
   tray: {
     showTrackTitle: true,
     enableScrolling: true,

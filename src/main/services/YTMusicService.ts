@@ -165,9 +165,9 @@ export class YTMusicService {
             const artist: any = await this.client.getArtistRaw(artistId);
 
             const header = artist.header;
-            const topSongs = artist.sections.find((s: any) => s.type === 'MusicShelf' || s.title?.toString().includes('曲'))?.contents || [];
-            const albums = artist.sections.find((s: any) => s.title?.toString().includes('アルバム'))?.contents || [];
-            const singles = artist.sections.find((s: any) => s.title?.toString().includes('シングル'))?.contents || [];
+            const topSongs = artist.sections.find((s: any) => s.type === 'MusicShelf' || s.title?.toString().includes('曲') || s.title?.toString().includes('Song'))?.contents || [];
+            const albums = artist.sections.find((s: any) => s.title?.toString().includes('アルバム') || s.title?.toString().includes('Album'))?.contents || [];
+            const singles = artist.sections.find((s: any) => s.title?.toString().includes('シングル') || s.title?.toString().includes('Single'))?.contents || [];
 
             const musicItem = MusicMapper.mapToMusicItem({
                 ...artist,

@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { AppSettings } from '../../../shared/types/settings';
-import GeneralSection from './GeneralSection';
+import UpdateSection from './UpdateSection';
+import DisplayModeSection from './DisplayModeSection';
+import ContentSection from './ContentSection';
 import MenuBarSection from './MenuBarSection';
+import LaunchSection from './LaunchSection';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const PreferencesView: React.FC = () => {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [version, setVersion] = useState('...');
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
@@ -14,6 +20,9 @@ const PreferencesView: React.FC = () => {
       setSettings(loadedSettings);
       setLoading(false);
     });
+
+    // Load version
+    window.electronAPI.getVersion().then(setVersion);
 
     // Listen for settings changes
     const cleanup = window.electronAPI.onSettingsChanged((newSettings: AppSettings) => {
@@ -31,10 +40,27 @@ const PreferencesView: React.FC = () => {
     await window.electronAPI.updateSettings(partial);
   };
 
+  const handleRestartPrompt = () => {
+    setTimeout(() => {
+      const isDevelopment = window.electronAPI.platform === 'darwin' &&
+        window.location.hostname === 'localhost';
+
+      const message = isDevelopment
+        ? `${t.restart_prompt_message}\n\n${t.restart_dev_message}`
+        : `${t.restart_prompt_message}\n\n${t.restart_prompt_confirm}`;
+
+      const shouldRestart = confirm(message);
+
+      if (shouldRestart) {
+        window.electronAPI.requestRestart();
+      }
+    }, 100);
+  };
+
   if (loading || !settings) {
     return (
       <div className="w-screen h-screen flex items-center justify-center">
-        <p className="text-white/40">Loading...</p>
+        <p className="text-white/40">{t.loading}</p>
       </div>
     );
   }
@@ -87,15 +113,29 @@ const PreferencesView: React.FC = () => {
       {/* Content area: Consolidated view */}
       <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar">
         <div className="space-y-8 py-4">
-          {/* General Section */}
-          <section>
-            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">General</h3>
-            <GeneralSection settings={settings} onUpdate={handleSettingsUpdate} />
+          {/* Update Section */}
+          <section className="space-y-4">
+            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">{t.software}</h3>
+            <UpdateSection currentVersion={version} />
+            <ContentSection
+              settings={settings}
+              onUpdate={handleSettingsUpdate}
+              onRestartPrompt={handleRestartPrompt}
+            />
+            <LaunchSection
+              settings={settings}
+              onUpdate={handleSettingsUpdate}
+            />
           </section>
 
-          {/* Menu Bar Section - Only show header if settings exist, implementation of visibility can be inside MenuBarSection if preferred, but here we show it if the component doesn't return null */}
-          <section>
-            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">Menu Bar</h3>
+          {/* Mode Section */}
+          <section className="space-y-4">
+            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">{t.mode}</h3>
+            <DisplayModeSection
+              settings={settings}
+              onUpdate={handleSettingsUpdate}
+              onRestartPrompt={handleRestartPrompt}
+            />
             <MenuBarSection settings={settings} onUpdate={handleSettingsUpdate} />
           </section>
         </div>
