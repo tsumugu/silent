@@ -203,8 +203,9 @@ function observeMediaSession() {
   }
 }
 
-// Start polling
-setInterval(observeMediaSession, 100);
+// Start polling with adaptive frequency
+// We use a high frequency (50ms) for smoother progress bars and reactive Control Center
+setInterval(observeMediaSession, 50);
 
 // Playback Controls (STRICTLY Selector-less via MediaSession Hook)
 ipcRenderer.on('playback:play', () => {

@@ -210,6 +210,14 @@ export function setupIPCHandlers(
     hiddenWindow.webContents.executeJavaScript('navigator.mediaSession.playbackState = "none"; block_updates = true;')
       .catch(() => { }); // Ignore errors if script fails
 
+    // Reset local playback state to avoid showing old metadata while loading
+    lastPlaybackInfo = null;
+    BrowserWindow.getAllWindows().forEach(win => {
+      if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
+        win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, null);
+      }
+    });
+
     trayService.showLoading();
     hiddenWindow.loadURL(url);
   });

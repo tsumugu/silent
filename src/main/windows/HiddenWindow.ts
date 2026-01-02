@@ -13,7 +13,8 @@ export function createHiddenWindow(): BrowserWindow {
       preload: preloadPath,
       contextIsolation: false, // Required for direct MediaSession hook. We will avoid EvalError by not using injection.
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      autoplayPolicy: 'no-user-gesture-required'
     }
   });
 
