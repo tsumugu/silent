@@ -6,7 +6,7 @@ import { AppSettings } from '../../shared/types/settings';
 import { ytMusicService } from '../services/YTMusicService';
 import { settingsService } from '../services/SettingsService';
 import { trayService } from '../services/TrayService';
-import { MusicArtist, isSongItem } from '../../shared/types/music';
+import { MusicArtist, MusicItem, isSongItem, isAlbumItem, isPlaylistItem, isChartItem, isRadioItem } from '../../shared/types/music';
 
 // Persist the last known playback state to restore it when UI window is recreated
 let lastPlaybackInfo: PlaybackInfo | null = null;
@@ -145,19 +145,19 @@ export function setupIPCHandlers(
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_NEXT, () => {
-    if (hiddenWindow.isDestroyed()) return;
+    if (hiddenWindow.isDestroyed() || !lastPlaybackInfo) return;
     sendMediaKey('MediaNextTrack', 'n');
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_NEXT);
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_PREVIOUS, () => {
-    if (hiddenWindow.isDestroyed()) return;
+    if (hiddenWindow.isDestroyed() || !lastPlaybackInfo) return;
     sendMediaKey('MediaPreviousTrack', 'p');
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_PREVIOUS);
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_SEEK, (_event, seekTime: number) => {
-    if (hiddenWindow.isDestroyed()) return;
+    if (hiddenWindow.isDestroyed() || !lastPlaybackInfo) return;
     // Seeking still needs IPC as there's no native "seek" media key
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_SEEK, seekTime);
   });
@@ -236,44 +236,74 @@ export function setupIPCHandlers(
     return await ytMusicService.checkLoginStatus();
   });
 
-  ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST' | 'RADIO', contextId?: string, artists?: MusicArtist[], albumId?: string) => {
+  let lastPlayRequestTime = 0;
+
+  ipcMain.on(IPCChannels.YT_PLAY, (_event, item: MusicItem, contextId?: string) => {
     if (hiddenWindow.isDestroyed()) return;
 
-    // Store context for later enrichment
-    lastPlayContext = { artists, albumId };
+    // 1. Throttling to prevent rapid double-clicks
+    const now = Date.now();
+    if (now - lastPlayRequestTime < 500) return;
+    lastPlayRequestTime = now;
 
-    let url: string;
-    if (type === 'SONG') {
+    // 2. Extract necessary info
+    let id: string;
+    let type = item.type;
+    let url: string = '';
+
+    if (isSongItem(item)) {
+      id = item.youtube_video_id;
       url = `https://music.youtube.com/watch?v=${id}`;
-      if (contextId) {
-        url += `&list=${contextId}`;
+      if (contextId || item.youtube_playlist_id) {
+        url += `&list=${contextId || item.youtube_playlist_id}`;
       }
-    } else if (type === 'PLAYLIST') {
+      lastPlayContext = { artists: item.artists, albumId: item.album?.youtube_browse_id };
+    } else if (isAlbumItem(item)) {
+      id = item.youtube_browse_id;
+      url = `https://music.youtube.com/watch?list=${item.youtube_playlist_id || id}`;
+      lastPlayContext = { artists: item.artists, albumId: id };
+    } else if (isPlaylistItem(item) || isChartItem(item)) {
+      id = item.youtube_playlist_id;
       url = `https://music.youtube.com/watch?list=${id}`;
-    } else if (type === 'RADIO') {
-      // For radio, we want to play the seed video and then continue as a radio/mix
-      url = `https://music.youtube.com/watch?v=${id}`;
-      if (contextId) {
-        url += `&list=${contextId}`;
-      }
+      lastPlayContext = {};
+    } else if (isRadioItem(item)) {
+      id = item.seed_video_id || item.youtube_playlist_id;
+      url = `https://music.youtube.com/watch?v=${id}&list=${item.youtube_playlist_id}`;
+      lastPlayContext = {};
     } else {
+      // Artist/etc.
+      id = (item as any).youtube_browse_id;
       url = `https://music.youtube.com/browse/${id}`;
+      lastPlayContext = {};
     }
 
+    // 3. Immediately notify UI of "Loading" state with new metadata
+    // This provides instant visual feedback and prevents the "disappearing" issue
+    const loadingInfo: PlaybackInfo = {
+      metadata: {
+        title: item.title,
+        artist: (item as any).artists ? (item as any).artists.map((a: any) => a.name).join(', ') : item.subtitle,
+        artwork: item.thumbnails.map(t => ({ src: t.url, sizes: `${t.width}x${t.height}` })),
+        videoId: isSongItem(item) ? item.youtube_video_id : undefined,
+      },
+      playbackState: 'loading',
+      position: 0,
+      duration: isSongItem(item) ? (item.duration?.seconds || 0) : 0,
+    };
 
-    // Stop current playback before loading new URL to prevent "stuck" states
-    hiddenWindow.webContents.executeJavaScript('navigator.mediaSession.playbackState = "none"; block_updates = true;')
-      .catch(() => { }); // Ignore errors if script fails
-
-    // Reset local playback state to avoid showing old metadata while loading
-    lastPlaybackInfo = null;
+    lastPlaybackInfo = loadingInfo;
     BrowserWindow.getAllWindows().forEach(win => {
       if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
-        win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, null);
+        win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, loadingInfo);
       }
     });
 
+    // 4. Force state in hidden window and load
+    hiddenWindow.webContents.executeJavaScript('navigator.mediaSession.playbackState = "none"; block_updates = true;')
+      .catch(() => { });
+
     trayService.showLoading();
+    hiddenWindow.webContents.stop(); // Discard previous load/navigation
     hiddenWindow.loadURL(url);
   });
 

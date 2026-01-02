@@ -14,7 +14,7 @@ export const usePlayerStore = create<PlayerState>((set) => ({
   setPlaybackInfo: (info: PlaybackInfo | null) => {
     set({
       playbackInfo: info,
-      isPlaying: info ? info.playbackState === 'playing' : false,
+      isPlaying: info?.playbackState === 'playing',
     });
   },
 }));

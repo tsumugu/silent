@@ -3,16 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface ControlBarProps {
   isPlaying: boolean;
+  isLoading?: boolean;
   isVisible: boolean;
   isMini?: boolean;
 }
 
-export function ControlBar({ isPlaying, isVisible, isMini }: ControlBarProps) {
+export function ControlBar({ isPlaying, isLoading, isVisible, isMini }: ControlBarProps) {
   const handlePrevious = () => {
+    if (isLoading) return;
     window.electronAPI.playbackPrevious();
   };
 
   const handlePlayPause = () => {
+    if (isLoading) return;
     if (isPlaying) {
       window.electronAPI.playbackPause();
     } else {
@@ -21,6 +24,7 @@ export function ControlBar({ isPlaying, isVisible, isMini }: ControlBarProps) {
   };
 
   const handleNext = () => {
+    if (isLoading) return;
     window.electronAPI.playbackNext();
   };
 
@@ -38,7 +42,8 @@ export function ControlBar({ isPlaying, isVisible, isMini }: ControlBarProps) {
           {/* Previous button */}
           <button
             onClick={handlePrevious}
-            className={`${isMini ? 'w-10 h-10' : 'w-14 h-14'} rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:scale-110`}
+            disabled={isLoading}
+            className={`${isMini ? 'w-10 h-10' : 'w-14 h-14'} rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 ${isLoading ? 'opacity-30' : 'hover:scale-110'}`}
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <svg
@@ -53,10 +58,13 @@ export function ControlBar({ isPlaying, isVisible, isMini }: ControlBarProps) {
           {/* Play/Pause button */}
           <button
             onClick={handlePlayPause}
-            className={`${isMini ? 'w-14 h-14' : 'w-20 h-20'} rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:scale-110`}
+            disabled={isLoading}
+            className={`${isMini ? 'w-14 h-14' : 'w-20 h-20'} rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center transition-all duration-200 ${isLoading ? 'opacity-50' : 'hover:scale-110'}`}
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
-            {isPlaying ? (
+            {isLoading ? (
+              <div className={`${isMini ? 'w-6 h-6' : 'w-8 h-8'} border-2 border-white/20 border-t-white rounded-full animate-spin`} />
+            ) : isPlaying ? (
               <svg
                 className={`${isMini ? 'w-6 h-6' : 'w-8 h-8'} text-white`}
                 fill="currentColor"
@@ -78,7 +86,8 @@ export function ControlBar({ isPlaying, isVisible, isMini }: ControlBarProps) {
           {/* Next button */}
           <button
             onClick={handleNext}
-            className={`${isMini ? 'w-10 h-10' : 'w-14 h-14'} rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:scale-110`}
+            disabled={isLoading}
+            className={`${isMini ? 'w-10 h-10' : 'w-14 h-14'} rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 ${isLoading ? 'opacity-30' : 'hover:scale-110'}`}
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <svg

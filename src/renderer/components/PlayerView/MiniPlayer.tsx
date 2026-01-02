@@ -28,10 +28,11 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     // Use the integrated hook for high-quality blob URL and colors
     const { colors, blobUrl } = useTrackAssets(originalArtwork, cacheKey);
 
-    if (!playbackInfo) return null;
+    const isLoading = playbackInfo?.playbackState === 'loading';
 
     const handlePlayPause = (e: React.MouseEvent) => {
         e.stopPropagation();
+        if (isLoading) return;
         if (isPlaying) {
             window.electronAPI.playbackPause();
         } else {
@@ -41,6 +42,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
 
     const handleNext = (e: React.MouseEvent) => {
         e.stopPropagation();
+        if (isLoading) return;
         window.electronAPI.playbackNext();
     };
 
@@ -59,7 +61,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
             {/* Artwork */}
             <motion.div
                 layoutId="player-artwork"
-                className={`w-10 h-10 rounded-md overflow-hidden bg-neutral-800 flex-shrink-0 relative z-10 ${isPlaying ? 'animate-pulse-slow' : ''}`}
+                className={`w-10 h-10 rounded-md overflow-hidden bg-neutral-800 flex-shrink-0 relative z-10 ${(isPlaying || isLoading) ? 'animate-pulse-slow' : ''}`}
             >
                 {blobUrl ? (
                     <img src={blobUrl} alt={title} className="w-full h-full object-cover" />
@@ -74,13 +76,13 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
             <div className="flex-1 mx-4 min-w-0 flex flex-col justify-center relative z-10">
                 <motion.h4
                     layoutId="player-title"
-                    className="text-white text-sm font-medium truncate shadow-black drop-shadow-md"
+                    className={`text-white text-sm font-medium truncate shadow-black drop-shadow-md ${isLoading ? 'opacity-70' : ''}`}
                 >
                     {title}
                 </motion.h4>
                 <motion.p
                     layoutId="player-artist"
-                    className="text-white/80 text-xs truncate drop-shadow-sm"
+                    className={`text-white/80 text-xs truncate drop-shadow-sm ${isLoading ? 'opacity-50' : ''}`}
                 >
                     {artist}
                 </motion.p>
@@ -101,9 +103,12 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
             >
                 <button
                     onClick={handlePlayPause}
-                    className="w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center transition-colors backdrop-blur-sm"
+                    disabled={isLoading}
+                    className="w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center transition-colors backdrop-blur-sm disabled:opacity-50"
                 >
-                    {isPlaying ? (
+                    {isLoading ? (
+                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : isPlaying ? (
                         <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                         </svg>
@@ -116,7 +121,8 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
 
                 <button
                     onClick={handleNext}
-                    className="w-8 h-8 rounded-full hover:bg-black/20 flex items-center justify-center transition-colors text-white/90 hover:text-white backdrop-blur-sm"
+                    disabled={isLoading}
+                    className="w-8 h-8 rounded-full hover:bg-black/20 flex items-center justify-center transition-colors text-white/90 hover:text-white backdrop-blur-sm disabled:opacity-30"
                 >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />

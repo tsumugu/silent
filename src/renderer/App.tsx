@@ -156,14 +156,7 @@ export default function App() {
                   onPlaylistSelect={(playlist) => navigateTo('detail', playlist)}
                   onArtistSelect={(artist) => navigateTo('artist', artist)}
                   onSongSelect={(item) => {
-                    if (isSongItem(item)) {
-                      const artists = item.artists;
-                      const albumId = item.album?.youtube_browse_id;
-                      window.electronAPI.play(item.youtube_video_id, 'SONG', undefined, artists, albumId);
-                    } else if (isRadioItem(item)) {
-                      const videoId = item.seed_video_id || '';
-                      window.electronAPI.play(videoId || item.youtube_playlist_id, 'RADIO', videoId ? item.youtube_playlist_id : undefined);
-                    }
+                    window.electronAPI.play(item);
                   }}
                   onSearch={(query) => navigateTo('search', null, query)}
                   onBack={goBack}
@@ -202,26 +195,7 @@ export default function App() {
                   initialItem={selectedItem}
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
-                    if (isSongItem(song)) {
-                      // Get artists from song or fallback to album/playlist artist
-                      const selectedArtists = (isSongItem(selectedItem) || isAlbumItem(selectedItem)) ? selectedItem.artists : [];
-                      const artists = (song.artists && song.artists.length > 0) ? song.artists : selectedArtists;
-                      // Get albumId if it's an album context
-                      const albumId = isAlbumItem(selectedItem) ? selectedItem.youtube_browse_id : undefined;
-                      window.electronAPI.play(
-                        song.youtube_video_id,
-                        'SONG',
-                        song.youtube_playlist_id || (
-                          (isPlaylistItem(selectedItem) || isRadioItem(selectedItem))
-                            ? selectedItem.youtube_playlist_id
-                            : (isAlbumItem(selectedItem) || isArtistItem(selectedItem))
-                              ? selectedItem.youtube_browse_id
-                              : undefined
-                        ),
-                        artists,
-                        albumId
-                      );
-                    }
+                    window.electronAPI.play(song);
                   }}
                   onNavigateToArtist={(artistId) => navigateTo('artist', { type: 'ARTIST', title: '', thumbnails: [], youtube_browse_id: artistId })}
                 />
@@ -252,17 +226,7 @@ export default function App() {
                   initialItem={selectedItem}
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
-                    if (isSongItem(song)) {
-                      const artists: any[] = [];
-                      const albumId = song.album?.youtube_browse_id;
-                      window.electronAPI.play(
-                        song.youtube_video_id,
-                        'SONG',
-                        undefined,
-                        artists,
-                        albumId
-                      );
-                    }
+                    window.electronAPI.play(song);
                   }}
                   onNavigateToItem={(item: MusicItem) => {
                     if (item.type === 'ARTIST') {

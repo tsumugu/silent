@@ -73,6 +73,10 @@ window.addEventListener('DOMContentLoaded', handleLoadFinish);
 // Reset on navigation start
 window.addEventListener('beforeunload', () => {
   (window as any).block_updates = true;
+  lastValidMetadata = null; // Clear old metadata on navigation
+  lastState = null;
+  // Safety timeout: if page doesn't load within 15s, unblock anyway
+  setTimeout(() => { (window as any).block_updates = false; }, 15000);
 });
 
 // Poll MediaSession every 100ms
@@ -124,12 +128,15 @@ function observeMediaSession() {
   }
 
   // Initial state suppression
-  // If we haven't interacted yet and the state is not 'playing', 
-  // assume it's a restored session and ignore it to keep Miniplayer empty.
-  if (!hasInteracted && playbackState !== 'playing') {
+  // If we haven't interacted yet and the state is not 'playing',
+  // we only allow updates if we are on a /watch page (meaning user explicitly started a song)
+  const isWatchPage = window.location.pathname.startsWith('/watch');
+  if (!hasInteracted && playbackState !== 'playing' && !isWatchPage) {
     return;
   }
-  hasInteracted = true;
+  if (isWatchPage || playbackState === 'playing') {
+    hasInteracted = true;
+  }
 
   const playbackInfo: PlaybackInfo = {
     metadata: activeMetadata,

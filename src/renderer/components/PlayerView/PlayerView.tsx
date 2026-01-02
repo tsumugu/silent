@@ -69,6 +69,8 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
   // Use the integrated hook for high-quality blob URL and colors
   const { blobUrl, colors } = useTrackAssets(originalArtwork, cacheKey);
 
+  const isLoading = playbackInfo?.playbackState === 'loading';
+
   return (
     /*
     不透明度の Hex 換算表（よく使うもの）
@@ -173,6 +175,7 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
             />
             <ControlBar
               isPlaying={playbackInfo?.playbackState === 'playing'}
+              isLoading={playbackInfo?.playbackState === 'loading'}
               isVisible={isHovered || isMini}
               isMini={isMini}
             />

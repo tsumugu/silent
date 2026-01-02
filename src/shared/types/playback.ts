@@ -19,7 +19,7 @@ export interface MediaMetadata {
 }
 
 // Playback state types
-export type PlaybackState = 'none' | 'paused' | 'playing';
+export type PlaybackState = 'none' | 'paused' | 'playing' | 'loading';
 
 export interface PlaybackInfo {
     metadata: MediaMetadata | null;

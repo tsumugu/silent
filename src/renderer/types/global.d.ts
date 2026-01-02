@@ -37,7 +37,7 @@ declare global {
       showLogin: () => void;
       checkLogin: () => Promise<boolean>;
       onSessionUpdated: (callback: () => void) => () => void;
-      play: (id: string, type: ItemType, contextId?: string, artists?: MusicArtist[], albumId?: string) => void;
+      play: (item: MusicItem, contextId?: string) => void;
       setVibrancy: (vibrancy: 'under-window' | 'content' | 'sidebar' | 'menu' | 'popover' | 'hud' | 'sheet' | 'window' | 'dropdown' | 'tooltip' | 'device-discovery' | 'video' | 'selection' | 'titlebar' | null) => void;
       // Settings
       getSettings: () => Promise<AppSettings>;
