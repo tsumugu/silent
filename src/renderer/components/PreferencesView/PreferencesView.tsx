@@ -85,7 +85,7 @@ const PreferencesView: React.FC = () => {
       </div>
 
       {/* Content area: Consolidated view */}
-      <div className="flex-1 overflow-hidden px-6 pb-6">
+      <div className="flex-1 overflow-y-auto px-6 pb-6 custom-scrollbar">
         <div className="space-y-8 py-4">
           {/* General Section */}
           <section>
