@@ -24,7 +24,6 @@ const config: ForgeConfig = {
 
       const path = require('path');
       const appPath = path.join(outputPaths[0], 'Silent.app');
-      console.log(`[Manual Signing] Signing app at: ${appPath}`);
 
       const { execSync } = require('child_process');
       try {
@@ -33,9 +32,7 @@ const config: ForgeConfig = {
         // Sign the whole bundle
         execSync(`codesign --force --deep --options runtime --entitlements ./entitlements.plist --sign - "${appPath}"`, { stdio: 'inherit' });
 
-        console.log('[Manual Signing] Verification:');
         execSync(`codesign -dvvv --entitlements - "${appPath}"`, { stdio: 'inherit' });
-        console.log('[Manual Signing] Complete.');
       } catch (e) {
         console.error('[Manual Signing] Failed:', e);
         throw e;

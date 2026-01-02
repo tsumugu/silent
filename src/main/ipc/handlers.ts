@@ -65,7 +65,6 @@ export function setupIPCHandlers(
           if (!playbackInfo.metadata.artistId && lastPlayContext.artists[0].id) {
             playbackInfo.metadata.artistId = lastPlayContext.artists[0].id;
           }
-          console.log('[Handlers] Using artists from play context:', lastPlayContext.artists);
         } else if (playbackInfo.metadata.videoId) {
           try {
             const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
@@ -83,7 +82,6 @@ export function setupIPCHandlers(
       if (!playbackInfo.metadata.albumId) {
         if (lastPlayContext.albumId) {
           playbackInfo.metadata.albumId = lastPlayContext.albumId;
-          console.log('[Handlers] Using albumId from play context:', lastPlayContext.albumId);
         } else if (playbackInfo.metadata.videoId) {
           try {
             const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);

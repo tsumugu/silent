@@ -49,11 +49,11 @@ function isSameItem(a: MusicItem, b: MusicItem): boolean {
     return a.youtube_video_id === b.youtube_video_id;
   }
   if ((isAlbumItem(a) || isArtistItem(a)) &&
-      (isAlbumItem(b) || isArtistItem(b))) {
+    (isAlbumItem(b) || isArtistItem(b))) {
     return (a as any).youtube_browse_id === (b as any).youtube_browse_id;
   }
   if ((isPlaylistItem(a) || isRadioItem(a)) &&
-      (isPlaylistItem(b) || isRadioItem(b))) {
+    (isPlaylistItem(b) || isRadioItem(b))) {
     return (a as any).youtube_playlist_id === (b as any).youtube_playlist_id;
   }
 
@@ -79,28 +79,21 @@ export const useNavigationStore = create<NavigationState>((set, get) => ({
 
   // Actions
   pushView: (view, item = null) => {
-    console.log('[navigationStore] pushView called:', { view, item });
     set((state) => {
       const current = state.viewStack[state.viewStack.length - 1];
-      console.log('[navigationStore] current:', current);
-
       // 重複チェック: 同じビュー + 同じアイテムなら push しない
       if (current.view === view && current.item === item) {
-        console.log('[navigationStore] Duplicate detected (reference check)');
         return state;
       }
 
       // detail/artist の場合、ID で重複チェック
       if ((view === 'detail' || view === 'artist') && item && current.item) {
         const isSame = isSameItem(current.item, item);
-        console.log('[navigationStore] isSameItem check:', isSame);
         if (isSame) {
-          console.log('[navigationStore] Duplicate detected (ID check)');
           return state;
         }
       }
 
-      console.log('[navigationStore] Pushing new view');
       return {
         viewStack: [...state.viewStack, { view, item }],
         isPlayerOpen: false // 新しいビューに遷移したらプレイヤーを閉じる

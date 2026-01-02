@@ -1,7 +1,7 @@
 {
   "name": "silent",
   "productName": "Silent",
-  "version": "1.0.39",
+  "version": "1.0.40",
   "description": "My Electron application description",
   "repository": "https://github.com/tsumugu/silent",
   "main": ".webpack/main",

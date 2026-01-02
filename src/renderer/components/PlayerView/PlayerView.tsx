@@ -48,7 +48,6 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
   };
 
   const handleArtistClick = (artist: MusicArtist) => {
-    console.log('[PlayerView] Artist clicked:', artist);
     if (artist.id && onNavigateToArtist) {
       const artistItem: MusicItem = {
         type: 'ARTIST',

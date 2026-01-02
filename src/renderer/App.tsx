@@ -49,8 +49,6 @@ export default function App() {
     item: MusicItem | null = null,
     query?: string
   ) => {
-    console.log(`[App] Navigating to ${view}`, item);
-
     if (view === 'player') {
       openPlayer();
     } else if (view === 'search' && query !== undefined && query.trim().length >= 1) {
