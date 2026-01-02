@@ -9,6 +9,7 @@ import {
 } from '../../../shared/types/music';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
+import { useMusicStore } from '../../store/musicStore';
 
 interface MusicDetailViewProps {
     id: string;
@@ -23,6 +24,14 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
+
+    // Get cache actions from store
+    const {
+        getAlbum,
+        setAlbum,
+        getPlaylist,
+        setPlaylist
+    } = useMusicStore();
 
     const thumbnails = data?.thumbnails || initialItem?.thumbnails || [];
     const rawCoverUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
@@ -53,21 +62,51 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
 
     useEffect(() => {
         const fetchData = async () => {
-            setLoading(true);
+            // Step 1: Try to get from cache (SWR pattern - return stale data immediately)
+            const cached = type === 'ALBUM'
+                ? getAlbum(id)
+                : getPlaylist(id);
+
+            if (cached) {
+                setData(cached);
+                setLoading(false);
+                // Cache hit - data will be displayed immediately
+            } else {
+                // No cache - show loading state
+                setLoading(true);
+            }
+
+            // Step 2: Set loading state in store
+            const storeType = type === 'ALBUM' ? 'album' : 'playlist';
+            useMusicStore.getState().setLoading(storeType, id, true);
+
             try {
+                // Step 3: Always fetch latest data in background
                 const result = type === 'ALBUM'
                     ? await window.electronAPI.getAlbumDetails(id)
                     : await window.electronAPI.getPlaylist(id);
 
-                setData(result);
+                if (result) {
+                    // Step 4: Update cache
+                    if (type === 'ALBUM') {
+                        setAlbum(id, result);
+                    } else {
+                        setPlaylist(id, result);
+                    }
+
+                    // Step 5: Update UI
+                    setData(result);
+                }
             } catch (error) {
                 console.error(`[MusicDetailView] Failed to fetch ${type} details for ${id}:`, error);
             } finally {
                 setLoading(false);
+                useMusicStore.getState().setLoading(storeType, id, false);
             }
         };
+
         fetchData();
-    }, [id, type]);
+    }, [id, type, getAlbum, setAlbum, getPlaylist, setPlaylist]);
 
     if (!data && !loading && !isEntering && !initialItem) {
         return (

@@ -37,13 +37,6 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         e.preventDefault();
         inputRef.current?.focus();
       }
-
-      // Escape to clear search
-      if (e.key === 'Escape') {
-        setQuery('');
-        inputRef.current?.blur();
-        onSearch('');
-      }
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);

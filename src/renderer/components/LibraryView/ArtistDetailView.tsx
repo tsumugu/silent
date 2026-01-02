@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { MusicDetail, MusicItem } from '../../../shared/types/music';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
+import { useMusicStore } from '../../store/musicStore';
 
 interface ArtistDetailViewProps {
     id: string;
@@ -22,6 +23,9 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Get cache actions from store
+    const { getArtist, setArtist } = useMusicStore();
+
     const title = data?.title || initialItem?.title || '';
     const thumbnails = data?.thumbnails || initialItem?.thumbnails || [];
     const rawCoverUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
@@ -31,18 +35,42 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
 
     useEffect(() => {
         const fetchArtist = async () => {
-            setLoading(true);
+            // Step 1: Try to get from cache (SWR pattern - return stale data immediately)
+            const cached = getArtist(id);
+
+            if (cached) {
+                setData(cached);
+                setLoading(false);
+                // Cache hit - data will be displayed immediately
+            } else {
+                // No cache - show loading state
+                setLoading(true);
+            }
+
+            // Step 2: Set loading state in store
+            useMusicStore.getState().setLoading('artist', id, true);
+
             try {
+                // Step 3: Always fetch latest data in background
                 const result = await window.electronAPI.getArtistDetails(id);
-                setData(result);
+
+                if (result) {
+                    // Step 4: Update cache
+                    setArtist(id, result);
+
+                    // Step 5: Update UI
+                    setData(result);
+                }
             } catch (error) {
                 console.error('[ArtistDetailView] Failed to fetch artist details:', error);
             } finally {
                 setLoading(false);
+                useMusicStore.getState().setLoading('artist', id, false);
             }
         };
+
         fetchArtist();
-    }, [id]);
+    }, [id, getArtist, setArtist]);
 
     return (
         <div className="h-full overflow-y-auto scrollbar-hide">

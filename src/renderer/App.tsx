@@ -7,6 +7,7 @@ import { MusicDetailView } from './components/LibraryView/MusicDetailView';
 import { useMediaSession } from './hooks/useMediaSession';
 import { MiniPlayer } from './components/PlayerView/MiniPlayer';
 import { ViewWrapper } from './components/common/ViewWrapper';
+import { useNavigationStore, ViewType } from './store/navigationStore';
 
 import {
   MusicItem,
@@ -19,55 +20,29 @@ import {
 
 import { ArtistDetailView } from './components/LibraryView/ArtistDetailView';
 
-type ViewType = 'home' | 'detail' | 'search' | 'artist';
-
-interface StackEntry {
-  view: ViewType;
-  item: MusicItem | null;
-}
-
-// Helper functions to safely get IDs from MusicItem
-function getBrowseId(item: MusicItem): string | undefined {
-  if (isAlbumItem(item) || isArtistItem(item)) {
-    return item.youtube_browse_id;
-  }
-  return undefined;
-}
-
-function getPlaylistId(item: MusicItem): string | undefined {
-  if (isPlaylistItem(item) || isRadioItem(item)) {
-    return item.youtube_playlist_id;
-  }
-  if (isAlbumItem(item) || isSongItem(item)) {
-    return item.youtube_playlist_id;
-  }
-  return undefined;
-}
-
-function getVideoId(item: MusicItem): string | undefined {
-  if (isSongItem(item)) {
-    return item.youtube_video_id;
-  }
-  return undefined;
-}
-
 export default function App() {
   // Initialize MediaSession listener
   useMediaSession();
 
-  // Navigation Stack for Main Content (Library, Album Details, etc.)
-  const [viewStack, setViewStack] = useState<StackEntry[]>([{ view: 'home', item: null }]);
+  // Get navigation state from store
+  const {
+    viewStack,
+    isPlayerOpen,
+    searchQuery,
+    searchResults,
+    pushView,
+    popView,
+    resetToHome,
+    openPlayer,
+    closePlayer,
+    setSearchQuery,
+    setSearchResults
+  } = useNavigationStore();
 
-  // Overlay State for Player
-  const [isPlayerOpen, setIsPlayerOpen] = useState(false);
-
-  // Search State
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<any>(null);
-
+  // Compute current view and item from viewStack
   const currentEntry = viewStack[viewStack.length - 1];
-  const currentView = currentEntry.view;
-  const selectedItem = currentEntry.item;
+  const currentView = currentEntry?.view || 'home';
+  const selectedItem = currentEntry?.item || null;
 
   const navigateTo = useCallback((
     view: 'player' | ViewType,
@@ -77,63 +52,20 @@ export default function App() {
     console.log(`[App] Navigating to ${view}`, item);
 
     if (view === 'player') {
-      setIsPlayerOpen(true);
+      openPlayer();
     } else if (view === 'search' && query !== undefined && query.trim().length >= 1) {
       setSearchQuery(query);
-      // Only push if not already on search with same query
-      if (currentView !== 'search' || searchQuery !== query) {
-        setViewStack(prev => [...prev, { view: 'search', item: null }]);
-      }
-      setIsPlayerOpen(false);
+      pushView('search');
     } else if (view === 'home') {
-      setViewStack([{ view: 'home', item: null }]);
-      setIsPlayerOpen(false);
-    } else if (view === 'detail') {
-      if (item) {
-        // Only push if not already looking at this item
-        const isSameDetail = currentView === 'detail' && selectedItem &&
-          (getBrowseId(selectedItem) === getBrowseId(item) ||
-            getPlaylistId(selectedItem) === getPlaylistId(item));
-
-        if (!isSameDetail) {
-          setViewStack(prev => [...prev, { view: 'detail', item }]);
-        }
-        setIsPlayerOpen(false);
-      }
-    } else if (view === 'artist') {
-      if (item) {
-        // Only push if not already looking at this artist
-        const isSameArtist = currentView === 'artist' && selectedItem &&
-          getBrowseId(selectedItem) === getBrowseId(item);
-
-        if (!isSameArtist) {
-          setViewStack(prev => [...prev, { view: 'artist', item }]);
-        }
-        setIsPlayerOpen(false);
-      }
+      resetToHome();
+    } else {
+      pushView(view, item);
     }
-  }, [currentView, searchQuery, selectedItem]);
+  }, [pushView, resetToHome, openPlayer, setSearchQuery]);
 
   const goBack = useCallback(() => {
-    // If player is open, close it first (like a modal)
-    if (isPlayerOpen) {
-      setIsPlayerOpen(false);
-      return;
-    }
-
-    // Otherwise navigate back in the stack
-    if (viewStack.length > 1) {
-      const poppedEntry = viewStack[viewStack.length - 1];
-
-      // Clear search state when leaving search view
-      if (poppedEntry.view === 'search') {
-        setSearchQuery('');
-        setSearchResults(null);
-      }
-
-      setViewStack(prev => prev.slice(0, -1));
-    }
-  }, [isPlayerOpen, viewStack]);
+    popView();
+  }, [popView]);
 
   // Handle scroll to switch between Player and Main View
   useEffect(() => {
@@ -144,38 +76,43 @@ export default function App() {
       if (isPlayerOpen) {
         // If Player is open, scroll DOWN to close it
         if (e.deltaY < -50) {
-          // Standard scroll direction check might be reversed depending on OS/Setting.
-          // Usually "pull down" gesture y < 0 ? No, deltaY < 0 is scrolling UP content (swiping down).
-          // Let's stick to the previous feeling: 
-          // Previous: "if currentView === 'player' && e.deltaY < -50 => nav to home"
-          setIsPlayerOpen(false);
+          closePlayer();
         }
-      } else {
-        // If Player is closed, scroll UP (swiping up) to open it?
-        // Usually swiping UP moves content DOWN.
-        // Let's assume standard "pull up" gesture to open player.
-        // e.deltaY > 0 is scrolling DOWN content (swiping up).
-        // Let's rely on click for now to Open, and Scroll/Click to close to keep it simple,
-        // unless previously defined.
-        // Previous logic didn't seem to have "open by scroll".
       }
     };
 
     window.addEventListener('wheel', handleWheel);
     return () => window.removeEventListener('wheel', handleWheel);
-  }, [isPlayerOpen]);
+  }, [isPlayerOpen, closePlayer]);
 
-  // Handle keyboard shortcuts (Esc to close player)
+  // Handle keyboard shortcuts (Esc to close player only, not to go back)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isPlayerOpen) {
-        setIsPlayerOpen(false);
+      if (e.key === 'Escape') {
+        // Always prevent default / stop propagation for Escape to avoid
+        // accidental back navigation or other system behaviors.
+        // Using capture: true in the listener ensures we catch this before anyone else.
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (isPlayerOpen) {
+          closePlayer();
+        } else if (searchQuery) {
+          // If player is not open but search is active, clear search
+          setSearchQuery('');
+          setSearchResults(null);
+
+          // Also blur any active input
+          if (document.activeElement instanceof HTMLInputElement) {
+            document.activeElement.blur();
+          }
+        }
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlayerOpen]);
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
+  }, [isPlayerOpen, closePlayer]);
 
   // Dynamically control window vibrancy based on player state
   useEffect(() => {
@@ -239,7 +176,12 @@ export default function App() {
           {/* Music Detail (Album/Playlist) */}
           {currentView === 'detail' && selectedItem && (
             <motion.div
-              key={`detail-${getBrowseId(selectedItem) || getPlaylistId(selectedItem)}`}
+              key={`detail-${(isAlbumItem(selectedItem) || isArtistItem(selectedItem))
+                ? selectedItem.youtube_browse_id
+                : (isPlaylistItem(selectedItem) || isRadioItem(selectedItem))
+                  ? selectedItem.youtube_playlist_id
+                  : ''
+                }`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -248,7 +190,13 @@ export default function App() {
             >
               <ViewWrapper>
                 <MusicDetailView
-                  id={(isPlaylistItem(selectedItem) || isRadioItem(selectedItem) ? getPlaylistId(selectedItem) : getBrowseId(selectedItem)) || getBrowseId(selectedItem) || getPlaylistId(selectedItem) || ''}
+                  id={
+                    (isPlaylistItem(selectedItem) || isRadioItem(selectedItem))
+                      ? selectedItem.youtube_playlist_id
+                      : (isAlbumItem(selectedItem) || isArtistItem(selectedItem))
+                        ? selectedItem.youtube_browse_id
+                        : ''
+                  }
                   type={selectedItem.type as 'ALBUM' | 'PLAYLIST'}
                   initialItem={selectedItem}
                   onBack={goBack}
@@ -258,11 +206,17 @@ export default function App() {
                       const selectedArtists = (isSongItem(selectedItem) || isAlbumItem(selectedItem)) ? selectedItem.artists : [];
                       const artists = (song.artists && song.artists.length > 0) ? song.artists : selectedArtists;
                       // Get albumId if it's an album context
-                      const albumId = isAlbumItem(selectedItem) ? (getBrowseId(selectedItem) || getPlaylistId(selectedItem)) : undefined;
+                      const albumId = isAlbumItem(selectedItem) ? selectedItem.youtube_browse_id : undefined;
                       window.electronAPI.play(
                         song.youtube_video_id,
                         'SONG',
-                        song.youtube_playlist_id || (isPlaylistItem(selectedItem) || isRadioItem(selectedItem) ? getPlaylistId(selectedItem) : getBrowseId(selectedItem)),
+                        song.youtube_playlist_id || (
+                          (isPlaylistItem(selectedItem) || isRadioItem(selectedItem))
+                            ? selectedItem.youtube_playlist_id
+                            : (isAlbumItem(selectedItem) || isArtistItem(selectedItem))
+                              ? selectedItem.youtube_browse_id
+                              : undefined
+                        ),
                         artists,
                         albumId
                       );
@@ -277,7 +231,10 @@ export default function App() {
           {/* Artist Detail */}
           {currentView === 'artist' && selectedItem && (
             <motion.div
-              key={`artist-${getBrowseId(selectedItem)}`}
+              key={`artist-${(isAlbumItem(selectedItem) || isArtistItem(selectedItem))
+                ? selectedItem.youtube_browse_id
+                : ''
+                }`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -286,7 +243,11 @@ export default function App() {
             >
               <ViewWrapper>
                 <ArtistDetailView
-                  id={getBrowseId(selectedItem) || ''}
+                  id={
+                    (isAlbumItem(selectedItem) || isArtistItem(selectedItem))
+                      ? selectedItem.youtube_browse_id
+                      : ''
+                  }
                   initialItem={selectedItem}
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
@@ -320,20 +281,20 @@ export default function App() {
       <AnimatePresence mode="popLayout">
         {isPlayerOpen ? (
           <PlayerView
-            onClose={() => setIsPlayerOpen(false)}
+            onClose={closePlayer}
             onNavigateToAlbum={(albumItem) => {
               navigateTo('detail', albumItem);
-              setIsPlayerOpen(false);
+              closePlayer();
             }}
             onNavigateToArtist={(artistItem) => {
               navigateTo('artist', artistItem);
-              setIsPlayerOpen(false);
+              closePlayer();
             }}
           />
         ) : (
           <MiniPlayer
             key="player-mini"
-            onClick={() => setIsPlayerOpen(true)}
+            onClick={openPlayer}
           />
         )}
       </AnimatePresence>

@@ -119,7 +119,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                         <button
                             onClick={onBack}
                             className="text-white/60 hover:text-white transition-colors p-2 -ml-2 rounded-lg hover:bg-white/5 active:scale-90"
-                            title="Back (Esc)"
+                            title="Back"
                         >
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
