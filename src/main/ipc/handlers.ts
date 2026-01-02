@@ -6,7 +6,7 @@ import { AppSettings } from '../../shared/types/settings';
 import { ytMusicService } from '../services/YTMusicService';
 import { settingsService } from '../services/SettingsService';
 import { trayService } from '../services/TrayService';
-import { MusicArtist } from '../../shared/types/music';
+import { MusicArtist, isSongItem } from '../../shared/types/music';
 
 // Persist the last known playback state to restore it when UI window is recreated
 let lastPlaybackInfo: PlaybackInfo | null = null;
@@ -69,7 +69,7 @@ export function setupIPCHandlers(
         } else if (playbackInfo.metadata.videoId) {
           try {
             const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
-            if (songDetails?.artists) {
+            if (songDetails && isSongItem(songDetails)) {
               playbackInfo.metadata.artists = songDetails.artists;
               if (songDetails.artists[0]?.id) {
                 playbackInfo.metadata.artistId = songDetails.artists[0].id;
@@ -87,7 +87,7 @@ export function setupIPCHandlers(
         } else if (playbackInfo.metadata.videoId) {
           try {
             const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
-            if (songDetails?.album?.youtube_browse_id) {
+            if (songDetails && isSongItem(songDetails) && songDetails.album?.youtube_browse_id) {
               playbackInfo.metadata.albumId = songDetails.album.youtube_browse_id;
             }
           } catch (e) { /* ignore */ }

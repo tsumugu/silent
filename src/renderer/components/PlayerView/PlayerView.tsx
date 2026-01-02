@@ -54,8 +54,7 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
         type: 'ARTIST',
         title: artist.name,
         youtube_browse_id: artist.id,
-        thumbnails: [],
-        artists: []
+        thumbnails: []
       };
       onNavigateToArtist(artistItem);
     }

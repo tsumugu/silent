@@ -1,6 +1,13 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MusicItem } from '../../../shared/types/music';
+import {
+  MusicItem,
+  isSongItem,
+  isAlbumItem,
+  isArtistItem,
+  isPlaylistItem,
+  isRadioItem
+} from '../../../shared/types/music';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
 
@@ -23,15 +30,16 @@ export const MusicCard: React.FC<MusicCardProps> = ({
   const rawImageUrl = thumbnails[thumbnails.length - 1]?.url || thumbnails[0]?.url;
 
   const title = item.title;
-  const artist = item.artists
+  const artists = (isSongItem(item) || isAlbumItem(item)) ? item.artists : [];
+  const artist = artists
     ?.map((a: any) => a.name)
     .filter((name: string) => name && name.trim().length > 0)
     .join(', ') || '';
 
   const canonicalId = getImageCacheKey(title, artist, {
-    browseId: item.youtube_browse_id,
-    playlistId: item.youtube_playlist_id,
-    videoId: item.youtube_video_id
+    browseId: (isAlbumItem(item) || isArtistItem(item)) ? item.youtube_browse_id : undefined,
+    playlistId: (isPlaylistItem(item) || isRadioItem(item) || isSongItem(item) || isAlbumItem(item)) ? item.youtube_playlist_id : undefined,
+    videoId: isSongItem(item) ? item.youtube_video_id : undefined
   });
 
   // Use assets from cache (handles proxying, high-res, and stability)
@@ -46,7 +54,7 @@ export const MusicCard: React.FC<MusicCardProps> = ({
       onAlbumSelect(item);
     } else if (normalizedType === 'song' && onSongSelect) {
       onSongSelect(item);
-    } else if (normalizedType === 'song' && item.youtube_video_id) {
+    } else if (normalizedType === 'song' && isSongItem(item)) {
       window.electronAPI.play(item.youtube_video_id, 'SONG');
     } else if (normalizedType === 'playlist' && onPlaylistSelect) {
       onPlaylistSelect(item);

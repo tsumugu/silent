@@ -45,8 +45,6 @@ graph TD
 
 ## 3. 具体的な変更内容
 
-## 3. 具体的な変更内容
-
 ### 3.1 厳密なエンティティ定義 (Discriminated Unions)
 
 `MusicItem` を単一のインターフェースから、`type` フィールドに基づいた厳密な型の合併（Discriminated Unions）へと変更します。これにより、タイプごとに「何が必須で何が不要か」を型レベルで担保します。
@@ -87,11 +85,11 @@ interface BaseMusicItem {
 ```typescript
 export interface SongItem extends BaseMusicItem {
     type: 'SONG';
-    youtube_video_id: string;
-    artists: MusicArtist[];
+    youtube_video_id: string; // 必須: 再生に必要
+    artists: MusicArtist[];  // id は極力含める
     album?: {
         name: string;
-        youtube_browse_id: string;
+        youtube_browse_id: string; // アルバム詳細へのリンク用
     };
     duration?: {
         text: string;
@@ -131,23 +129,41 @@ export interface RadioItem extends BaseMusicItem {
 export type MusicItem = SongItem | AlbumItem | PlaylistItem | ArtistItem | ChartItem | RadioItem;
 ```
 
-### 3.2 IDの体系と使い分け
+### 3.2 IDの体系とデータ正規化
 
 YouTube Musicのデータ構造には複数のIDが存在し、用途によって使い分ける必要があります。
 
 | IDの種類 | 定義名 | 目的 | 役割 |
 | :--- | :--- | :--- | :--- |
 | **Playback ID** | `youtube_video_id` | **再生** | 実際に楽曲を再生するために必須の識別子。 |
-| **Navigation ID** | `youtube_browse_id` | **詳細取得** | アルバムやアーティストの「一覧ページ」をAPIから取得するための識別子。 |
-| **Navigation ID** | `youtube_playlist_id` | **詳細取得/再生コンテキスト** | プレイリストの一覧取得、および「そのリストを順番に再生する」ためのコンテキスト。 |
+| **Navigation ID** | `youtube_browse_id` | **詳細取得** | アルバムやアーティストの「一覧ページ」をAPIから取得。 |
+| **Navigation ID** | `youtube_playlist_id` | **詳細取得/再生コンテキスト** | プレイリストの一覧取得、および継続再生用コンテキスト。 |
 
-#### タイプ別の ID 保持イメージ
-- `SONG`: `youtube_video_id` (必須) + `youtube_browse_id` (アルバム詳細用/任意)。
-- `ALBUM`: `youtube_browse_id` (詳細取得用/必須)。
-- `PLAYLIST`: `youtube_playlist_id` (詳細取得用/必須)。
-- `ARTIST`: `youtube_browse_id` (詳細取得用/必須)。
+#### マッパー層での正規化方針
+- **Artist IDの徹底**: `SongItem` 等に含まれる `MusicArtist` は、可能な限り `id` (browse_id) を保持するようにマッパーで補完します。
+- **Context IDの明示**: プレイリストやアルバム内での再生時には、`youtube_playlist_id` を再生コンテキストとして常に引き回します。
+- **IDのプレフィックスによる型推論**: プレフィックス（`MPRE`, `UC`, `PL`, `RD` 等）に基づいた厳密な型判定を行い、`UNKNOWN` を排除します。
 
-### 3.3 ディレクトリ構成の整理
+### 3.3 状態管理とナビゲーションの改善 (Zustand)
+
+これまで `App.tsx` の `useState` で管理していたUI状態を Zustand ストアへ移行し、堅牢なナビゲーションとデータキャッシュを実現します。
+
+#### 1. `navigationStore`: ページ遷移の集中管理
+- **履歴管理 (Stack-based)**: `viewStack` をストアで管理し、`push`, `pop`, `reset` などのアクションを定義します。ブラウザの「戻る」挙動に近い直感的な遷移を保証し、`flaky` な挙動を排除します。
+- **遷移ガード**: 重複した遷移（同じアルバムを二度開くなど）をストア側で防ぎます。
+- **URL-like なルーティング**: 各画面に一意の識別子（`home`, `album/:id`, `artist/:id` 等）を割り振り、外部（外部プロセス等）からのディープリンクにも対応可能な設計にします。
+
+#### 2. `dataCacheStore`: 重複リクエストの削減
+- **一貫性のあるキャッシュ**: 取得したアルバム詳細（`AlbumItem`）やアーティスト詳細（`ArtistItem`）を ID をキーに保存します。
+- **メモリ内キャッシュ**: 詳細画面を開く際、既にストアにデータがある場合は即座に表示し、バックグラウンドで最新化（SWR: Stale-While-Revalidate）することで、体感速度を向上させ、不要な API リクエストを削減します。
+- **正規化されたデータ保持**: 楽曲、アルバム、アーティストを個別のエンティティとして保持し、データの一貫性を保ちます。
+
+#### 3. `playerStore`: 再生状態の同期
+- 現在の再生楽曲、再生状態（isPlaying, progress）を管理。`HiddenWindow` との正確な同期を担います。
+
+これにより、`PlayerView` や `SearchBar` からの遷移などのバケツリレーを完全に排除し、アプリケーション全体のどこからでも安全にナビゲーションとデータアクセスが可能になります。
+
+### 3.4 ディレクトリ構成の整理
 ```text
 src/
   ├── main/

@@ -1,7 +1,14 @@
 import React from 'react';
 import Masonry from 'react-masonry-css';
 import { MusicCard } from './MusicCard';
-import { MusicItem } from '../../../shared/types/music';
+import {
+  MusicItem,
+  isSongItem,
+  isAlbumItem,
+  isArtistItem,
+  isPlaylistItem,
+  isRadioItem
+} from '../../../shared/types/music';
 
 interface MusicSectionProps {
   title: string;
@@ -44,16 +51,21 @@ export const MusicSection: React.FC<MusicSectionProps> = ({
         className="flex -ml-4 w-auto"
         columnClassName="pl-4 bg-clip-padding"
       >
-        {items.map((item, itemIdx) => (
-          <MusicCard
-            key={item.youtube_video_id || item.youtube_browse_id || item.youtube_playlist_id || itemIdx}
-            item={item}
-            onAlbumSelect={onAlbumSelect}
-            onPlaylistSelect={onPlaylistSelect}
-            onArtistSelect={onArtistSelect}
-            onSongSelect={onSongSelect}
-          />
-        ))}
+        {items.map((item, itemIdx) => {
+          const key = isSongItem(item) ? item.youtube_video_id :
+            (isAlbumItem(item) || isArtistItem(item)) ? item.youtube_browse_id :
+              (isPlaylistItem(item) || isRadioItem(item)) ? item.youtube_playlist_id : itemIdx;
+          return (
+            <MusicCard
+              key={key}
+              item={item}
+              onAlbumSelect={onAlbumSelect}
+              onPlaylistSelect={onPlaylistSelect}
+              onArtistSelect={onArtistSelect}
+              onSongSelect={onSongSelect}
+            />
+          );
+        })}
       </Masonry>
     </div>
   );

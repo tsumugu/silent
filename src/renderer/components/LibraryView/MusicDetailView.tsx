@@ -1,6 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { MusicDetail, MusicItem } from '../../../shared/types/music';
+import {
+    MusicDetail,
+    MusicItem,
+    isSongItem,
+    isAlbumItem,
+    MusicArtist
+} from '../../../shared/types/music';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
 
@@ -26,10 +32,10 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     // Determine the best artist name string
     const getArtistName = () => {
         if (data?.artists && data.artists.length > 0) {
-            return data.artists.map(a => a.name).join(', ');
+            return data.artists.map((a: MusicArtist) => a.name).join(', ');
         }
-        if (initialItem?.artists && initialItem.artists.length > 0) {
-            return initialItem.artists.map(a => a.name).join(', ');
+        if (initialItem && (isSongItem(initialItem) || isAlbumItem(initialItem)) && initialItem.artists.length > 0) {
+            return initialItem.artists.map((a: MusicArtist) => a.name).join(', ');
         }
         return '';
     };
@@ -88,7 +94,8 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     const year = getYear(data?.subtitle || initialItem?.subtitle);
 
     // Extract the primary artist ID for fallback
-    const primaryArtistId = data?.artists?.[0]?.id || initialItem?.artists?.[0]?.id;
+    const primaryArtistId = data?.artists?.[0]?.id ||
+        (initialItem && (isSongItem(initialItem) || isAlbumItem(initialItem)) ? initialItem.artists?.[0]?.id : undefined);
 
     return (
         <motion.div
@@ -177,9 +184,10 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                             tracks.map((song, index) => {
                                 const songTitle = song.title;
 
+                                const videoId = isSongItem(song) ? song.youtube_video_id : `item-${index}`;
                                 return (
                                     <motion.div
-                                        key={`${song.youtube_video_id || index}`}
+                                        key={videoId}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.03 }}
@@ -194,7 +202,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                                 {songTitle}
                                             </div>
                                             <div className="text-white/40 text-xs truncate group-hover:text-white/60">
-                                                {song.artists.map((a, i, arr) => {
+                                                {(isSongItem(song) || isAlbumItem(song)) ? song.artists.map((a: MusicArtist, i: number, arr: MusicArtist[]) => {
                                                     const artistId = a.id || primaryArtistId;
                                                     return (
                                                         <span key={i}>
@@ -212,11 +220,11 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                                             {i < arr.length - 1 && ', '}
                                                         </span>
                                                     );
-                                                }) || artistName}
+                                                }) : artistName}
                                             </div>
                                         </div>
                                         <div className="text-right text-white/30 text-xs font-mono group-hover:text-white/60">
-                                            {song.duration?.text || '--:--'}
+                                            {isSongItem(song) ? (song.duration?.text || '--:--') : '--:--'}
                                         </div>
                                     </motion.div>
                                 );

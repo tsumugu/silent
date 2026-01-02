@@ -8,7 +8,14 @@ import { useMediaSession } from './hooks/useMediaSession';
 import { MiniPlayer } from './components/PlayerView/MiniPlayer';
 import { ViewWrapper } from './components/common/ViewWrapper';
 
-import { MusicItem } from '../shared/types/music';
+import {
+  MusicItem,
+  isAlbumItem,
+  isArtistItem,
+  isPlaylistItem,
+  isSongItem,
+  isRadioItem
+} from '../shared/types/music';
 
 import { ArtistDetailView } from './components/LibraryView/ArtistDetailView';
 
@@ -17,6 +24,31 @@ type ViewType = 'home' | 'detail' | 'search' | 'artist';
 interface StackEntry {
   view: ViewType;
   item: MusicItem | null;
+}
+
+// Helper functions to safely get IDs from MusicItem
+function getBrowseId(item: MusicItem): string | undefined {
+  if (isAlbumItem(item) || isArtistItem(item)) {
+    return item.youtube_browse_id;
+  }
+  return undefined;
+}
+
+function getPlaylistId(item: MusicItem): string | undefined {
+  if (isPlaylistItem(item) || isRadioItem(item)) {
+    return item.youtube_playlist_id;
+  }
+  if (isAlbumItem(item) || isSongItem(item)) {
+    return item.youtube_playlist_id;
+  }
+  return undefined;
+}
+
+function getVideoId(item: MusicItem): string | undefined {
+  if (isSongItem(item)) {
+    return item.youtube_video_id;
+  }
+  return undefined;
 }
 
 export default function App() {
@@ -59,9 +91,9 @@ export default function App() {
     } else if (view === 'detail') {
       if (item) {
         // Only push if not already looking at this item
-        const isSameDetail = currentView === 'detail' &&
-          (selectedItem?.youtube_browse_id === item.youtube_browse_id ||
-            selectedItem?.youtube_playlist_id === item.youtube_playlist_id);
+        const isSameDetail = currentView === 'detail' && selectedItem &&
+          (getBrowseId(selectedItem) === getBrowseId(item) ||
+            getPlaylistId(selectedItem) === getPlaylistId(item));
 
         if (!isSameDetail) {
           setViewStack(prev => [...prev, { view: 'detail', item }]);
@@ -71,8 +103,8 @@ export default function App() {
     } else if (view === 'artist') {
       if (item) {
         // Only push if not already looking at this artist
-        const isSameArtist = currentView === 'artist' &&
-          selectedItem?.youtube_browse_id === item.youtube_browse_id;
+        const isSameArtist = currentView === 'artist' && selectedItem &&
+          getBrowseId(selectedItem) === getBrowseId(item);
 
         if (!isSameArtist) {
           setViewStack(prev => [...prev, { view: 'artist', item }]);
@@ -189,7 +221,7 @@ export default function App() {
                   onPlaylistSelect={(playlist) => navigateTo('detail', playlist)}
                   onArtistSelect={(artist) => navigateTo('artist', artist)}
                   onSongSelect={(song) => {
-                    if (song.youtube_video_id) {
+                    if (isSongItem(song)) {
                       const artists = song.artists;
                       const albumId = song.album?.youtube_browse_id;
                       window.electronAPI.play(song.youtube_video_id, 'SONG', undefined, artists, albumId);
@@ -207,7 +239,7 @@ export default function App() {
           {/* Music Detail (Album/Playlist) */}
           {currentView === 'detail' && selectedItem && (
             <motion.div
-              key={`detail-${selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id}`}
+              key={`detail-${getBrowseId(selectedItem) || getPlaylistId(selectedItem)}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -216,26 +248,27 @@ export default function App() {
             >
               <ViewWrapper>
                 <MusicDetailView
-                  id={(selectedItem.type === 'PLAYLIST' ? selectedItem.youtube_playlist_id : selectedItem.youtube_browse_id) || selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id || ''}
+                  id={(isPlaylistItem(selectedItem) || isRadioItem(selectedItem) ? getPlaylistId(selectedItem) : getBrowseId(selectedItem)) || getBrowseId(selectedItem) || getPlaylistId(selectedItem) || ''}
                   type={selectedItem.type as 'ALBUM' | 'PLAYLIST'}
                   initialItem={selectedItem}
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
-                    if (song.youtube_video_id) {
+                    if (isSongItem(song)) {
                       // Get artists from song or fallback to album/playlist artist
-                      const artists = (song.artists && song.artists.length > 0) ? song.artists : (selectedItem.artists || []);
+                      const selectedArtists = (isSongItem(selectedItem) || isAlbumItem(selectedItem)) ? selectedItem.artists : [];
+                      const artists = (song.artists && song.artists.length > 0) ? song.artists : selectedArtists;
                       // Get albumId if it's an album context
-                      const albumId = selectedItem.type === 'ALBUM' ? (selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id) : undefined;
+                      const albumId = isAlbumItem(selectedItem) ? (getBrowseId(selectedItem) || getPlaylistId(selectedItem)) : undefined;
                       window.electronAPI.play(
                         song.youtube_video_id,
                         'SONG',
-                        song.youtube_playlist_id || (selectedItem.type === 'PLAYLIST' ? selectedItem.youtube_playlist_id : selectedItem.youtube_browse_id),
+                        song.youtube_playlist_id || (isPlaylistItem(selectedItem) || isRadioItem(selectedItem) ? getPlaylistId(selectedItem) : getBrowseId(selectedItem)),
                         artists,
                         albumId
                       );
                     }
                   }}
-                  onNavigateToArtist={(artistId) => navigateTo('artist', { type: 'ARTIST', title: '', thumbnails: [], artists: [{ name: '', id: artistId }], youtube_browse_id: artistId })}
+                  onNavigateToArtist={(artistId) => navigateTo('artist', { type: 'ARTIST', title: '', thumbnails: [], youtube_browse_id: artistId })}
                 />
               </ViewWrapper>
             </motion.div>
@@ -244,7 +277,7 @@ export default function App() {
           {/* Artist Detail */}
           {currentView === 'artist' && selectedItem && (
             <motion.div
-              key={`artist-${selectedItem.youtube_browse_id}`}
+              key={`artist-${getBrowseId(selectedItem)}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -253,12 +286,12 @@ export default function App() {
             >
               <ViewWrapper>
                 <ArtistDetailView
-                  id={selectedItem.youtube_browse_id || ''}
+                  id={getBrowseId(selectedItem) || ''}
                   initialItem={selectedItem}
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
-                    if (song.youtube_video_id) {
-                      const artists = selectedItem.artists || [];
+                    if (isSongItem(song)) {
+                      const artists: any[] = [];
                       const albumId = song.album?.youtube_browse_id;
                       window.electronAPI.play(
                         song.youtube_video_id,
