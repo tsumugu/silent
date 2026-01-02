@@ -134,7 +134,7 @@ export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
         <motion.div
           layout
           layoutId="player-artwork"
-          className="flex-1 min-h-0 flex items-center justify-center w-full max-w-[500px]"
+          className="flex-1 min-h-0 flex items-center justify-center w-full"
           style={{
             maxHeight: isHovered ? '100%' : '800px'
           }}
@@ -148,7 +148,7 @@ export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
 
         {/* Bottom Section: Controls - only present when needed */}
         {(isHovered || isMini) && (
-          <motion.div layout className="w-full flex-shrink-0 flex flex-col items-center gap-6 max-w-[500px]">
+          <motion.div layout className="w-full flex-shrink-0 flex flex-col items-center gap-6">
             <SeekBar
               currentTime={playbackInfo?.position || 0}
               duration={playbackInfo?.duration || 0}
