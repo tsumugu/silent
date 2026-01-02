@@ -1,14 +1,18 @@
 import { BrowserWindow, ipcMain, net, app } from 'electron';
 import { IPCChannels } from './types';
-import { PlaybackInfo } from '../../shared/types';
+import { PlaybackInfo } from '../../shared/types/playback';
 import { AppSettings } from '../../shared/types/settings';
 
 import { ytMusicService } from '../services/YTMusicService';
 import { settingsService } from '../services/SettingsService';
 import { trayService } from '../services/TrayService';
+import { MusicArtist } from '../../shared/types/music';
 
 // Persist the last known playback state to restore it when UI window is recreated
 let lastPlaybackInfo: PlaybackInfo | null = null;
+
+// Store context from play command for enrichment
+let lastPlayContext: { artists?: MusicArtist[]; albumId?: string } = {};
 
 export function setupIPCHandlers(
   hiddenWindow: BrowserWindow
@@ -50,7 +54,47 @@ export function setupIPCHandlers(
   // Playback state updates: Hidden → All Windows
   // ========================================
 
-  ipcMain.on(IPCChannels.PLAYBACK_STATE_CHANGED, (_event, playbackInfo: PlaybackInfo) => {
+  ipcMain.on(IPCChannels.PLAYBACK_STATE_CHANGED, async (_event, playbackInfo: PlaybackInfo) => {
+    // Enrich metadata with artist and album details
+    if (playbackInfo.metadata) {
+      // 1. Enrich Artists
+      if (!playbackInfo.metadata.artists || playbackInfo.metadata.artists.length === 0) {
+        if (lastPlayContext.artists && lastPlayContext.artists.length > 0) {
+          playbackInfo.metadata.artists = lastPlayContext.artists;
+          // Also set the primary artistId for backward compatibility
+          if (!playbackInfo.metadata.artistId && lastPlayContext.artists[0].id) {
+            playbackInfo.metadata.artistId = lastPlayContext.artists[0].id;
+          }
+          console.log('[Handlers] Using artists from play context:', lastPlayContext.artists);
+        } else if (playbackInfo.metadata.videoId) {
+          try {
+            const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
+            if (songDetails?.artists) {
+              playbackInfo.metadata.artists = songDetails.artists;
+              if (songDetails.artists[0]?.id) {
+                playbackInfo.metadata.artistId = songDetails.artists[0].id;
+              }
+            }
+          } catch (e) { /* ignore */ }
+        }
+      }
+
+      // 2. Enrich Album ID
+      if (!playbackInfo.metadata.albumId) {
+        if (lastPlayContext.albumId) {
+          playbackInfo.metadata.albumId = lastPlayContext.albumId;
+          console.log('[Handlers] Using albumId from play context:', lastPlayContext.albumId);
+        } else if (playbackInfo.metadata.videoId) {
+          try {
+            const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
+            if (songDetails?.album?.youtube_browse_id) {
+              playbackInfo.metadata.albumId = songDetails.album.youtube_browse_id;
+            }
+          } catch (e) { /* ignore */ }
+        }
+      }
+    }
+
     // Persist for state recovery
     lastPlaybackInfo = playbackInfo;
 
@@ -169,6 +213,10 @@ export function setupIPCHandlers(
     return await ytMusicService.getPlaylist(playlistId);
   });
 
+  ipcMain.handle(IPCChannels.YT_GET_ARTIST_DETAILS, async (_event, artistId: string) => {
+    return await ytMusicService.getArtistDetails(artistId);
+  });
+
   ipcMain.handle(IPCChannels.YT_GET_SONG_DETAILS, async (_event, videoId: string) => {
     return await ytMusicService.getSongDetails(videoId);
   });
@@ -190,8 +238,11 @@ export function setupIPCHandlers(
     return await ytMusicService.checkLoginStatus();
   });
 
-  ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST', contextId?: string) => {
+  ipcMain.on(IPCChannels.YT_PLAY, (_event, id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST', contextId?: string, artists?: MusicArtist[], albumId?: string) => {
     if (hiddenWindow.isDestroyed()) return;
+
+    // Store context for later enrichment
+    lastPlayContext = { artists, albumId };
 
     let url: string;
     if (type === 'SONG') {

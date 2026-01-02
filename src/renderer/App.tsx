@@ -10,40 +10,39 @@ import { ViewWrapper } from './components/common/ViewWrapper';
 
 import { MusicItem } from '../shared/types/music';
 
-type ViewType = 'home' | 'detail' | 'search';
+import { ArtistDetailView } from './components/LibraryView/ArtistDetailView';
+
+type ViewType = 'home' | 'detail' | 'search' | 'artist';
+
+interface StackEntry {
+  view: ViewType;
+  item: MusicItem | null;
+}
 
 export default function App() {
   // Initialize MediaSession listener
   useMediaSession();
 
   // Navigation Stack for Main Content (Library, Album Details, etc.)
-  // Does NOT include Player
-  const [viewStack, setViewStack] = useState<ViewType[]>(['home']);
+  const [viewStack, setViewStack] = useState<StackEntry[]>([{ view: 'home', item: null }]);
 
   // Overlay State for Player
   const [isPlayerOpen, setIsPlayerOpen] = useState(false);
-
-  useEffect(() => {
-
-  }, [isPlayerOpen]);
-
-  useEffect(() => {
-
-  }, [viewStack]);
-
-  const [selectedItem, setSelectedItem] = useState<MusicItem | null>(null);
 
   // Search State
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<any>(null);
 
-  const currentView = viewStack[viewStack.length - 1];
+  const currentEntry = viewStack[viewStack.length - 1];
+  const currentView = currentEntry.view;
+  const selectedItem = currentEntry.item;
 
   const navigateTo = useCallback((
     view: 'player' | ViewType,
     item: MusicItem | null = null,
     query?: string
   ) => {
+    console.log(`[App] Navigating to ${view}`, item);
 
     if (view === 'player') {
       setIsPlayerOpen(true);
@@ -51,13 +50,12 @@ export default function App() {
       setSearchQuery(query);
       // Only push if not already on search with same query
       if (currentView !== 'search' || searchQuery !== query) {
-        setViewStack(prev => [...prev, 'search']);
+        setViewStack(prev => [...prev, { view: 'search', item: null }]);
       }
       setIsPlayerOpen(false);
     } else if (view === 'home') {
-      setViewStack(['home']);
+      setViewStack([{ view: 'home', item: null }]);
       setIsPlayerOpen(false);
-      setSelectedItem(null);
     } else if (view === 'detail') {
       if (item) {
         // Only push if not already looking at this item
@@ -66,8 +64,18 @@ export default function App() {
             selectedItem?.youtube_playlist_id === item.youtube_playlist_id);
 
         if (!isSameDetail) {
-          setSelectedItem(item);
-          setViewStack(prev => [...prev, 'detail']);
+          setViewStack(prev => [...prev, { view: 'detail', item }]);
+        }
+        setIsPlayerOpen(false);
+      }
+    } else if (view === 'artist') {
+      if (item) {
+        // Only push if not already looking at this artist
+        const isSameArtist = currentView === 'artist' &&
+          selectedItem?.youtube_browse_id === item.youtube_browse_id;
+
+        if (!isSameArtist) {
+          setViewStack(prev => [...prev, { view: 'artist', item }]);
         }
         setIsPlayerOpen(false);
       }
@@ -83,10 +91,10 @@ export default function App() {
 
     // Otherwise navigate back in the stack
     if (viewStack.length > 1) {
-      const poppedView = viewStack[viewStack.length - 1];
+      const poppedEntry = viewStack[viewStack.length - 1];
 
       // Clear search state when leaving search view
-      if (poppedView === 'search') {
+      if (poppedEntry.view === 'search') {
         setSearchQuery('');
         setSearchResults(null);
       }
@@ -162,7 +170,7 @@ export default function App() {
 
 
           {/* Home & Search Results (Unified ListView) */}
-          {(currentView === 'home' || currentView === 'search' || (currentView === 'detail' && viewStack.includes('home'))) && (
+          {(currentView === 'home' || currentView === 'search' || (currentView === 'detail' && viewStack.some(e => e.view === 'home'))) && (
             <motion.div
               key="library-main"
               initial={{ opacity: 0 }}
@@ -179,9 +187,12 @@ export default function App() {
                   query={currentView === 'search' ? searchQuery : undefined}
                   onAlbumSelect={(album) => navigateTo('detail', album)}
                   onPlaylistSelect={(playlist) => navigateTo('detail', playlist)}
+                  onArtistSelect={(artist) => navigateTo('artist', artist)}
                   onSongSelect={(song) => {
                     if (song.youtube_video_id) {
-                      window.electronAPI.play(song.youtube_video_id, 'SONG');
+                      const artists = song.artists;
+                      const albumId = song.album?.youtube_browse_id;
+                      window.electronAPI.play(song.youtube_video_id, 'SONG', undefined, artists, albumId);
                     }
                   }}
                   onSearch={(query) => navigateTo('search', null, query)}
@@ -196,7 +207,7 @@ export default function App() {
           {/* Music Detail (Album/Playlist) */}
           {currentView === 'detail' && selectedItem && (
             <motion.div
-              key={`detail - ${selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id} `}
+              key={`detail-${selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -211,11 +222,58 @@ export default function App() {
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
                     if (song.youtube_video_id) {
+                      // Get artists from song or fallback to album/playlist artist
+                      const artists = (song.artists && song.artists.length > 0) ? song.artists : (selectedItem.artists || []);
+                      // Get albumId if it's an album context
+                      const albumId = selectedItem.type === 'ALBUM' ? (selectedItem.youtube_browse_id || selectedItem.youtube_playlist_id) : undefined;
                       window.electronAPI.play(
                         song.youtube_video_id,
                         'SONG',
-                        song.youtube_playlist_id || (selectedItem.type === 'PLAYLIST' ? selectedItem.youtube_playlist_id : selectedItem.youtube_browse_id)
+                        song.youtube_playlist_id || (selectedItem.type === 'PLAYLIST' ? selectedItem.youtube_playlist_id : selectedItem.youtube_browse_id),
+                        artists,
+                        albumId
                       );
+                    }
+                  }}
+                  onNavigateToArtist={(artistId) => navigateTo('artist', { type: 'ARTIST', title: '', thumbnails: [], artists: [{ name: '', id: artistId }], youtube_browse_id: artistId })}
+                />
+              </ViewWrapper>
+            </motion.div>
+          )}
+
+          {/* Artist Detail */}
+          {currentView === 'artist' && selectedItem && (
+            <motion.div
+              key={`artist-${selectedItem.youtube_browse_id}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0 z-10"
+            >
+              <ViewWrapper>
+                <ArtistDetailView
+                  id={selectedItem.youtube_browse_id || ''}
+                  initialItem={selectedItem}
+                  onBack={goBack}
+                  onPlaySong={(song: MusicItem) => {
+                    if (song.youtube_video_id) {
+                      const artists = selectedItem.artists || [];
+                      const albumId = song.album?.youtube_browse_id;
+                      window.electronAPI.play(
+                        song.youtube_video_id,
+                        'SONG',
+                        undefined,
+                        artists,
+                        albumId
+                      );
+                    }
+                  }}
+                  onNavigateToItem={(item: MusicItem) => {
+                    if (item.type === 'ARTIST') {
+                      navigateTo('artist', item);
+                    } else {
+                      navigateTo('detail', item);
                     }
                   }}
                 />
@@ -232,6 +290,10 @@ export default function App() {
             onClose={() => setIsPlayerOpen(false)}
             onNavigateToAlbum={(albumItem) => {
               navigateTo('detail', albumItem);
+              setIsPlayerOpen(false);
+            }}
+            onNavigateToArtist={(artistItem) => {
+              navigateTo('artist', artistItem);
               setIsPlayerOpen(false);
             }}
           />

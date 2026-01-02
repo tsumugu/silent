@@ -8,6 +8,7 @@ interface MusicCardProps {
   item: MusicItem;
   onAlbumSelect?: (album: MusicItem) => void;
   onPlaylistSelect?: (playlist: MusicItem) => void;
+  onArtistSelect?: (artist: MusicItem) => void;
   onSongSelect?: (song: MusicItem) => void;
 }
 
@@ -15,6 +16,7 @@ export const MusicCard: React.FC<MusicCardProps> = ({
   item,
   onAlbumSelect,
   onPlaylistSelect,
+  onArtistSelect,
   onSongSelect
 }) => {
   const thumbnails = item.thumbnails || [];
@@ -48,6 +50,8 @@ export const MusicCard: React.FC<MusicCardProps> = ({
       window.electronAPI.play(item.youtube_video_id, 'SONG');
     } else if (normalizedType === 'playlist' && onPlaylistSelect) {
       onPlaylistSelect(item);
+    } else if (normalizedType === 'artist' && onArtistSelect) {
+      onArtistSelect(item);
     }
   };
 

@@ -1,5 +1,5 @@
 import { ipcRenderer } from 'electron';
-import { PlaybackInfo } from '../shared/types';
+import { PlaybackInfo } from '../shared/types/playback';
 
 // Forced global variables for control from main process
 (window as any).block_updates = false;
@@ -44,7 +44,7 @@ function triggerAction(action: string, details?: any): boolean {
 // Global error handling to catch playback failures
 window.addEventListener('error', (e) => {
   console.error('[HiddenWindow] Global Error:', e.message);
-  if (e.message.includes('playback') || e.message.includes('load')) {
+  if (e.message?.includes('playback') || e.message?.includes('load')) {
     forceUpdateState();
   }
 }, true);
@@ -86,51 +86,29 @@ function observeMediaSession() {
   const hasMetadata = metadata && metadata.title;
 
   if (hasMetadata && metadata) {
-    let albumId: string | undefined;
-
-    try {
-      const playerBar = document.querySelector('ytmusic-player-bar');
-      const bylineLinks = playerBar?.querySelectorAll('.middle-controls .byline a') || [];
-
-      for (const lin of Array.from(bylineLinks)) {
-        const link = lin as any;
-        const browseId = link.data?.navigationEndpoint?.browseEndpoint?.browseId ||
-          link.navigationEndpoint?.browseEndpoint?.browseId;
-
-        if (browseId && (browseId.startsWith('MPREb') || browseId.startsWith('F'))) {
-          albumId = browseId;
-          break;
-        }
-
-        const href = link.getAttribute('href');
-        if (href?.includes('browse/MPREb') || href?.includes('browse/F')) {
-          albumId = href.split('browse/')[1];
-          break;
-        }
+    // VideoId is extracted from URL - this is reliable
+    const videoId = (() => {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('v') || undefined;
+      } catch {
+        return undefined;
       }
-    } catch (e) {
-      console.warn('Failed to extract albumId:', e);
-    }
+    })();
 
     lastValidMetadata = {
       title: metadata.title,
       artist: metadata.artist,
       album: metadata.album,
-      albumId: albumId,
+      // albumId and artistId will be enriched by main process via youtubei.js
+      albumId: undefined,
+      artistId: undefined,
       artwork: metadata.artwork ? metadata.artwork.map(art => ({
         src: art.src,
         sizes: art.sizes,
         type: art.type,
       })) : [],
-      videoId: (() => {
-        try {
-          const urlParams = new URLSearchParams(window.location.search);
-          const videoId = urlParams.get('v');
-          return videoId || undefined;
-        } catch {
-          return undefined;
-        }
-      })(),
+      videoId: videoId,
     };
   }
 

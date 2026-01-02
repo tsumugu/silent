@@ -8,14 +8,15 @@ import { SeekBar } from './SeekBar';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
-import { MusicItem } from '../../../shared/types/music';
+import { MusicItem, MusicArtist } from '../../../shared/types/music';
 
 interface PlayerViewProps {
   onClose?: () => void;
   onNavigateToAlbum?: (albumItem: MusicItem) => void;
+  onNavigateToArtist?: (artistItem: MusicItem) => void;
 }
 
-export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
+export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: PlayerViewProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [albumInfo, setAlbumInfo] = useState<{ id: string; name: string } | null>(null);
   const { playbackInfo } = usePlayerStore();
@@ -43,6 +44,20 @@ export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
         artists: []
       };
       onNavigateToAlbum(albumItem);
+    }
+  };
+
+  const handleArtistClick = (artist: MusicArtist) => {
+    console.log('[PlayerView] Artist clicked:', artist);
+    if (artist.id && onNavigateToArtist) {
+      const artistItem: MusicItem = {
+        type: 'ARTIST',
+        title: artist.name,
+        youtube_browse_id: artist.id,
+        thumbnails: [],
+        artists: []
+      };
+      onNavigateToArtist(artistItem);
     }
   };
 
@@ -123,8 +138,10 @@ export function PlayerView({ onClose, onNavigateToAlbum }: PlayerViewProps) {
             <TrackInfo
               title={playbackInfo?.metadata?.title}
               artist={playbackInfo?.metadata?.artist}
+              artists={playbackInfo?.metadata?.artists}
               album={albumName}
               onAlbumClick={handleAlbumClick}
+              onArtistClick={handleArtistClick}
               isVisible={isHovered || isMini}
               isMini={isMini}
             />

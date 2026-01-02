@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MusicSection } from './MusicSection';
+import { MusicSection } from './MusicSection'; // Trigger re-save
 import { SearchBar } from './SearchBar';
 import { MusicItem } from '../../../shared/types/music';
 import { LoadingState, ErrorState, EmptyState } from '../common/StateViews';
@@ -8,6 +8,7 @@ interface ListViewProps {
     query?: string;
     onAlbumSelect: (album: MusicItem) => void;
     onPlaylistSelect: (playlist: MusicItem) => void;
+    onArtistSelect: (artist: MusicItem) => void;
     onSongSelect?: (song: MusicItem) => void;
     onSearch?: (query: string) => void;
     onBack?: () => void;
@@ -19,6 +20,7 @@ export const ListView: React.FC<ListViewProps> = ({
     query,
     onAlbumSelect,
     onPlaylistSelect,
+    onArtistSelect,
     onSongSelect,
     onSearch,
     onBack,
@@ -156,6 +158,7 @@ export const ListView: React.FC<ListViewProps> = ({
                         items={section.contents}
                         onAlbumSelect={onAlbumSelect}
                         onPlaylistSelect={onPlaylistSelect}
+                        onArtistSelect={onArtistSelect}
                         onSongSelect={onSongSelect}
                     />
                 ))}

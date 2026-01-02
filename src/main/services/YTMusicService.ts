@@ -168,6 +168,61 @@ export class YTMusicService {
         }
     }
 
+    async getArtistDetails(artistId: string): Promise<MusicDetail | null> {
+        await this.initialize();
+        if (!this.innertube) return null;
+
+        try {
+            const artist: any = await this.innertube.music.getArtist(artistId);
+
+            const header = artist.header;
+            const topSongs = artist.sections.find((s: any) => s.type === 'MusicShelf' || s.title?.toString().includes('曲'))?.contents || [];
+            const albums = artist.sections.find((s: any) => s.title?.toString().includes('アルバム'))?.contents || [];
+            const singles = artist.sections.find((s: any) => s.title?.toString().includes('シングル'))?.contents || [];
+
+            const musicItem = this.mapMusicItem({
+                ...artist,
+                browse_id: artistId,
+                type: 'ARTIST',
+                title: header?.name?.toString() || artist.name?.toString()
+            });
+
+            if (!musicItem) return null;
+
+            const sections = [];
+            if (topSongs.length > 0) {
+                sections.push({
+                    title: 'Top Songs',
+                    items: topSongs.map((t: any) => this.mapMusicItem(t)).filter(Boolean) as MusicItem[]
+                });
+            }
+            if (albums.length > 0) {
+                sections.push({
+                    title: 'Albums',
+                    items: albums.map((t: any) => this.mapMusicItem(t)).filter(Boolean) as MusicItem[]
+                });
+            }
+            if (singles.length > 0) {
+                sections.push({
+                    title: 'Singles & EPs',
+                    items: singles.map((t: any) => this.mapMusicItem(t)).filter(Boolean) as MusicItem[]
+                });
+            }
+
+            const result: MusicDetail = {
+                ...musicItem,
+                description: header?.description?.toString(),
+                tracks: [], // Artists don't have a single track list usually
+                sections: sections
+            };
+
+            return JSON.parse(JSON.stringify(result));
+        } catch (e) {
+            console.error(`[YTMusicService] Failed to get artist details for ${artistId}`, e);
+            return null;
+        }
+    }
+
     async getPlaylist(playlistId: string): Promise<MusicDetail | null> {
 
         await this.initialize();
@@ -179,7 +234,14 @@ export class YTMusicService {
             const items = playlist.items || playlist.contents || [];
 
             // ヘッダーアーティストを先に抽出して正規化
-            const rawHeaderArtists = header.artists || playlist.artists || header.author || playlist.author;
+            // Safely check for header
+            if (!header) {
+                console.warn(`[YTMusicService] No header found for playlist ${playlistId}`);
+                // If it's UC started, it's actually an artist, so maybe we should return null or redirect
+                if (playlistId.startsWith('UC')) return await this.getArtistDetails(playlistId);
+            }
+
+            const rawHeaderArtists = header?.artists || playlist.artists || header?.author || playlist.author;
             const fallbackArtists = this.normalizeArtists(rawHeaderArtists);
 
             const musicItem = this.mapMusicItem({
@@ -373,7 +435,7 @@ export class YTMusicService {
             artists.push(...rawArtists
                 .map((a: any) => ({
                     name: a.name?.toString().trim() || a.text?.toString().trim() || a.toString().trim() || '',
-                    id: a.id || a.browse_id || a.channel_id || a.endpoint?.payload?.browseId
+                    id: a.id || a.browseId || a.browse_id || a.channel_id || a.endpoint?.payload?.browseId || a.navigation_endpoint?.browse_endpoint?.browse_id || a.navigationEndpoint?.browseEndpoint?.browseId || a.navigation_endpoint?.payload?.browseId || a.navigationEndpoint?.payload?.browseId
                 }))
                 .filter(a => a.name.length > 0 && a.name !== 'Unknown Artist' && a.name !== '[object Object]')
             );
@@ -383,7 +445,7 @@ export class YTMusicService {
                 artists.push(...rawArtists.runs
                     .map((a: any) => ({
                         name: a.text?.toString().trim() || '',
-                        id: a.endpoint?.payload?.browseId || a.id || a.browse_id
+                        id: a.endpoint?.payload?.browseId || a.navigation_endpoint?.browse_endpoint?.browse_id || a.navigationEndpoint?.browseEndpoint?.browseId || a.navigation_endpoint?.payload?.browseId || a.navigationEndpoint?.payload?.browseId || a.id || a.browseId || a.browse_id
                     }))
                     .filter((a: any) => a.name.length > 0 && a.name !== 'Unknown Artist')
                 );
@@ -395,14 +457,14 @@ export class YTMusicService {
                 if (name && name.length > 0 && name !== 'Unknown Artist' && name !== '[object Object]') {
                     artists.push({
                         name,
-                        id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId
+                        id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId || rawArtists.navigation_endpoint?.browse_endpoint?.browse_id || rawArtists.navigationEndpoint?.browseEndpoint?.browseId
                     });
                 } else if (rawArtists.toString() !== '[object Object]') {
                     const toStringName = rawArtists.toString().trim();
                     if (toStringName.length > 0 && toStringName !== 'Unknown Artist') {
                         artists.push({
                             name: toStringName,
-                            id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId
+                            id: rawArtists.id || rawArtists.browse_id || rawArtists.endpoint?.payload?.browseId || rawArtists.navigation_endpoint?.browse_endpoint?.browse_id || rawArtists.navigationEndpoint?.browseEndpoint?.browseId
                         });
                     }
                 }
@@ -417,7 +479,12 @@ export class YTMusicService {
             }
         }
 
-        return artists;
+        const results = artists.filter(a => a.name.length > 0);
+        if (results.some(a => !a.id)) {
+            // Only log if we have a name but no ID
+            // console.warn('[YTMusicService] Artist missing ID:', { results, rawArtists });
+        }
+        return results;
     }
 
     private mapMusicItem(item: any, fallbackArtists?: MusicArtist[]): MusicItem | null {
@@ -442,6 +509,15 @@ export class YTMusicService {
             if (!videoId && (item.id.length === 11)) videoId = item.id;
             else if (!browseId && (item.id.startsWith('MPRE') || item.id.startsWith('Fm') || item.id.startsWith('UC'))) browseId = item.id;
             else if (!playlistId && (item.id.startsWith('PL') || item.id.startsWith('RD') || item.id.startsWith('VL'))) playlistId = item.id;
+        }
+
+        // Additional ID extraction from endpoints
+        const endpoint = item.endpoint || item.navigation_endpoint || item.navigationEndpoint;
+        if (endpoint) {
+            const payload = endpoint.payload || endpoint;
+            if (!browseId) browseId = payload.browseId || payload.browse_id;
+            if (!playlistId) playlistId = payload.playlistId || payload.playlist_id;
+            if (!videoId) videoId = payload.videoId || payload.video_id;
         }
 
         // youtubei.js の item_type または type からタイプを判定

@@ -36,9 +36,19 @@ export interface MusicItem {
 }
 
 /** 
- * アルバムやプレイリストの詳細ページ（Header + Tracks）
+ * セクション単位のアイテムリスト（アーティスト詳細などで使用）
+ */
+export interface MusicSection {
+    title: string;
+    items: MusicItem[];
+    type?: string;
+}
+
+/** 
+ * アルバムやプレイリスト、アーティストの詳細ページ（Header + Tracks/Sections）
  */
 export interface MusicDetail extends MusicItem {
     description?: string;
     tracks: MusicItem[];
+    sections?: MusicSection[];
 }

@@ -3,7 +3,7 @@ import { Worker } from 'worker_threads';
 import * as path from 'path';
 import { Resvg } from '@resvg/resvg-js';
 import { TraySettings } from '../../shared/types/settings';
-import { MediaMetadata } from '../../shared/types';
+import { MediaMetadata } from '../../shared/types/playback';
 
 export interface TrayCallbacks {
   onShowWindow: () => void;

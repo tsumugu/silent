@@ -10,9 +10,10 @@ interface MusicDetailViewProps {
     initialItem?: MusicItem;
     onBack: () => void;
     onPlaySong: (song: MusicItem) => void;
+    onNavigateToArtist?: (artistId: string) => void;
 }
 
-export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, initialItem, onBack, onPlaySong }) => {
+export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, initialItem, onBack, onPlaySong, onNavigateToArtist }) => {
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
@@ -86,6 +87,9 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     };
     const year = getYear(data?.subtitle || initialItem?.subtitle);
 
+    // Extract the primary artist ID for fallback
+    const primaryArtistId = data?.artists?.[0]?.id || initialItem?.artists?.[0]?.id;
+
     return (
         <motion.div
             layoutId={`card-${type.toLowerCase()}-${id}`}
@@ -137,13 +141,15 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                             {title}
                         </h1>
                         <div className="flex items-center gap-3 text-white/60">
-                            {year && (
-                                <span className="font-semibold text-white/90">{year}</span>
-                            )}
-                            {year && (
-                                <span className="w-1 h-1 rounded-full bg-white/20" />
-                            )}
-                            <span className="text-sm">{tracks.length || 0} songs</span>
+                            <div className="flex items-center gap-3 text-white/40 text-sm font-medium">
+                                {year && (
+                                    <>
+                                        <span>{year}</span>
+                                        <span className="w-1 h-1 rounded-full bg-white/20" />
+                                    </>
+                                )}
+                                <span>{tracks.length || 0} songs</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -170,10 +176,6 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                         ) : (
                             tracks.map((song, index) => {
                                 const songTitle = song.title;
-                                const songArtist = song.artists
-                                    .map(a => a.name)
-                                    .filter(name => name && name.trim().length > 0)
-                                    .join(', ') || artistName || 'Unknown Artist';
 
                                 return (
                                     <motion.div
@@ -192,7 +194,25 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                                 {songTitle}
                                             </div>
                                             <div className="text-white/40 text-xs truncate group-hover:text-white/60">
-                                                {songArtist}
+                                                {song.artists.map((a, i, arr) => {
+                                                    const artistId = a.id || primaryArtistId;
+                                                    return (
+                                                        <span key={i}>
+                                                            <span
+                                                                className={artistId ? 'hover:underline cursor-pointer' : ''}
+                                                                onClick={(e) => {
+                                                                    if (artistId) {
+                                                                        e.stopPropagation();
+                                                                        onNavigateToArtist?.(artistId);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {a.name}
+                                                            </span>
+                                                            {i < arr.length - 1 && ', '}
+                                                        </span>
+                                                    );
+                                                }) || artistName}
                                             </div>
                                         </div>
                                         <div className="text-right text-white/30 text-xs font-mono group-hover:text-white/60">

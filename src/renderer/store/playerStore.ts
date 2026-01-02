@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { PlaybackInfo } from '../../shared/types';
+import { PlaybackInfo } from '../../shared/types/playback';
 
 interface PlayerState {
   playbackInfo: PlaybackInfo | null;

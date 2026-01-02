@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { usePlayerStore } from '../store/playerStore';
-import { PlaybackInfo } from '../../shared/types';
+import { PlaybackInfo } from '../../shared/types/playback';
 
 export function useMediaSession() {
   const setPlaybackInfo = usePlayerStore((state) => state.setPlaybackInfo);

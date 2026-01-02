@@ -22,8 +22,7 @@ export function createHiddenWindow(): BrowserWindow {
   win.loadURL('https://music.youtube.com');
 
   // Dev tools in development for debugging
-  const isScreenshotMode = process.argv.includes('--screenshot-mode');
-  if (!app.isPackaged && !isScreenshotMode) {
+  if (process.env.NODE_ENV === 'development') {
     win.webContents.openDevTools({ mode: 'detach' });
   }
 

@@ -1,4 +1,4 @@
-import { PlaybackInfo } from '../../shared/types';
+import { PlaybackInfo } from '../../shared/types/playback';
 import { MusicItem, MusicDetail } from '../../shared/types/music';
 import { AppSettings } from '../../shared/types/settings';
 
@@ -27,6 +27,7 @@ declare global {
       getHomeAlbums: () => Promise<MusicItem[]>;
       getAlbumDetails: (albumId: string) => Promise<MusicDetail | null>;
       getPlaylist: (playlistId: string) => Promise<MusicDetail | null>;
+      getArtistDetails: (artistId: string) => Promise<MusicDetail | null>;
       getSongDetails: (videoId: string) => Promise<MusicItem | null>;
       search: (query: string) => Promise<{
         songs: MusicItem[];
@@ -36,7 +37,7 @@ declare global {
       showLogin: () => void;
       checkLogin: () => Promise<boolean>;
       onSessionUpdated: (callback: () => void) => () => void;
-      play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST', contextId?: string) => void;
+      play: (id: string, type: 'SONG' | 'ALBUM' | 'PLAYLIST', contextId?: string, artists?: MusicArtist[], albumId?: string) => void;
       setVibrancy: (vibrancy: 'under-window' | 'content' | 'sidebar' | 'menu' | 'popover' | 'hud' | 'sheet' | 'window' | 'dropdown' | 'tooltip' | 'device-discovery' | 'video' | 'selection' | 'titlebar' | null) => void;
       // Settings
       getSettings: () => Promise<AppSettings>;

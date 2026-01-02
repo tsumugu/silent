@@ -9,6 +9,7 @@ interface MusicSectionProps {
   showCount?: boolean;
   onAlbumSelect?: (album: MusicItem) => void;
   onPlaylistSelect?: (playlist: MusicItem) => void;
+  onArtistSelect?: (artist: MusicItem) => void;
   onSongSelect?: (song: MusicItem) => void;
 }
 
@@ -18,6 +19,7 @@ export const MusicSection: React.FC<MusicSectionProps> = ({
   showCount = false,
   onAlbumSelect,
   onPlaylistSelect,
+  onArtistSelect,
   onSongSelect,
 }) => {
   const breakpointColumnsObj = {
@@ -48,6 +50,7 @@ export const MusicSection: React.FC<MusicSectionProps> = ({
             item={item}
             onAlbumSelect={onAlbumSelect}
             onPlaylistSelect={onPlaylistSelect}
+            onArtistSelect={onArtistSelect}
             onSongSelect={onSongSelect}
           />
         ))}

@@ -4,6 +4,7 @@ import { usePlayerStore } from '../../store/playerStore';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
+import { MusicItem } from '../../../shared/types/music';
 
 interface MiniPlayerProps {
     onClick: () => void;
