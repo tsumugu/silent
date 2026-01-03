@@ -198,18 +198,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                             </div>
                         </div>
 
-                        {/* Play All Button */}
-                        <div className="flex items-center gap-3 mt-6">
-                            <button
-                                onClick={() => initialItem && onPlaySong(initialItem)}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-white text-black rounded-full font-bold hover:bg-neutral-200 transition-all active:scale-95 shadow-xl"
-                            >
-                                <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
-                                <span className="text-sm">Play</span>
-                            </button>
-                        </div>
+
                     </div>
                 </div>
 
