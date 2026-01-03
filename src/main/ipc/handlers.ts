@@ -65,44 +65,41 @@ export function setupIPCHandlers(
       const currentVideoId = playbackInfo.metadata.videoId;
       // Check if the current track matches the context (same video ID)
       const isSameTrack = currentVideoId && currentVideoId === lastPlayContext.videoId;
-      // If we are playing an album, we can assume all tracks belong to it
+      // If we are playing an album/playlist, we can assume all tracks belong to it
       const isAlbumMode = lastPlayContext.playMode === 'ALBUM';
+      const isPlaylistMode = lastPlayContext.playMode === 'PLAYLIST';
 
+      console.log('[Handlers] PLAYBACK_STATE_CHANGED - Before enrichment:', {
+        videoId: currentVideoId,
+        isSameTrack,
+        isAlbumMode,
+        isPlaylistMode,
+        hasArtists: !!(playbackInfo.metadata.artists && playbackInfo.metadata.artists.length > 0),
+        hasAlbumId: !!playbackInfo.metadata.albumId,
+        contextVideoId: lastPlayContext.videoId,
+        contextPlayMode: lastPlayContext.playMode
+      });
 
-
-      // 1. Enrich Artists - only add missing IDs, don't replace names
-      const existingArtists = playbackInfo.metadata.artists || [];
-      const hasArtistId = existingArtists.some(a => !!a.id);
-
-      if (!hasArtistId) {
+      // 1. Enrich Artists
+      if (!playbackInfo.metadata.artists || playbackInfo.metadata.artists.length === 0) {
         // Only use context artists if it's the specific track we started with
         if (isSameTrack && lastPlayContext.artists && lastPlayContext.artists.length > 0) {
-          // Merge: Keep existing names, add IDs from context
-          if (existingArtists.length > 0) {
-            playbackInfo.metadata.artists = existingArtists.map((existing, idx) => ({
-              name: existing.name,
-              id: lastPlayContext.artists?.[idx]?.id || existing.id
-            }));
-          } else {
-            playbackInfo.metadata.artists = lastPlayContext.artists;
-          }
+          playbackInfo.metadata.artists = lastPlayContext.artists;
+          // Also set the primary artistId for backward compatibility
           if (!playbackInfo.metadata.artistId && lastPlayContext.artists[0].id) {
             playbackInfo.metadata.artistId = lastPlayContext.artists[0].id;
           }
         } else if (playbackInfo.metadata.videoId) {
           try {
             const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
-
-            if (songDetails && isSongItem(songDetails) && songDetails.artists) {
-              // Preserve existing artist names if available, only add IDs
-              if (existingArtists.length > 0) {
-                playbackInfo.metadata.artists = existingArtists.map((existing, idx) => ({
-                  name: existing.name,
-                  id: songDetails.artists?.[idx]?.id || existing.id
-                }));
-              } else {
-                playbackInfo.metadata.artists = songDetails.artists;
-              }
+            console.log('[Handlers] getSongDetails result:', songDetails ? {
+              type: songDetails.type,
+              hasArtists: isSongItem(songDetails) ? songDetails.artists?.length : 0,
+              artistIds: isSongItem(songDetails) ? songDetails.artists?.map((a: any) => a.id) : [],
+              albumId: isSongItem(songDetails) ? songDetails.album?.youtube_browse_id : undefined
+            } : null);
+            if (songDetails && isSongItem(songDetails)) {
+              playbackInfo.metadata.artists = songDetails.artists;
               if (songDetails.artists[0]?.id) {
                 playbackInfo.metadata.artistId = songDetails.artists[0].id;
               }
@@ -115,8 +112,8 @@ export function setupIPCHandlers(
       if (!playbackInfo.metadata.albumId) {
         if (isSameTrack && lastPlayContext.albumId) {
           playbackInfo.metadata.albumId = lastPlayContext.albumId;
-        } else if (isAlbumMode && lastPlayContext.albumId) {
-          // In Album mode, persist the album ID for all tracks
+        } else if ((isAlbumMode || isPlaylistMode) && lastPlayContext.albumId) {
+          // In Album/Playlist mode, persist the container ID for all tracks
           playbackInfo.metadata.albumId = lastPlayContext.albumId;
         } else if (playbackInfo.metadata.videoId) {
           try {
@@ -128,7 +125,10 @@ export function setupIPCHandlers(
         }
       }
 
-
+      console.log('[Handlers] PLAYBACK_STATE_CHANGED - After enrichment:', {
+        artists: playbackInfo.metadata.artists?.map((a: any) => ({ name: a.name, id: a.id })),
+        albumId: playbackInfo.metadata.albumId
+      });
     }
 
     // Persist for state recovery
@@ -297,18 +297,30 @@ export function setupIPCHandlers(
     if (isSongItem(item)) {
       id = item.youtube_video_id;
       url = `https://music.youtube.com/watch?v=${id}`;
-      if (contextId || item.youtube_playlist_id) {
-        url += `&list=${contextId || item.youtube_playlist_id}`;
+      let listId = contextId || item.youtube_playlist_id;
+      // Normalize listId: VL prefix is for browse IDs, strip it for watch URLs
+      if (listId?.startsWith('VL')) {
+        listId = listId.substring(2);
+      }
+      console.log('[Handlers] YT_PLAY SongItem:', { videoId: id, contextId, itemPlaylistId: item.youtube_playlist_id, listId });
+      if (listId) {
+        url += `&list=${listId}`;
       }
       lastPlayContext = {
         artists: item.artists,
-        albumId: item.album?.youtube_browse_id,
+        albumId: contextId || item.youtube_playlist_id || item.album?.youtube_browse_id, // Keep original ID for metadata
         videoId: item.youtube_video_id,
-        playMode: 'SONG'
+        playMode: (listId?.startsWith('MPRE') || item.album?.youtube_browse_id) ? 'ALBUM' : (listId ? 'PLAYLIST' : 'SONG')
       };
+      console.log('[Handlers] YT_PLAY lastPlayContext:', lastPlayContext);
     } else if (isAlbumItem(item)) {
       id = item.youtube_browse_id;
-      url = `https://music.youtube.com/watch?list=${item.youtube_playlist_id || id}`;
+      // Normalize: VL prefix is for browse IDs, strip it for watch URLs
+      let albumListId = item.youtube_playlist_id || id;
+      if (albumListId?.startsWith('VL')) {
+        albumListId = albumListId.substring(2);
+      }
+      url = `https://music.youtube.com/watch?list=${albumListId}`;
       lastPlayContext = {
         artists: item.artists,
         albumId: id,
@@ -316,8 +328,16 @@ export function setupIPCHandlers(
       };
     } else if (isPlaylistItem(item) || isChartItem(item)) {
       id = item.youtube_playlist_id;
-      url = `https://music.youtube.com/watch?list=${id}`;
-      lastPlayContext = { playMode: 'PLAYLIST' };
+      // Normalize: VL prefix is for browse IDs, strip it for watch URLs
+      let playlistListId = id;
+      if (playlistListId?.startsWith('VL')) {
+        playlistListId = playlistListId.substring(2);
+      }
+      url = `https://music.youtube.com/watch?list=${playlistListId}`;
+      lastPlayContext = {
+        playMode: 'PLAYLIST',
+        albumId: id // Store original ID for metadata
+      };
     } else if (isRadioItem(item)) {
       id = item.seed_video_id || item.youtube_playlist_id;
       url = `https://music.youtube.com/watch?v=${id}&list=${item.youtube_playlist_id}`;
