@@ -5,6 +5,7 @@ import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
 import { useMusicStore } from '../../store/musicStore';
 import { useTranslation } from '../../hooks/useTranslation';
+import { usePlayerStore } from '../../store/playerStore';
 
 interface ArtistDetailViewProps {
     id: string;
@@ -22,6 +23,8 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
     onNavigateToItem
 }) => {
     const { t } = useTranslation();
+    const { playbackInfo } = usePlayerStore();
+    const isGlobalLoading = playbackInfo?.playbackState === 'loading';
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -121,8 +124,9 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
                                     {section.items.map((item, iIndex) => (
                                         <div
                                             key={iIndex}
-                                            className="group cursor-pointer space-y-3"
+                                            className={`group cursor-pointer space-y-3 transition-all duration-300 ${isGlobalLoading ? 'opacity-30 blur-[1px] pointer-events-none' : ''}`}
                                             onClick={() => {
+                                                if (isGlobalLoading) return;
                                                 if (item.type === 'SONG') onPlaySong(item);
                                                 else onNavigateToItem(item);
                                             }}

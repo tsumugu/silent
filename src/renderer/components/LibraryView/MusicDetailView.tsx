@@ -11,6 +11,7 @@ import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
 import { useMusicStore } from '../../store/musicStore';
 import { useTranslation } from '../../hooks/useTranslation';
+import { usePlayerStore } from '../../store/playerStore';
 
 interface MusicDetailViewProps {
     id: string;
@@ -23,6 +24,8 @@ interface MusicDetailViewProps {
 
 export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, initialItem, onBack, onPlaySong, onNavigateToArtist }) => {
     const { t } = useTranslation();
+    const { playbackInfo } = usePlayerStore();
+    const isGlobalLoading = playbackInfo?.playbackState === 'loading';
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
@@ -234,8 +237,10 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.03 }}
-                                        className="group grid grid-cols-[3rem_1fr_4rem] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-all active:scale-[0.995]"
-                                        onClick={() => onPlaySong(song)}
+                                        className={`group grid grid-cols-[3rem_1fr_4rem] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-all active:scale-[0.995] ${isGlobalLoading ? 'opacity-40 blur-[0.5px] pointer-events-none' : ''}`}
+                                        onClick={() => {
+                                            if (!isGlobalLoading) onPlaySong(song);
+                                        }}
                                     >
                                         <div className="text-center text-white/30 font-medium group-hover:text-white/60 transition-colors">
                                             {index + 1}

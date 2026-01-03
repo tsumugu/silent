@@ -10,6 +10,7 @@ import {
 } from '../../../shared/types/music';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
+import { usePlayerStore } from '../../store/playerStore';
 
 interface MusicCardProps {
   item: MusicItem;
@@ -45,11 +46,15 @@ export const MusicCard: React.FC<MusicCardProps> = ({
   // Use assets from cache (handles proxying, high-res, and stability)
   const { blobUrl: imageUrl } = useTrackAssets(rawImageUrl, canonicalId);
 
+  const { playbackInfo } = usePlayerStore();
+  const isLoading = playbackInfo?.playbackState === 'loading';
+
   const normalizedType = item.type === 'ALBUM' ? 'album' :
     item.type === 'PLAYLIST' ? 'playlist' :
       item.type === 'SONG' || item.type === 'RADIO' ? 'song' : item.type === 'ARTIST' ? 'artist' : null;
 
   const handleClick = () => {
+    if (isLoading) return;
     if (normalizedType === 'album' && onAlbumSelect) {
       onAlbumSelect(item);
     } else if (normalizedType === 'song') {
@@ -69,9 +74,9 @@ export const MusicCard: React.FC<MusicCardProps> = ({
     <motion.div
       key={canonicalId}
       layoutId={normalizedType && canonicalId ? `card - ${normalizedType} -${canonicalId} ` : undefined}
-      className="mb-8 cursor-pointer group bg-white/0 rounded-xl overflow-hidden"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+      className={`mb-8 cursor-pointer group bg-white/0 rounded-xl overflow-hidden transition-all duration-300 ${isLoading ? 'opacity-30 blur-[1px] pointer-events-none' : ''}`}
+      whileHover={isLoading ? {} : { scale: 1.02 }}
+      whileTap={isLoading ? {} : { scale: 0.98 }}
       onClick={handleClick}
     >
       <motion.div
