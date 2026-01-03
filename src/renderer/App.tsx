@@ -197,11 +197,14 @@ export default function App() {
                   initialItem={selectedItem}
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
-                    window.electronAPI.play(song, (isPlaylistItem(selectedItem) || isRadioItem(selectedItem))
-                      ? selectedItem.youtube_playlist_id
-                      : (isAlbumItem(selectedItem) || isArtistItem(selectedItem))
-                        ? selectedItem.youtube_browse_id
-                        : undefined);
+                    const contextId = (isSongItem(song) && song.youtube_playlist_id)
+                      ? song.youtube_playlist_id
+                      : (isPlaylistItem(selectedItem) || isRadioItem(selectedItem))
+                        ? selectedItem.youtube_playlist_id
+                        : (isAlbumItem(selectedItem) || isArtistItem(selectedItem))
+                          ? selectedItem.youtube_browse_id
+                          : undefined;
+                    window.electronAPI.play(song, contextId);
                   }}
                   onNavigateToArtist={(artistId) => navigateTo('artist', { type: 'ARTIST', title: '', thumbnails: [], youtube_browse_id: artistId })}
                 />

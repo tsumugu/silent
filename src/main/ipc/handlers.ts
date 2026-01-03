@@ -362,7 +362,14 @@ export function setupIPCHandlers(
     if (isSongItem(item)) {
       id = item.youtube_video_id;
       url = `https://music.youtube.com/watch?v=${id}`;
-      let listId = contextId || item.youtube_playlist_id;
+
+      // Select the best contextId for continuous playback
+      // If we're in an album, item.youtube_playlist_id (OLAK...) is better than contextId (MPRE...)
+      let listId = contextId;
+      if (!listId || (listId.startsWith('MPRE') && item.youtube_playlist_id && !item.youtube_playlist_id.startsWith('MPRE'))) {
+        listId = item.youtube_playlist_id || contextId;
+      }
+
       // Normalize listId: VL prefix is for browse IDs, strip it for watch URLs
       if (listId?.startsWith('VL')) {
         listId = listId.substring(2);
