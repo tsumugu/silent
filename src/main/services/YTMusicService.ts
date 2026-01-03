@@ -10,6 +10,7 @@ import { MusicMapper } from '../../shared/mappers/musicMapper';
 export class YTMusicService {
     private client: YTMusicClient;
     private songDetailsCache: Map<string, MusicItem> = new Map();
+    private pendingDetailsRequests: Map<string, Promise<MusicItem | null>> = new Map();
 
     constructor() {
         this.client = new YTMusicClient();
@@ -270,81 +271,82 @@ export class YTMusicService {
      * 楽曲詳細の取得 (キャッシュ付き)
      */
     async getSongDetails(videoId: string): Promise<MusicItem | null> {
-        // Check cache first
+        // 1. Check completed cache
         if (this.songDetailsCache.has(videoId)) {
             return this.songDetailsCache.get(videoId)!;
         }
 
-        try {
-            const info: any = await this.client.getSongInfoRaw(videoId);
-
-            if (!info) return null;
-
-            // Extract basic info from the response
-            const basicInfo = info.basic_info || info;
-            const title = basicInfo.title?.toString() || 'Unknown Title';
-
-            // Extract thumbnails
-            const thumbnails = MusicMapper.extractThumbnails(basicInfo.thumbnail || basicInfo.thumbnails);
-
-            // Extract artist info
-            const rawArtists = basicInfo.author || basicInfo.artists || basicInfo.artist;
-            const artists = MusicMapper.normalizeArtists(rawArtists);
-
-            // Extract album info - this is the key part
-            let albumInfo = null;
-            if (basicInfo.album) {
-                albumInfo = {
-                    youtube_browse_id: basicInfo.album.id || basicInfo.album.browse_id,
-                    name: basicInfo.album.name?.toString() || 'Unknown Album'
-                };
-            }
-
-            // Build SongItem manually since we have all required fields
-            const musicItem: any = {
-                type: 'SONG',
-                title,
-                thumbnails,
-                artists: artists.length > 0 ? artists : [{ name: 'Unknown Artist' }],
-                youtube_video_id: videoId,
-                album: albumInfo || undefined
-            };
-
-            // Quality Check: If missing critical IDs (Album or Artist), try fallback search
-            // because strict "info" often lacks clickable IDs for radio/mix tracks
-            const hasAlbumId = !!(musicItem.album?.youtube_browse_id);
-            const hasArtistId = musicItem.artists.some((a: any) => !!a.id);
-
-            if (!hasAlbumId || !hasArtistId) {
-                try {
-                    console.log(`[YTMusicService] Song details missing ID for ${videoId}, trying fallback search...`);
-                    // Search by Video ID often returns the specific song card with full metadata
-                    const searchResults = await this.search(videoId);
-                    const betterSong = searchResults.songs.find((s: MusicItem) => isSongItem(s) && s.youtube_video_id === videoId);
-
-                    if (betterSong) {
-                        if (!hasAlbumId && betterSong.album) {
-                            musicItem.album = betterSong.album;
-                        }
-                        if (!hasArtistId && betterSong.artists && betterSong.artists.length > 0 && betterSong.artists[0].id) {
-                            musicItem.artists = betterSong.artists;
-                        }
-                    }
-                } catch (fallbackErr) {
-                    console.warn('[YTMusicService] Fallback search failed', fallbackErr);
-                }
-            }
-
-            const result = JSON.parse(JSON.stringify(musicItem));
-
-            // Cache the result
-            this.songDetailsCache.set(videoId, result);
-
-            return result;
-        } catch (e) {
-            console.error(`[YTMusicService] Failed to get song details for ${videoId}`, e);
-            return null;
+        // 2. Check for in-progress request to coalesce multiple calls
+        if (this.pendingDetailsRequests.has(videoId)) {
+            return this.pendingDetailsRequests.get(videoId)!;
         }
+
+        // 3. Start a new request and store its promise
+        const requestPromise = (async () => {
+            try {
+                const info: any = await this.client.getSongInfoRaw(videoId);
+                if (!info) return null;
+
+                const basicInfo = info.basic_info || info;
+                const title = basicInfo.title?.toString() || 'Unknown Title';
+                const thumbnails = MusicMapper.extractThumbnails(basicInfo.thumbnail || basicInfo.thumbnails);
+                const rawArtists = basicInfo.author || basicInfo.artists || basicInfo.artist;
+                const artists = MusicMapper.normalizeArtists(rawArtists);
+
+                let albumInfo = null;
+                if (basicInfo.album) {
+                    albumInfo = {
+                        youtube_browse_id: basicInfo.album.id || basicInfo.album.browse_id,
+                        name: basicInfo.album.name?.toString() || 'Unknown Album'
+                    };
+                }
+
+                const musicItem: any = {
+                    type: 'SONG',
+                    title,
+                    thumbnails,
+                    artists: artists.length > 0 ? artists : [{ name: 'Unknown Artist' }],
+                    youtube_video_id: videoId,
+                    album: albumInfo || undefined
+                };
+
+                // Quality Check: Fallback if IDs are missing
+                const hasAlbumId = !!(musicItem.album?.youtube_browse_id);
+                const hasArtistId = musicItem.artists.some((a: any) => !!a.id);
+
+                if (!hasAlbumId || !hasArtistId) {
+                    try {
+                        console.log(`[YTMusicService] Song details missing ID for ${videoId}, trying fallback search...`);
+                        const searchResults = await this.search(videoId);
+                        const betterSong = searchResults.songs.find((s: MusicItem) => isSongItem(s) && s.youtube_video_id === videoId);
+
+                        if (betterSong) {
+                            if (!hasAlbumId && betterSong.album) {
+                                musicItem.album = betterSong.album;
+                            }
+                            if (!hasArtistId && betterSong.artists && betterSong.artists.length > 0 && betterSong.artists[0].id) {
+                                musicItem.artists = betterSong.artists;
+                            }
+                        }
+                    } catch (fallbackErr) {
+                        console.warn('[YTMusicService] Fallback search failed', fallbackErr);
+                    }
+                }
+
+                const result = JSON.parse(JSON.stringify(musicItem));
+                this.songDetailsCache.set(videoId, result);
+                return result;
+            } catch (e) {
+                console.error(`[YTMusicService] Failed to get song details for ${videoId}`, e);
+                return null;
+            } finally {
+                // Remove from pending map when done
+                this.pendingDetailsRequests.delete(videoId);
+            }
+        })();
+
+        this.pendingDetailsRequests.set(videoId, requestPromise);
+        return requestPromise;
     }
 
     /**

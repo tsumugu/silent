@@ -70,13 +70,33 @@ function handleLoadFinish() {
 window.addEventListener('load', handleLoadFinish);
 window.addEventListener('DOMContentLoaded', handleLoadFinish);
 
+// Also unblock when video starts playing (YouTube Music often plays before full load)
+function setupVideoPlayingListener() {
+  const video = document.querySelector('video');
+  if (video) {
+    video.addEventListener('playing', () => {
+      if ((window as any).block_updates) {
+        console.log('[HiddenPreload] Video playing - unblocking updates');
+        (window as any).block_updates = false;
+        forceUpdateState();
+      }
+    });
+  } else {
+    // Video element might not exist yet, try again shortly
+    setTimeout(setupVideoPlayingListener, 100);
+  }
+}
+
+// Start looking for video element
+setupVideoPlayingListener();
+
 // Reset on navigation start
 window.addEventListener('beforeunload', () => {
   (window as any).block_updates = true;
   lastValidMetadata = null; // Clear old metadata on navigation
   lastState = null;
-  // Safety timeout: if page doesn't load within 15s, unblock anyway
-  setTimeout(() => { (window as any).block_updates = false; }, 15000);
+  // Safety timeout: if page doesn't load within 8s, unblock anyway (Issue #22)
+  setTimeout(() => { (window as any).block_updates = false; }, 8000);
 });
 
 // Poll MediaSession every 100ms
@@ -189,8 +209,8 @@ function observeMediaSession() {
 }
 
 // Start polling with adaptive frequency
-// We use a high frequency (50ms) for smoother progress bars and reactive Control Center
-setInterval(observeMediaSession, 50);
+// We use 100ms for a good balance between responsiveness and performance
+setInterval(observeMediaSession, 100);
 
 // Playback Controls (STRICTLY Selector-less via MediaSession Hook)
 ipcRenderer.on('playback:play', () => {

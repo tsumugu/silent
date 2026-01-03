@@ -19,6 +19,9 @@ let lastPlayContext: {
   playMode?: 'ALBUM' | 'PLAYLIST' | 'SONG' | 'RADIO'; // The mode in which playback started
 } = {};
 
+// To prevent stale enrichment results from overwriting newer ones
+let enrichmentVersion = 0;
+
 export function setupIPCHandlers(
   hiddenWindow: BrowserWindow
 ) {
@@ -60,91 +63,118 @@ export function setupIPCHandlers(
   // ========================================
 
   ipcMain.on(IPCChannels.PLAYBACK_STATE_CHANGED, async (_event, playbackInfo: PlaybackInfo) => {
-    // Enrich metadata with artist and album details
-    if (playbackInfo.metadata) {
-      const currentVideoId = playbackInfo.metadata.videoId;
-      // Check if the current track matches the context (same video ID)
-      const isSameTrack = currentVideoId && currentVideoId === lastPlayContext.videoId;
-      // If we are playing an album/playlist, we can assume all tracks belong to it
-      const isAlbumMode = lastPlayContext.playMode === 'ALBUM';
-      const isPlaylistMode = lastPlayContext.playMode === 'PLAYLIST';
-
-      console.log('[Handlers] PLAYBACK_STATE_CHANGED - Before enrichment:', {
-        videoId: currentVideoId,
-        isSameTrack,
-        isAlbumMode,
-        isPlaylistMode,
-        hasArtists: !!(playbackInfo.metadata.artists && playbackInfo.metadata.artists.length > 0),
-        hasAlbumId: !!playbackInfo.metadata.albumId,
-        contextVideoId: lastPlayContext.videoId,
-        contextPlayMode: lastPlayContext.playMode
-      });
-
-      // 1. Enrich Artists
-      if (!playbackInfo.metadata.artists || playbackInfo.metadata.artists.length === 0) {
-        // Only use context artists if it's the specific track we started with
-        if (isSameTrack && lastPlayContext.artists && lastPlayContext.artists.length > 0) {
-          playbackInfo.metadata.artists = lastPlayContext.artists;
-          // Also set the primary artistId for backward compatibility
-          if (!playbackInfo.metadata.artistId && lastPlayContext.artists[0].id) {
-            playbackInfo.metadata.artistId = lastPlayContext.artists[0].id;
-          }
-        } else if (playbackInfo.metadata.videoId) {
-          try {
-            const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
-            console.log('[Handlers] getSongDetails result:', songDetails ? {
-              type: songDetails.type,
-              hasArtists: isSongItem(songDetails) ? songDetails.artists?.length : 0,
-              artistIds: isSongItem(songDetails) ? songDetails.artists?.map((a: any) => a.id) : [],
-              albumId: isSongItem(songDetails) ? songDetails.album?.youtube_browse_id : undefined
-            } : null);
-            if (songDetails && isSongItem(songDetails)) {
-              playbackInfo.metadata.artists = songDetails.artists;
-              if (songDetails.artists[0]?.id) {
-                playbackInfo.metadata.artistId = songDetails.artists[0].id;
-              }
-            }
-          } catch (e) { /* ignore */ }
-        }
-      }
-
-      // 2. Enrich Album ID
-      if (!playbackInfo.metadata.albumId) {
-        if (isSameTrack && lastPlayContext.albumId) {
-          playbackInfo.metadata.albumId = lastPlayContext.albumId;
-        } else if ((isAlbumMode || isPlaylistMode) && lastPlayContext.albumId) {
-          // In Album/Playlist mode, persist the container ID for all tracks
-          playbackInfo.metadata.albumId = lastPlayContext.albumId;
-        } else if (playbackInfo.metadata.videoId) {
-          try {
-            const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
-            if (songDetails && isSongItem(songDetails) && songDetails.album?.youtube_browse_id) {
-              playbackInfo.metadata.albumId = songDetails.album.youtube_browse_id;
-            }
-          } catch (e) { /* ignore */ }
-        }
-      }
-
-      console.log('[Handlers] PLAYBACK_STATE_CHANGED - After enrichment:', {
-        artists: playbackInfo.metadata.artists?.map((a: any) => ({ name: a.name, id: a.id })),
-        albumId: playbackInfo.metadata.albumId
-      });
-    }
-
-    // Persist for state recovery
+    // ================================================================
+    // STEP 1: Immediate UI forwarding (non-blocking)
+    // This ensures 'playing' state reaches UI without delay
+    // ================================================================
     lastPlaybackInfo = playbackInfo;
 
-    // Forward playback state from hidden window to ALL open windows (UI, Preferences, etc.)
     BrowserWindow.getAllWindows().forEach(win => {
       if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
         win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, playbackInfo);
       }
     });
 
-    // Update tray with track info
+    // Update tray immediately with whatever metadata we have
     const settings = settingsService.getSettings();
     if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
       trayService.updateTrack(playbackInfo.metadata);
+    }
+
+    // ================================================================
+    // STEP 2: Asynchronous metadata enrichment (separate update)
+    // If metadata is incomplete, fetch details and send enriched version
+    // ================================================================
+    if (playbackInfo.metadata?.videoId) {
+      const currentVideoId = playbackInfo.metadata.videoId;
+      const currentVersion = enrichmentVersion;
+      const isSameTrack = currentVideoId === lastPlayContext.videoId;
+      const isAlbumMode = lastPlayContext.playMode === 'ALBUM';
+      const isPlaylistMode = lastPlayContext.playMode === 'PLAYLIST';
+
+      let needsEnrichment = false;
+      const enrichedMetadata = { ...playbackInfo.metadata };
+
+      // Check if we need to enrich artists
+      if (!enrichedMetadata.artists || enrichedMetadata.artists.length === 0) {
+        if (isSameTrack && lastPlayContext.artists && lastPlayContext.artists.length > 0) {
+          enrichedMetadata.artists = lastPlayContext.artists;
+          if (!enrichedMetadata.artistId && lastPlayContext.artists[0].id) {
+            enrichedMetadata.artistId = lastPlayContext.artists[0].id;
+          }
+        } else {
+          needsEnrichment = true;
+        }
+      }
+
+      // Check if we need to enrich album ID
+      if (!enrichedMetadata.albumId) {
+        if (isSameTrack && lastPlayContext.albumId) {
+          enrichedMetadata.albumId = lastPlayContext.albumId;
+        } else if ((isAlbumMode || isPlaylistMode) && lastPlayContext.albumId) {
+          enrichedMetadata.albumId = lastPlayContext.albumId;
+        } else {
+          needsEnrichment = true;
+        }
+      }
+
+      // Perform async enrichment if needed
+      if (needsEnrichment) {
+        try {
+          const songDetails = await ytMusicService.getSongDetails(currentVideoId);
+
+          // Version check: discard if a newer track has started
+          if (currentVersion !== enrichmentVersion) {
+            console.log('[Handlers] Discarding stale enrichment for', currentVideoId);
+            return;
+          }
+
+          if (songDetails && isSongItem(songDetails)) {
+            if (!enrichedMetadata.artists || enrichedMetadata.artists.length === 0) {
+              enrichedMetadata.artists = songDetails.artists;
+              if (songDetails.artists[0]?.id) {
+                enrichedMetadata.artistId = songDetails.artists[0].id;
+              }
+            }
+            if (!enrichedMetadata.albumId && songDetails.album?.youtube_browse_id) {
+              enrichedMetadata.albumId = songDetails.album.youtube_browse_id;
+            }
+          }
+        } catch (e) {
+          console.warn('[Handlers] Metadata enrichment failed', e);
+        }
+      }
+
+      // Send enriched metadata update to UI (only if we actually enriched something)
+      const hasNewInfo =
+        (enrichedMetadata.artists && enrichedMetadata.artists.length > 0 && !playbackInfo.metadata.artists?.length) ||
+        (enrichedMetadata.albumId && !playbackInfo.metadata.albumId);
+
+      if (hasNewInfo && enrichmentVersion === currentVersion) {
+        const enrichedPlaybackInfo: PlaybackInfo = {
+          ...playbackInfo,
+          metadata: enrichedMetadata
+        };
+
+        lastPlaybackInfo = enrichedPlaybackInfo;
+
+        BrowserWindow.getAllWindows().forEach(win => {
+          if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
+            win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, enrichedPlaybackInfo);
+          }
+        });
+
+        // Update tray with enriched metadata
+        if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
+          trayService.updateTrack(enrichedMetadata);
+        }
+
+        console.log('[Handlers] Sent enriched metadata:', {
+          videoId: currentVideoId,
+          artists: enrichedMetadata.artists?.map((a: any) => ({ name: a.name, id: a.id })),
+          albumId: enrichedMetadata.albumId
+        });
+      }
     }
   });
 
@@ -270,22 +300,30 @@ export function setupIPCHandlers(
     ytMusicService.initialize(true);
   });
 
-  ipcMain.handle(IPCChannels.YT_CHECK_LOGIN, async () => {
-    return await ytMusicService.checkLoginStatus();
-  });
-
   let lastPlayRequestTime = 0;
 
-  ipcMain.on(IPCChannels.YT_PLAY, (_event, item: MusicItem, contextId?: string) => {
+  ipcMain.on(IPCChannels.YT_PLAY, async (_event, item: MusicItem, contextId?: string) => {
     if (hiddenWindow.isDestroyed()) return;
 
-    // 1. Throttling to prevent rapid double-clicks
+    // 1. Throttling and duplicate prevention
     const now = Date.now();
     if (now - lastPlayRequestTime < 500) return;
+
+    const videoIdForDupCheck = isSongItem(item) ? item.youtube_video_id : undefined;
+    // Skip if we are already playing or explicitly loading THIS same videoId
+    if (videoIdForDupCheck && lastPlayContext.videoId === videoIdForDupCheck && lastPlaybackInfo?.playbackState === 'loading') {
+      console.log(`[Handlers] YT_PLAY skipping duplicate request for ${videoIdForDupCheck}`);
+      return;
+    }
+
     lastPlayRequestTime = now;
 
+    // Increment version ONLY when we actually proceed with a new playback request
+    const currentPlayVersion = ++enrichmentVersion;
+    console.log(`[Handlers] YT_PLAY starting version: ${currentPlayVersion} for ${item.title} (ID: ${videoIdForDupCheck})`);
+
     // 2. Extract necessary info
-    let id: string;
+    let id: string | undefined = videoIdForDupCheck;
     let type = item.type;
     let url: string = '';
 
@@ -383,6 +421,10 @@ export function setupIPCHandlers(
 
     hiddenWindow.webContents.stop(); // Discard previous load/navigation
     hiddenWindow.loadURL(url);
+  });
+
+  ipcMain.handle(IPCChannels.YT_CHECK_LOGIN, async () => {
+    return await ytMusicService.checkLoginStatus();
   });
 
   // ========================================
