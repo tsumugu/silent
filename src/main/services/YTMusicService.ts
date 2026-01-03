@@ -375,15 +375,84 @@ export class YTMusicService {
                     if (firstItem && (firstItem.type || firstItem.item_type || firstItem.contents)) {
                         // Section/Shelf の可能性が高い
                         for (const section of obj.contents) {
-                            if (section.contents) processItems(section.contents);
-                            else if (section.items) processItems(section.items);
+                            // Handle MusicCardShelf - extract all needed data
+                            if (section.type === 'MusicCardShelf' || section.item_type === 'MusicCardShelf') {
+                                // Extract videoId from buttons
+                                const videoId = section.buttons?.[0]?.endpoint?.payload?.videoId;
+
+                                // Extract artist and album from menu items
+                                let artistId: string | undefined;
+                                let albumId: string | undefined;
+
+                                for (const menuItem of section.menu?.items || []) {
+                                    const pageType = menuItem.endpoint?.payload?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType;
+                                    const browseId = menuItem.endpoint?.payload?.browseId;
+
+                                    if (pageType === 'MUSIC_PAGE_TYPE_ARTIST' && browseId) {
+                                        artistId = browseId;
+                                    } else if (pageType === 'MUSIC_PAGE_TYPE_ALBUM' && browseId) {
+                                        albumId = browseId;
+                                    }
+                                }
+
+                                // Extract artist name from subtitle (format: "曲 • アーティスト名 • 時間")
+                                let artistName = 'Unknown Artist';
+                                const subtitle = section.subtitle?.toString() || '';
+                                const subtitleParts = subtitle.split(' • ');
+                                if (subtitleParts.length >= 2) {
+                                    artistName = subtitleParts[1]; // Second part is the artist
+                                }
+
+                                if (videoId) {
+                                    // Create a proper SongItem from MusicCardShelf data
+                                    const shelfSongItem = {
+                                        type: 'SONG',
+                                        title: section.title?.toString() || 'Unknown',
+                                        video_id: videoId,
+                                        artists: [{
+                                            name: artistName,
+                                            id: artistId,
+                                            browse_id: artistId
+                                        }],
+                                        album: albumId ? {
+                                            id: albumId,
+                                            browse_id: albumId,
+                                            name: 'Unknown Album'
+                                        } : undefined,
+                                        thumbnails: section.thumbnail
+                                    };
+
+                                    console.log('[YTMusicService] Extracted from MusicCardShelf:', {
+                                        title: shelfSongItem.title,
+                                        videoId,
+                                        artistId,
+                                        albumId,
+                                        artistName
+                                    });
+
+                                    processItems([shelfSongItem]);
+                                    continue; // Don't fall through to other handlers
+                                }
+                            }
+
+                            // Check specifically for other shelf types with contents/items
+                            if (section.contents) {
+                                processItems(section.contents);
+                            } else if (section.items) {
+                                processItems(section.items);
+                            }
                             // もし section 自体がアイテムなら
-                            else processItems([section]);
+                            else {
+                                processItems([section]);
+                            }
                         }
                     } else {
                         processItems(obj.contents);
                     }
                 }
+
+                // Specific recursive paths
+                if (obj.top_result) processItems([obj.top_result]); // Top result is often a single item or CardShelf
 
                 // 特定のカテゴリーシェルフ
                 if (obj.songs?.contents) processItems(obj.songs.contents);

@@ -68,6 +68,16 @@ export function setupIPCHandlers(
       // If we are playing an album, we can assume all tracks belong to it
       const isAlbumMode = lastPlayContext.playMode === 'ALBUM';
 
+      console.log('[Handlers] PLAYBACK_STATE_CHANGED - Before enrichment:', {
+        videoId: currentVideoId,
+        isSameTrack,
+        isAlbumMode,
+        hasArtists: !!(playbackInfo.metadata.artists && playbackInfo.metadata.artists.length > 0),
+        hasAlbumId: !!playbackInfo.metadata.albumId,
+        contextVideoId: lastPlayContext.videoId,
+        contextPlayMode: lastPlayContext.playMode
+      });
+
       // 1. Enrich Artists
       if (!playbackInfo.metadata.artists || playbackInfo.metadata.artists.length === 0) {
         // Only use context artists if it's the specific track we started with
@@ -80,6 +90,12 @@ export function setupIPCHandlers(
         } else if (playbackInfo.metadata.videoId) {
           try {
             const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
+            console.log('[Handlers] getSongDetails result:', songDetails ? {
+              type: songDetails.type,
+              hasArtists: isSongItem(songDetails) ? songDetails.artists?.length : 0,
+              artistIds: isSongItem(songDetails) ? songDetails.artists?.map((a: any) => a.id) : [],
+              albumId: isSongItem(songDetails) ? songDetails.album?.youtube_browse_id : undefined
+            } : null);
             if (songDetails && isSongItem(songDetails)) {
               playbackInfo.metadata.artists = songDetails.artists;
               if (songDetails.artists[0]?.id) {
@@ -106,6 +122,11 @@ export function setupIPCHandlers(
           } catch (e) { /* ignore */ }
         }
       }
+
+      console.log('[Handlers] PLAYBACK_STATE_CHANGED - After enrichment:', {
+        artists: playbackInfo.metadata.artists?.map((a: any) => ({ name: a.name, id: a.id })),
+        albumId: playbackInfo.metadata.albumId
+      });
     }
 
     // Persist for state recovery
