@@ -40,6 +40,12 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
         }
     };
 
+    const handlePrevious = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isLoading) return;
+        window.electronAPI.playbackPrevious();
+    };
+
     const handleNext = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (isLoading) return;
@@ -99,12 +105,24 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
             {/* Controls */}
             <motion.div
                 layoutId="player-controls"
-                className="flex items-center gap-4 relative z-10"
+                className="flex items-center gap-1.5 sm:gap-3 relative z-10"
             >
+                <button
+                    onClick={handlePrevious}
+                    disabled={isLoading}
+                    className="w-8 h-8 rounded-full hover:bg-black/20 flex items-center justify-center transition-colors text-white/70 hover:text-white disabled:opacity-30"
+                    title="Previous"
+                >
+                    <svg className="w-5 h-5 transition-transform active:scale-90" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z" />
+                    </svg>
+                </button>
+
                 <button
                     onClick={handlePlayPause}
                     disabled={isLoading}
-                    className="w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 flex items-center justify-center transition-colors backdrop-blur-sm disabled:opacity-50"
+                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-200 active:scale-95 disabled:opacity-50"
+                    title={isPlaying ? "Pause" : "Play"}
                 >
                     {isLoading ? (
                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -122,9 +140,10 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                 <button
                     onClick={handleNext}
                     disabled={isLoading}
-                    className="w-8 h-8 rounded-full hover:bg-black/20 flex items-center justify-center transition-colors text-white/90 hover:text-white backdrop-blur-sm disabled:opacity-30"
+                    className="w-8 h-8 rounded-full hover:bg-black/20 flex items-center justify-center transition-colors text-white/70 hover:text-white disabled:opacity-30"
+                    title="Next"
                 >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 transition-transform active:scale-90" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
                     </svg>
                 </button>
