@@ -11,6 +11,7 @@ export interface AppSettings {
   language: string;
   location: string;
   tray: TraySettings;
+  debugMode: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -21,5 +22,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   tray: {
     showTrackTitle: true,
     enableScrolling: true,
-  }
+  },
+  debugMode: false
 };

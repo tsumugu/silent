@@ -43,6 +43,10 @@ export class SettingsService extends EventEmitter {
               default: true
             }
           }
+        },
+        debugMode: {
+          type: 'boolean',
+          default: false
         }
       }
     });
@@ -66,8 +70,9 @@ export class SettingsService extends EventEmitter {
       launchAtLogin: (this.store as any).get('launchAtLogin'),
       language: (this.store as any).get('language'),
       location: (this.store as any).get('location'),
-      tray: (this.store as any).get('tray')
-    };
+      tray: (this.store as any).get('tray'),
+      debugMode: !!(this.store as any).get('debugMode')
+    } as AppSettings;
   }
 
   updateSettings(partial: Partial<AppSettings>): AppSettings {
@@ -91,6 +96,9 @@ export class SettingsService extends EventEmitter {
         ...partial.tray
       };
       (this.store as any).set('tray', updatedTray);
+    }
+    if (partial.debugMode !== undefined) {
+      (this.store as any).set('debugMode', partial.debugMode);
     }
 
     const updated = this.getSettings();

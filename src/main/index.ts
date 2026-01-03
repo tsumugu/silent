@@ -100,6 +100,11 @@ app.whenReady().then(() => {
   // Set up IPC handlers for communication - Register once for the lifetime of the app
   setupIPCHandlers(hiddenWindow);
 
+  // Initial debug mode check
+  if (settings.debugMode) {
+    hiddenWindow.show();
+  }
+
   // Initialize tray if in Menu Bar mode
   if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
     try {
@@ -152,6 +157,15 @@ app.whenReady().then(() => {
     // Update tray settings if in Menu Bar mode
     if (newSettings.displayMode === 'menuBar' && process.platform === 'darwin') {
       trayService.updateSettings(newSettings.tray);
+    }
+
+    // Toggle hidden window based on debug mode
+    if (hiddenWindow && !hiddenWindow.isDestroyed()) {
+      if (newSettings.debugMode) {
+        hiddenWindow.show();
+      } else {
+        hiddenWindow.hide();
+      }
     }
 
     // Note: displayMode change requires restart (handled by user prompt in Preferences UI)

@@ -1,17 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const AboutView: React.FC = () => {
   const { t } = useTranslation();
   const [version, setVersion] = useState<string>('');
   const [isHovered, setIsHovered] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     window.electronAPI.getVersion().then(setVersion);
   }, []);
 
   const handleClose = () => {
     window.electronAPI.closeWindow();
+  };
+
+  const handleVersionClick = async () => {
+    const newCount = clickCount + 1;
+    if (newCount >= 5) {
+      setClickCount(0);
+      try {
+        const settings = await window.electronAPI.getSettings();
+        await window.electronAPI.updateSettings({
+          debugMode: !settings.debugMode
+        });
+        console.log(`[About] Debug mode toggled: ${!settings.debugMode}`);
+      } catch (err) {
+        console.error('[About] Failed to toggle debug mode:', err);
+      }
+    } else {
+      setClickCount(newCount);
+      // Reset count after 2 seconds of inactivity
+      const timer = setTimeout(() => setClickCount(0), 2000);
+      return () => clearTimeout(timer);
+    }
   };
 
   return (
@@ -72,8 +94,13 @@ const AboutView: React.FC = () => {
           {/* App name */}
           <h1 className="text-white font-semibold text-2xl mb-2">Silent</h1>
 
-          {/* Version */}
-          <p className="text-white/40 text-sm mb-8">{t.version} {version}</p>
+          {/* Version - Hidden trigger for debug mode */}
+          <p
+            className={`text-white/40 text-sm mb-8 cursor-default select-none transition-opacity ${clickCount > 0 ? 'opacity-100 text-white/60' : ''}`}
+            onClick={handleVersionClick}
+          >
+            {t.version} {version}
+          </p>
 
           {/* Copyright */}
           <p className="text-white/30 text-xs mb-1">© 2025 tsumugu</p>
