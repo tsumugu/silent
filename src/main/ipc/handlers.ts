@@ -68,36 +68,41 @@ export function setupIPCHandlers(
       // If we are playing an album, we can assume all tracks belong to it
       const isAlbumMode = lastPlayContext.playMode === 'ALBUM';
 
-      console.log('[Handlers] PLAYBACK_STATE_CHANGED - Before enrichment:', {
-        videoId: currentVideoId,
-        isSameTrack,
-        isAlbumMode,
-        hasArtists: !!(playbackInfo.metadata.artists && playbackInfo.metadata.artists.length > 0),
-        hasAlbumId: !!playbackInfo.metadata.albumId,
-        contextVideoId: lastPlayContext.videoId,
-        contextPlayMode: lastPlayContext.playMode
-      });
 
-      // 1. Enrich Artists
-      if (!playbackInfo.metadata.artists || playbackInfo.metadata.artists.length === 0) {
+
+      // 1. Enrich Artists - only add missing IDs, don't replace names
+      const existingArtists = playbackInfo.metadata.artists || [];
+      const hasArtistId = existingArtists.some(a => !!a.id);
+
+      if (!hasArtistId) {
         // Only use context artists if it's the specific track we started with
         if (isSameTrack && lastPlayContext.artists && lastPlayContext.artists.length > 0) {
-          playbackInfo.metadata.artists = lastPlayContext.artists;
-          // Also set the primary artistId for backward compatibility
+          // Merge: Keep existing names, add IDs from context
+          if (existingArtists.length > 0) {
+            playbackInfo.metadata.artists = existingArtists.map((existing, idx) => ({
+              name: existing.name,
+              id: lastPlayContext.artists?.[idx]?.id || existing.id
+            }));
+          } else {
+            playbackInfo.metadata.artists = lastPlayContext.artists;
+          }
           if (!playbackInfo.metadata.artistId && lastPlayContext.artists[0].id) {
             playbackInfo.metadata.artistId = lastPlayContext.artists[0].id;
           }
         } else if (playbackInfo.metadata.videoId) {
           try {
             const songDetails = await ytMusicService.getSongDetails(playbackInfo.metadata.videoId);
-            console.log('[Handlers] getSongDetails result:', songDetails ? {
-              type: songDetails.type,
-              hasArtists: isSongItem(songDetails) ? songDetails.artists?.length : 0,
-              artistIds: isSongItem(songDetails) ? songDetails.artists?.map((a: any) => a.id) : [],
-              albumId: isSongItem(songDetails) ? songDetails.album?.youtube_browse_id : undefined
-            } : null);
-            if (songDetails && isSongItem(songDetails)) {
-              playbackInfo.metadata.artists = songDetails.artists;
+
+            if (songDetails && isSongItem(songDetails) && songDetails.artists) {
+              // Preserve existing artist names if available, only add IDs
+              if (existingArtists.length > 0) {
+                playbackInfo.metadata.artists = existingArtists.map((existing, idx) => ({
+                  name: existing.name,
+                  id: songDetails.artists?.[idx]?.id || existing.id
+                }));
+              } else {
+                playbackInfo.metadata.artists = songDetails.artists;
+              }
               if (songDetails.artists[0]?.id) {
                 playbackInfo.metadata.artistId = songDetails.artists[0].id;
               }
@@ -123,10 +128,7 @@ export function setupIPCHandlers(
         }
       }
 
-      console.log('[Handlers] PLAYBACK_STATE_CHANGED - After enrichment:', {
-        artists: playbackInfo.metadata.artists?.map((a: any) => ({ name: a.name, id: a.id })),
-        albumId: playbackInfo.metadata.albumId
-      });
+
     }
 
     // Persist for state recovery

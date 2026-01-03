@@ -310,7 +310,6 @@ export class YTMusicService {
 
             if (!hasAlbumId || !hasArtistId) {
                 try {
-                    console.log(`[YTMusicService] Song details missing ID for ${videoId}, trying fallback search...`);
                     // Search by Video ID often returns the specific song card with full metadata
                     const searchResults = await this.search(videoId);
                     const betterSong = searchResults.songs.find((s: MusicItem) => isSongItem(s) && s.youtube_video_id === videoId);
@@ -422,13 +421,6 @@ export class YTMusicService {
                                         thumbnails: section.thumbnail
                                     };
 
-                                    console.log('[YTMusicService] Extracted from MusicCardShelf:', {
-                                        title: shelfSongItem.title,
-                                        videoId,
-                                        artistId,
-                                        albumId,
-                                        artistName
-                                    });
 
                                     processItems([shelfSongItem]);
                                     continue; // Don't fall through to other handlers
