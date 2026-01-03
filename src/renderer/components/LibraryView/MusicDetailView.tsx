@@ -177,7 +177,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                     </motion.div>
 
                     {/* Metadata */}
-                    <div className="flex flex-col justify-end">
+                    <div className="flex flex-col justify-center">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-white/30 text-[9px] uppercase tracking-[0.2em] font-bold ring-1 ring-white/10 px-2 py-0.5 rounded-sm">
                                 {type}

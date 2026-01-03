@@ -86,7 +86,7 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
             </div>
 
             <div className="p-8 pb-32">
-                <div className="flex flex-col md:flex-row gap-8 mb-12 items-end">
+                <div className="flex flex-col md:flex-row gap-8 mb-12 items-center">
                     <div className="w-48 h-48 md:w-64 md:h-64 shrink-0 rounded-full overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-white/5">
                         {coverUrl ? (
                             <img src={coverUrl} alt={title} className="w-full h-full object-cover" />
