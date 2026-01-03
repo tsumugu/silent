@@ -239,9 +239,11 @@ export class TrayService {
     }
 
     try {
-      if (metadata?.title) {
-        this.isLoading = false;
+      // If we have metadata with a title, we are definitely no longer in a generic loading state
+      if (metadata?.title && !this.isLoading) {
+        // Normal track update
       }
+
       this.currentMetadata = metadata;
 
       // Behavior when track title display is disabled: Always show "♫ Silent"
@@ -253,7 +255,8 @@ export class TrayService {
       }
 
       if (metadata?.title || this.isLoading) {
-        const text = this.isLoading ? '♫ Silent' : metadata?.title || '';
+        // If loading, show placeholder unless provided metadata has a title
+        const text = (this.isLoading && !metadata?.title) ? '♫ Silent' : metadata?.title || '';
         if (!text) return;
 
         const visualWidth = this.getVisualWidth(text);
@@ -307,7 +310,7 @@ export class TrayService {
 
   private clearTrack(): void {
     if (!this.tray) return;
-    this.currentTrackText = '';
+    this.currentTrackText = '♫ Silent'; // Reset to default
     this.currentMetadata = null;
     this.isLoading = false;
     this.stopMarquee();
@@ -319,7 +322,9 @@ export class TrayService {
 
   showLoading(): void {
     this.isLoading = true;
-    this.updateTrack(this.currentMetadata);
+    this.stopMarquee(); // Immediately stop any scrolling
+    this.currentTrackText = ''; // Force updateTrack to refresh
+    this.updateTrack(null); // Reset to "♫ Silent" immediately
   }
 
   private startMarquee(text: string): void {

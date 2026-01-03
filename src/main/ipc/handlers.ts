@@ -378,6 +378,9 @@ export function setupIPCHandlers(
       .catch(() => { });
 
     trayService.showLoading();
+    // Immediate tray update with new metadata if available (prevents marquee from old track)
+    trayService.updateTrack(loadingInfo.metadata);
+
     hiddenWindow.webContents.stop(); // Discard previous load/navigation
     hiddenWindow.loadURL(url);
   });
