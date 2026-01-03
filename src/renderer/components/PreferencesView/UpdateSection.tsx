@@ -34,15 +34,15 @@ const UpdateSection: React.FC<UpdateSectionProps> = ({ currentVersion }) => {
                 <div>
                     <label className="text-white font-medium text-sm block">{t.software}</label>
                     <p className="text-white/30 text-xs mt-1">
-                        Current Version: <span className="text-white/60">{currentVersion}</span>
+                        {t.current_version}: <span className="text-white/60">{currentVersion}</span>
                     </p>
                 </div>
                 <button
                     onClick={checkUpdates}
                     disabled={updateStatus.loading}
                     className={`px-4 py-2 rounded-lg text-xs font-medium transition-colors ${updateStatus.loading
-                            ? 'bg-white/5 text-white/20'
-                            : 'bg-white/10 text-white/80 hover:bg-white/20'
+                        ? 'bg-white/5 text-white/20'
+                        : 'bg-white/10 text-white/80 hover:bg-white/20'
                         }`}
                 >
                     {updateStatus.loading ? t.update_checking : t.update_check}
@@ -79,7 +79,7 @@ const UpdateSection: React.FC<UpdateSectionProps> = ({ currentVersion }) => {
                             )}
                         </div>
                     ) : (
-                        <p className="text-white/30 text-xs text-center">Your version is up to date.</p>
+                        <p className="text-white/30 text-xs text-center">{t.update_up_to_date}</p>
                     )}
                 </div>
             )}

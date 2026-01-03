@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ControlBarProps {
   isPlaying: boolean;
@@ -9,6 +10,7 @@ interface ControlBarProps {
 }
 
 export function ControlBar({ isPlaying, isLoading, isVisible, isMini }: ControlBarProps) {
+  const { t } = useTranslation();
   const handlePrevious = () => {
     if (isLoading) return;
     window.electronAPI.playbackPrevious();
@@ -44,6 +46,7 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini }: ControlB
             onClick={handlePrevious}
             disabled={isLoading}
             className={`${isMini ? 'w-10 h-10' : 'w-14 h-14'} rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 ${isLoading ? 'opacity-30' : 'hover:scale-110'}`}
+            title={t.previous}
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <svg
@@ -60,6 +63,7 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini }: ControlB
             onClick={handlePlayPause}
             disabled={isLoading}
             className={`${isMini ? 'w-14 h-14' : 'w-20 h-20'} rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center transition-all duration-200 ${isLoading ? 'opacity-50' : 'hover:scale-110'}`}
+            title={isPlaying ? t.pause : t.play}
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             {isLoading ? (
@@ -88,6 +92,7 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini }: ControlB
             onClick={handleNext}
             disabled={isLoading}
             className={`${isMini ? 'w-10 h-10' : 'w-14 h-14'} rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 ${isLoading ? 'opacity-30' : 'hover:scale-110'}`}
+            title={t.next}
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <svg

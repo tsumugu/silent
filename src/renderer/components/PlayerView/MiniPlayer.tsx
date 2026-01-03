@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../../hooks/useTranslation';
 import { usePlayerStore } from '../../store/playerStore';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
@@ -11,12 +12,13 @@ interface MiniPlayerProps {
 }
 
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
+    const { t } = useTranslation();
     const { playbackInfo, isPlaying } = usePlayerStore();
 
     // Hooks should be called unconditionally
     const metadata = playbackInfo?.metadata;
-    const title = metadata?.title || 'Unknown Title';
-    const artist = metadata?.artist || 'Unknown Artist';
+    const title = metadata?.title || t.unknown_title;
+    const artist = metadata?.artist || t.unknown_artist;
     const originalArtwork = metadata?.artwork?.[0]?.src || null;
     const videoId = metadata?.videoId;
 
@@ -111,7 +113,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                     onClick={handlePrevious}
                     disabled={isLoading}
                     className="w-8 h-8 rounded-full hover:bg-black/20 flex items-center justify-center transition-colors text-white/70 hover:text-white disabled:opacity-30"
-                    title="Previous"
+                    title={t.previous}
                 >
                     <svg className="w-5 h-5 transition-transform active:scale-90" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 6h2v12H6V6zm3.5 6l8.5 6V6l-8.5 6z" />
@@ -122,7 +124,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                     onClick={handlePlayPause}
                     disabled={isLoading}
                     className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all duration-200 active:scale-95 disabled:opacity-50"
-                    title={isPlaying ? "Pause" : "Play"}
+                    title={isPlaying ? t.pause : t.play}
                 >
                     {isLoading ? (
                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -141,7 +143,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                     onClick={handleNext}
                     disabled={isLoading}
                     className="w-8 h-8 rounded-full hover:bg-black/20 flex items-center justify-center transition-colors text-white/70 hover:text-white disabled:opacity-30"
-                    title="Next"
+                    title={t.next}
                 >
                     <svg className="w-5 h-5 transition-transform active:scale-90" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />

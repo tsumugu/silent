@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const AboutView: React.FC = () => {
+  const { t } = useTranslation();
   const [version, setVersion] = useState<string>('');
   const [isHovered, setIsHovered] = useState(false);
 
@@ -53,7 +55,7 @@ const AboutView: React.FC = () => {
             />
           </div>
         </div>
-        <h2 className="text-white/60 text-sm font-medium">About</h2>
+        <h2 className="text-white/60 text-sm font-medium">{t.about}</h2>
         <div className="w-14" /> {/* Spacer for centering */}
       </div>
 
@@ -71,7 +73,7 @@ const AboutView: React.FC = () => {
           <h1 className="text-white font-semibold text-2xl mb-2">Silent</h1>
 
           {/* Version */}
-          <p className="text-white/40 text-sm mb-8">Version {version}</p>
+          <p className="text-white/40 text-sm mb-8">{t.version} {version}</p>
 
           {/* Copyright */}
           <p className="text-white/30 text-xs mb-1">© 2025 tsumugu</p>

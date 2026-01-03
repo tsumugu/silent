@@ -4,6 +4,7 @@ import { MusicDetail, MusicItem } from '../../../shared/types/music';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
 import { useMusicStore } from '../../store/musicStore';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ArtistDetailViewProps {
     id: string;
@@ -20,6 +21,7 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
     onPlaySong,
     onNavigateToItem
 }) => {
+    const { t } = useTranslation();
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -81,7 +83,7 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                     </div>
-                    <span className="text-sm font-medium">Back</span>
+                    <span className="text-sm font-medium">{t.back}</span>
                 </button>
             </div>
 
@@ -99,7 +101,7 @@ export const ArtistDetailView: React.FC<ArtistDetailViewProps> = ({
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-white/30 text-[9px] uppercase tracking-[0.2em] font-bold ring-1 ring-white/10 px-2 py-0.5 rounded-sm">
-                                ARTIST
+                                {t.artist_label}
                             </span>
                         </div>
                         <h1 className="text-5xl md:text-7xl font-bold text-white mb-2 tracking-tight">{title}</h1>

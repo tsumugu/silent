@@ -10,6 +10,7 @@ import {
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
 import { useMusicStore } from '../../store/musicStore';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface MusicDetailViewProps {
     id: string;
@@ -21,6 +22,7 @@ interface MusicDetailViewProps {
 }
 
 export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, initialItem, onBack, onPlaySong, onNavigateToArtist }) => {
+    const { t } = useTranslation();
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
@@ -111,12 +113,12 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     if (!data && !loading && !isEntering && !initialItem) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-white/50 gap-4">
-                <p>Failed to load {type.toLowerCase()}</p>
+                <p>{t.failed_load_type(type)}</p>
                 <button
                     onClick={onBack}
                     className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-white text-sm"
                 >
-                    Back to Library
+                    {t.back_to_library}
                 </button>
             </div>
         );
@@ -154,7 +156,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
                         </div>
-                        <span className="text-sm font-medium">Back</span>
+                        <span className="text-sm font-medium">{t.back}</span>
                     </button>
                 </div>
             </div>
@@ -180,7 +182,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                     <div className="flex flex-col justify-center">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="text-white/30 text-[9px] uppercase tracking-[0.2em] font-bold ring-1 ring-white/10 px-2 py-0.5 rounded-sm">
-                                {type}
+                                {type === 'ALBUM' ? t.album_label : t.playlist_label}
                             </span>
                         </div>
                         <h1 className="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
@@ -194,7 +196,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                         <span className="w-1 h-1 rounded-full bg-white/20" />
                                     </>
                                 )}
-                                <span>{tracks.length || 0} songs</span>
+                                <span>{t.songs_count(tracks.length || 0)}</span>
                             </div>
                         </div>
 
@@ -205,8 +207,8 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                 {/* Song List Header */}
                 <div className="grid grid-cols-[3rem_1fr_4rem] gap-4 px-4 py-3 border-b border-white/5 text-white/30 text-[10px] uppercase tracking-widest font-bold mb-2">
                     <div className="text-center">#</div>
-                    <div>Title</div>
-                    <div className="text-right">Time</div>
+                    <div>{t.title_label}</div>
+                    <div className="text-right">{t.time_label}</div>
                 </div>
 
                 {/* Song List or Loader */}
@@ -214,12 +216,12 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 text-white/20 gap-4">
                             <div className="w-6 h-6 border-2 border-white/5 border-t-white/40 rounded-full animate-spin" />
-                            <span className="text-xs font-medium uppercase tracking-widest">Loading tracks...</span>
+                            <span className="text-xs font-medium uppercase tracking-widest">{t.loading_tracks}</span>
                         </div>
                     ) : (
                         tracks.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 text-white/20">
-                                <span className="text-xs font-medium uppercase tracking-widest">No tracks found</span>
+                                <span className="text-xs font-medium uppercase tracking-widest">{t.no_tracks}</span>
                             </div>
                         ) : (
                             tracks.map((song, index) => {

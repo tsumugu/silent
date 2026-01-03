@@ -106,7 +106,7 @@ const PreferencesView: React.FC = () => {
             />
           </div>
         </div>
-        <h2 className="text-white/60 text-sm font-medium">Preferences</h2>
+        <h2 className="text-white/60 text-sm font-medium">{t.preferences}</h2>
         <div className="w-14" /> {/* Spacer for centering */}
       </div>
 

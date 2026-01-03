@@ -1,3 +1,4 @@
+import React from 'react';
 import { useTranslation } from '../../hooks/useTranslation';
 
 export const LoadingState: React.FC<{ message?: string }> = ({ message }) => {
@@ -25,7 +26,7 @@ export const ErrorState: React.FC<{ error: string }> = ({ error }) => {
                 </svg>
             </div>
             <div>
-                <h3 className="text-white font-bold text-lg mb-2">Something went wrong</h3>
+                <h3 className="text-white font-bold text-lg mb-2">{t.error_title}</h3>
                 <p className="text-white/40 text-sm leading-relaxed">{error}</p>
             </div>
         </div>

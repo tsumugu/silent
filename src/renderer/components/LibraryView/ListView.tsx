@@ -68,7 +68,7 @@ export const ListView: React.FC<ListViewProps> = ({
             }
         } catch (err) {
             console.error('Failed to fetch content:', err);
-            setError(isSearchMode ? 'Search failed. Please try again.' : 'Failed to fetch home content.');
+            setError(isSearchMode ? t.failed_search : t.failed_home);
             setSections([]);
         } finally {
             setLoading(false);

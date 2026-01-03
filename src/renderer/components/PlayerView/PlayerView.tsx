@@ -9,6 +9,7 @@ import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
 import { MusicItem, MusicArtist } from '../../../shared/types/music';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface PlayerViewProps {
   onClose?: () => void;
@@ -17,6 +18,7 @@ interface PlayerViewProps {
 }
 
 export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: PlayerViewProps) {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [albumInfo, setAlbumInfo] = useState<{ id: string; name: string } | null>(null);
 
@@ -129,7 +131,7 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
               onClose();
             }}
             className={`absolute top-6 left-1/2 transform-translate-x-1/2 text-white/40 hover:text-white transition-colors z-50 ${isMini ? 'mb-1' : 'mb-2'} `}
-            title="Close Player (Esc)"
+            title={t.close_player}
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             <svg className={isMini ? 'w-4 h-4 rotate-180' : 'w-5 h-5 rotate-180'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
