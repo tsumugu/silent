@@ -197,12 +197,12 @@ export default function App() {
                   initialItem={selectedItem}
                   onBack={goBack}
                   onPlaySong={(song: MusicItem) => {
-                    const contextId = (isSongItem(song) && song.youtube_playlist_id)
-                      ? song.youtube_playlist_id
+                    const contextId = (isAlbumItem(selectedItem) || isArtistItem(selectedItem))
+                      ? selectedItem.youtube_browse_id
                       : (isPlaylistItem(selectedItem) || isRadioItem(selectedItem))
                         ? selectedItem.youtube_playlist_id
-                        : (isAlbumItem(selectedItem) || isArtistItem(selectedItem))
-                          ? selectedItem.youtube_browse_id
+                        : (isSongItem(song) && song.youtube_playlist_id)
+                          ? song.youtube_playlist_id
                           : undefined;
                     window.electronAPI.play(song, contextId);
                   }}

@@ -136,10 +136,24 @@ export function setupIPCHandlers(
       if (!enrichedMetadata.albumId) {
         if (isSameTrack && lastPlayContext.albumId) {
           enrichedMetadata.albumId = lastPlayContext.albumId;
+          const mode = lastPlayContext.playMode;
+          if (mode === 'ALBUM' || mode === 'PLAYLIST') {
+            enrichedMetadata.collectionType = mode;
+          }
         } else if ((isAlbumMode || isPlaylistMode) && lastPlayContext.albumId) {
           enrichedMetadata.albumId = lastPlayContext.albumId;
+          const mode = lastPlayContext.playMode;
+          if (mode === 'ALBUM' || mode === 'PLAYLIST') {
+            enrichedMetadata.collectionType = mode;
+          }
         } else {
           needsEnrichment = true;
+        }
+      } else if (!enrichedMetadata.collectionType) {
+        // Even if we have albumId, we might need collectionType
+        const mode = lastPlayContext.playMode;
+        if ((isSameTrack || isAlbumMode || isPlaylistMode) && (mode === 'ALBUM' || mode === 'PLAYLIST')) {
+          enrichedMetadata.collectionType = mode;
         }
       }
 
@@ -162,6 +176,7 @@ export function setupIPCHandlers(
             }
             if (!enrichedMetadata.albumId && songDetails.album?.youtube_browse_id) {
               enrichedMetadata.albumId = songDetails.album.youtube_browse_id;
+              enrichedMetadata.collectionType = 'ALBUM';
             }
             // Update reference duration once we have official details
             if (songDetails.duration?.seconds) {
@@ -176,7 +191,8 @@ export function setupIPCHandlers(
       // Send enriched metadata update to UI (only if we actually enriched something)
       const hasNewInfo =
         (enrichedMetadata.artists && enrichedMetadata.artists.length > 0 && !playbackInfo.metadata.artists?.length) ||
-        (enrichedMetadata.albumId && !playbackInfo.metadata.albumId);
+        (enrichedMetadata.albumId && !playbackInfo.metadata.albumId) ||
+        (enrichedMetadata.collectionType && !playbackInfo.metadata.collectionType);
 
       // Only proceed if info has changed since last enrichment
       if (hasNewInfo && enrichmentVersion === currentVersion) {
@@ -379,9 +395,9 @@ export function setupIPCHandlers(
       }
       lastPlayContext = {
         artists: item.artists,
-        albumId: contextId || item.youtube_playlist_id || item.album?.youtube_browse_id, // Keep original ID for metadata
+        albumId: (contextId?.startsWith('MPRE') ? contextId : undefined) || item.album?.youtube_browse_id || contextId || item.youtube_playlist_id,
         videoId: item.youtube_video_id,
-        playMode: (listId?.startsWith('MPRE') || item.album?.youtube_browse_id) ? 'ALBUM' : (listId ? 'PLAYLIST' : 'SONG')
+        playMode: (listId?.startsWith('MPRE') || contextId?.startsWith('MPRE') || item.album?.youtube_browse_id) ? 'ALBUM' : (listId ? 'PLAYLIST' : 'SONG')
       };
     } else if (isAlbumItem(item)) {
       id = item.youtube_browse_id;
@@ -430,6 +446,8 @@ export function setupIPCHandlers(
         artist: (item as any).artists ? (item as any).artists.map((a: any) => a.name).join(', ') : item.subtitle,
         artwork: item.thumbnails.map(t => ({ src: t.url, sizes: `${t.width}x${t.height}` })),
         videoId: isSongItem(item) ? item.youtube_video_id : undefined,
+        albumId: lastPlayContext.albumId,
+        collectionType: (lastPlayContext.playMode === 'ALBUM' || lastPlayContext.playMode === 'PLAYLIST') ? lastPlayContext.playMode : undefined,
       },
       playbackState: 'loading',
       position: 0,

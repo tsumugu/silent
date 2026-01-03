@@ -42,16 +42,23 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
 
   const handleAlbumClick = React.useCallback(() => {
     if (albumName && albumId && onNavigateToAlbum) {
+      const collectionType = metadata?.collectionType || 'ALBUM';
       const albumItem: MusicItem = {
-        type: 'ALBUM',
+        type: collectionType,
         title: albumName,
-        youtube_browse_id: albumId,
         thumbnails: [],
         artists: []
-      };
+      } as any;
+
+      if (collectionType === 'ALBUM') {
+        (albumItem as any).youtube_browse_id = albumId;
+      } else {
+        (albumItem as any).youtube_playlist_id = albumId;
+      }
+
       onNavigateToAlbum(albumItem);
     }
-  }, [albumName, albumId, onNavigateToAlbum]);
+  }, [albumName, albumId, metadata?.collectionType, onNavigateToAlbum]);
 
   const handleArtistClick = React.useCallback((artist: MusicArtist) => {
     if (artist.id && onNavigateToArtist) {
