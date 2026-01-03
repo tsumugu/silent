@@ -100,63 +100,74 @@ window.addEventListener('beforeunload', () => {
   setTimeout(() => { (window as any).block_updates = false; }, 8000);
 });
 
-// Poll MediaSession every 100ms
-function observeMediaSession() {
+// Poll Video and DOM every 100ms
+function observePlayback() {
   if ((window as any).block_updates) return;
 
-  const mediaSession = navigator.mediaSession;
-  if (!mediaSession) return;
+  // 1. EXTRACT METADATA FROM DOM (SELECTOR-LESS / MINIMAL SELECTOR)
+  // We use the player bar elements which are more reliable than MediaSession which can be hijacked by OS or other tabs
+  const extractMetadata = () => {
+    try {
+      const playerBar = document.querySelector('ytmusic-player-bar');
+      if (!playerBar) return null;
 
-  const metadata = mediaSession.metadata;
-  const hasMetadata = metadata && metadata.title;
+      const title = playerBar.querySelector('.title')?.textContent?.trim();
+      const byline = playerBar.querySelector('.byline')?.textContent?.trim();
 
-  if (hasMetadata && metadata) {
-    // VideoId is extracted from URL - this is reliable
-    const videoId = (() => {
-      try {
-        const urlParams = new URLSearchParams(window.location.search);
-        return urlParams.get('v') || undefined;
-      } catch {
-        return undefined;
-      }
-    })();
+      // Byline typically contains "Artist • Album • Year" or "Artist • Year"
+      const parts = byline ? byline.split(' • ') : [];
+      const artist = parts[0] || '';
+      const album = parts[1] || '';
 
+      const artworkImg = playerBar.querySelector('.image') as HTMLImageElement;
+      const artwork = artworkImg && artworkImg.src ? [{
+        src: artworkImg.src,
+        sizes: '512x512',
+        type: 'image/jpeg'
+      }] : [];
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const videoId = urlParams.get('v') || undefined;
+
+      if (!title) return null;
+
+      return {
+        title,
+        artist,
+        album,
+        artwork,
+        videoId
+      };
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const metadata = extractMetadata();
+  if (metadata) {
     lastValidMetadata = {
-      title: metadata.title,
-      artist: metadata.artist,
-      album: metadata.album,
-      // albumId and artistId will be enriched by main process via youtubei.js
-      albumId: undefined,
-      artistId: undefined,
-      artwork: metadata.artwork ? metadata.artwork.map(art => ({
-        src: art.src,
-        sizes: art.sizes,
-        type: art.type,
-      })) : [],
-      videoId: videoId,
+      ...metadata,
+      albumId: undefined, // Enriched by main process
+      artistId: undefined // Enriched by main process
     };
   }
 
-  const activeMetadata = hasMetadata ? lastValidMetadata : (lastValidMetadata || null);
-  if (!activeMetadata) return;
+  if (!lastValidMetadata) return;
 
-  // Find the primary video element playing the content
+  // 2. FIND VIDEO ELEMENT
   const allVideos = Array.from(document.querySelectorAll('video'));
   const video = allVideos.find(v => {
-    // Basic checks for the main player video
     const isVisible = v.offsetWidth > 0 || v.offsetHeight > 0;
-    const hasSource = v.src && v.src.startsWith('blob:'); // YouTube Music uses blob URLs for main content
+    const hasSource = v.src && v.src.startsWith('blob:');
     return isVisible && hasSource;
-  }) || allVideos[0]; // fallback to first if none match
+  }) || allVideos[0];
 
-  let playbackState = mediaSession.playbackState || 'none';
-  if (video) {
-    playbackState = video.paused ? 'paused' : 'playing';
-  }
+  if (!video) return;
+
+  // 3. DETERMINE PLAYBACK STATE
+  const playbackState = video.paused ? 'paused' : 'playing';
 
   // Initial state suppression
-  // If we haven't interacted yet and the state is not 'playing',
-  // we only allow updates if we are on a /watch page (meaning user explicitly started a song)
   const isWatchPage = window.location.pathname.startsWith('/watch');
   if (!hasInteracted && playbackState !== 'playing' && !isWatchPage) {
     return;
@@ -166,34 +177,11 @@ function observeMediaSession() {
   }
 
   const playbackInfo: PlaybackInfo = {
-    metadata: activeMetadata,
+    metadata: lastValidMetadata,
     playbackState: playbackState as any,
-    position: 0,
-    duration: 0,
+    position: video.currentTime || 0,
+    duration: video.duration || 0,
   };
-
-  if (video && isFinite(video.currentTime) && isFinite(video.duration) && video.duration > 0) {
-    const newPos = video.currentTime;
-    const newDur = video.duration;
-
-    // // Detect duration drift/jump using the persistent lastReportedDuration
-    // if (Math.abs(newDur - lastReportedDuration) > 1 && lastReportedDuration > 0) {
-    //   console.log(`[HiddenPreload] Duration changed significantly: ${lastReportedDuration.toFixed(2)} -> ${newDur.toFixed(2)}`);
-    // }
-
-    playbackInfo.position = newPos;
-    playbackInfo.duration = newDur;
-    lastReportedDuration = newDur;
-  } else if ("getPositionState" in mediaSession) {
-    try {
-      const positionState = (mediaSession as any).getPositionState();
-      if (positionState && isFinite(positionState.duration) && positionState.duration > 0) {
-        playbackInfo.position = positionState.position || 0;
-        playbackInfo.duration = positionState.duration || 0;
-        lastReportedDuration = playbackInfo.duration;
-      }
-    } catch (e) { /* ignore */ }
-  }
 
   // Optimization: Only send update if significant changes occurred
   let shouldUpdate = false;
@@ -204,9 +192,8 @@ function observeMediaSession() {
       const last = JSON.parse(lastStateText) as PlaybackInfo;
       const metadataChanged = JSON.stringify(playbackInfo.metadata) !== JSON.stringify(last.metadata);
       const stateChanged = playbackInfo.playbackState !== last.playbackState;
-      const durationChanged = Math.abs(playbackInfo.duration - last.duration) > 1;
+      const durationChanged = Math.abs(playbackInfo.duration - last.duration) > 0.1;
       const positionJump = Math.abs(playbackInfo.position - last.position) > 1.5;
-
       const timeSinceLastUpdate = Date.now() - lastStateTime;
 
       if (metadataChanged || stateChanged || durationChanged || positionJump || timeSinceLastUpdate > 2000) {
@@ -218,13 +205,14 @@ function observeMediaSession() {
   }
 
   if (shouldUpdate) {
-    // Safety Force end: If we exceed the official duration (metadata truth), trigger next track
+    // Safety Force end
     const officialDur = (window as any)._officialDuration || 0;
     if (officialDur > 0 && playbackInfo.position >= officialDur - 0.5) {
       triggerAction('nexttrack');
-      return; // Skip this update to avoid jitter
+      return;
     }
 
+    lastReportedDuration = playbackInfo.duration;
     const currentState = JSON.stringify(playbackInfo);
     lastStateText = currentState;
     lastStateTime = Date.now();
@@ -232,9 +220,8 @@ function observeMediaSession() {
   }
 }
 
-// Start polling with adaptive frequency
-// We use 100ms for a good balance between responsiveness and performance
-setInterval(observeMediaSession, 100);
+// Start polling
+setInterval(observePlayback, 100);
 
 // Playback Controls (STRICTLY Selector-less via MediaSession Hook)
 ipcRenderer.on('playback:play', () => {
