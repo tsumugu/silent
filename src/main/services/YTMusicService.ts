@@ -166,10 +166,6 @@ export class YTMusicService {
             const artist: any = await this.client.getArtistRaw(artistId);
 
             const header = artist.header;
-            const topSongs = artist.sections.find((s: any) => s.type === 'MusicShelf' || s.title?.toString().includes('曲') || s.title?.toString().includes('Song'))?.contents || [];
-            const albums = artist.sections.find((s: any) => s.title?.toString().includes('アルバム') || s.title?.toString().includes('Album'))?.contents || [];
-            const singles = artist.sections.find((s: any) => s.title?.toString().includes('シングル') || s.title?.toString().includes('Single'))?.contents || [];
-
             const musicItem = MusicMapper.mapToMusicItem({
                 ...artist,
                 browse_id: artistId,
@@ -179,31 +175,26 @@ export class YTMusicService {
 
             if (!musicItem) return null;
 
-            const sections = [];
-            if (topSongs.length > 0) {
-                sections.push({
-                    title: 'Top Songs',
-                    items: topSongs.map((t: any) => MusicMapper.mapToMusicItem(t)).filter(Boolean) as MusicItem[]
-                });
-            }
-            if (albums.length > 0) {
-                sections.push({
-                    title: 'Albums',
-                    items: albums.map((t: any) => MusicMapper.mapToMusicItem(t)).filter(Boolean) as MusicItem[]
-                });
-            }
-            if (singles.length > 0) {
-                sections.push({
-                    title: 'Singles & EPs',
-                    items: singles.map((t: any) => MusicMapper.mapToMusicItem(t)).filter(Boolean) as MusicItem[]
-                });
-            }
+            // Align with getHome logic: Map all sections dynamically
+            const rawSections = artist.sections || [];
+            const sections = rawSections.map((section: any) => {
+                const title = section.title?.toString() || section.header?.title?.toString() || 'Untitled Section';
+                const items = section.contents || section.items || [];
+                const contents = items
+                    .map((item: any) => MusicMapper.mapToMusicItem(item))
+                    .filter(Boolean) as MusicItem[];
+
+                return { title, contents };
+            }).filter((s: any) => s.contents.length > 0);
 
             const result: MusicDetail = {
                 ...musicItem,
-                description: header?.description?.toString(),
+                artists: [{
+                    name: musicItem.title,
+                    id: artistId,
+                }],
                 tracks: [], // Artists don't have a single track list usually
-                sections: sections
+                sections: sections.map((s: { title: string, contents: MusicItem[] }) => ({ title: s.title, items: s.contents }))
             };
 
             return JSON.parse(JSON.stringify(result));
