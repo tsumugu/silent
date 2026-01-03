@@ -8,6 +8,7 @@ import { useMediaSession } from './hooks/useMediaSession';
 import { MiniPlayer } from './components/PlayerView/MiniPlayer';
 import { ViewWrapper } from './components/common/ViewWrapper';
 import { useNavigationStore, ViewType } from './store/navigationStore';
+import { usePlayerStore } from './store/playerStore';
 
 import {
   MusicItem,
@@ -38,6 +39,7 @@ export default function App() {
     setSearchQuery,
     setSearchResults
   } = useNavigationStore();
+  const { playbackInfo } = usePlayerStore();
 
   // Compute current view and item from viewStack
   const currentEntry = viewStack[viewStack.length - 1];
@@ -260,7 +262,7 @@ export default function App() {
               closePlayer();
             }}
           />
-        ) : (
+        ) : playbackInfo?.metadata?.title && (
           <MiniPlayer
             key="player-mini"
             onClick={openPlayer}
