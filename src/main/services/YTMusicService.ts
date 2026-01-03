@@ -1,4 +1,4 @@
-import { MusicItem, MusicArtist, MusicDetail, isAlbumItem } from '../../shared/types/music';
+import { MusicItem, MusicArtist, MusicDetail, isAlbumItem, isSongItem } from '../../shared/types/music';
 import { YTMusicClient } from '../infrastructure/YTMusicClient';
 import { MusicMapper } from '../../shared/mappers/musicMapper';
 
@@ -302,6 +302,31 @@ export class YTMusicService {
                 youtube_video_id: videoId,
                 album: albumInfo || undefined
             };
+
+            // Quality Check: If missing critical IDs (Album or Artist), try fallback search
+            // because strict "info" often lacks clickable IDs for radio/mix tracks
+            const hasAlbumId = !!(musicItem.album?.youtube_browse_id);
+            const hasArtistId = musicItem.artists.some((a: any) => !!a.id);
+
+            if (!hasAlbumId || !hasArtistId) {
+                try {
+                    console.log(`[YTMusicService] Song details missing ID for ${videoId}, trying fallback search...`);
+                    // Search by Video ID often returns the specific song card with full metadata
+                    const searchResults = await this.search(videoId);
+                    const betterSong = searchResults.songs.find((s: MusicItem) => isSongItem(s) && s.youtube_video_id === videoId);
+
+                    if (betterSong) {
+                        if (!hasAlbumId && betterSong.album) {
+                            musicItem.album = betterSong.album;
+                        }
+                        if (!hasArtistId && betterSong.artists && betterSong.artists.length > 0 && betterSong.artists[0].id) {
+                            musicItem.artists = betterSong.artists;
+                        }
+                    }
+                } catch (fallbackErr) {
+                    console.warn('[YTMusicService] Fallback search failed', fallbackErr);
+                }
+            }
 
             const result = JSON.parse(JSON.stringify(musicItem));
 

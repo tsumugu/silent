@@ -12,7 +12,12 @@ import { MusicArtist, MusicItem, isSongItem, isAlbumItem, isPlaylistItem, isChar
 let lastPlaybackInfo: PlaybackInfo | null = null;
 
 // Store context from play command for enrichment
-let lastPlayContext: { artists?: MusicArtist[]; albumId?: string } = {};
+let lastPlayContext: {
+  artists?: MusicArtist[];
+  albumId?: string;
+  videoId?: string;         // The videoId this context belongs to
+  playMode?: 'ALBUM' | 'PLAYLIST' | 'SONG' | 'RADIO'; // The mode in which playback started
+} = {};
 
 export function setupIPCHandlers(
   hiddenWindow: BrowserWindow
@@ -57,9 +62,16 @@ export function setupIPCHandlers(
   ipcMain.on(IPCChannels.PLAYBACK_STATE_CHANGED, async (_event, playbackInfo: PlaybackInfo) => {
     // Enrich metadata with artist and album details
     if (playbackInfo.metadata) {
+      const currentVideoId = playbackInfo.metadata.videoId;
+      // Check if the current track matches the context (same video ID)
+      const isSameTrack = currentVideoId && currentVideoId === lastPlayContext.videoId;
+      // If we are playing an album, we can assume all tracks belong to it
+      const isAlbumMode = lastPlayContext.playMode === 'ALBUM';
+
       // 1. Enrich Artists
       if (!playbackInfo.metadata.artists || playbackInfo.metadata.artists.length === 0) {
-        if (lastPlayContext.artists && lastPlayContext.artists.length > 0) {
+        // Only use context artists if it's the specific track we started with
+        if (isSameTrack && lastPlayContext.artists && lastPlayContext.artists.length > 0) {
           playbackInfo.metadata.artists = lastPlayContext.artists;
           // Also set the primary artistId for backward compatibility
           if (!playbackInfo.metadata.artistId && lastPlayContext.artists[0].id) {
@@ -80,7 +92,10 @@ export function setupIPCHandlers(
 
       // 2. Enrich Album ID
       if (!playbackInfo.metadata.albumId) {
-        if (lastPlayContext.albumId) {
+        if (isSameTrack && lastPlayContext.albumId) {
+          playbackInfo.metadata.albumId = lastPlayContext.albumId;
+        } else if (isAlbumMode && lastPlayContext.albumId) {
+          // In Album mode, persist the album ID for all tracks
           playbackInfo.metadata.albumId = lastPlayContext.albumId;
         } else if (playbackInfo.metadata.videoId) {
           try {
@@ -251,30 +266,47 @@ export function setupIPCHandlers(
     let type = item.type;
     let url: string = '';
 
+    // Reset context basics
+    lastPlayContext = {
+      playMode: item.type as any
+    };
+
     if (isSongItem(item)) {
       id = item.youtube_video_id;
       url = `https://music.youtube.com/watch?v=${id}`;
       if (contextId || item.youtube_playlist_id) {
         url += `&list=${contextId || item.youtube_playlist_id}`;
       }
-      lastPlayContext = { artists: item.artists, albumId: item.album?.youtube_browse_id };
+      lastPlayContext = {
+        artists: item.artists,
+        albumId: item.album?.youtube_browse_id,
+        videoId: item.youtube_video_id,
+        playMode: 'SONG'
+      };
     } else if (isAlbumItem(item)) {
       id = item.youtube_browse_id;
       url = `https://music.youtube.com/watch?list=${item.youtube_playlist_id || id}`;
-      lastPlayContext = { artists: item.artists, albumId: id };
+      lastPlayContext = {
+        artists: item.artists,
+        albumId: id,
+        playMode: 'ALBUM'
+      };
     } else if (isPlaylistItem(item) || isChartItem(item)) {
       id = item.youtube_playlist_id;
       url = `https://music.youtube.com/watch?list=${id}`;
-      lastPlayContext = {};
+      lastPlayContext = { playMode: 'PLAYLIST' };
     } else if (isRadioItem(item)) {
       id = item.seed_video_id || item.youtube_playlist_id;
       url = `https://music.youtube.com/watch?v=${id}&list=${item.youtube_playlist_id}`;
-      lastPlayContext = {};
+      lastPlayContext = {
+        videoId: item.seed_video_id,
+        playMode: 'RADIO'
+      };
     } else {
       // Artist/etc.
       id = (item as any).youtube_browse_id;
       url = `https://music.youtube.com/browse/${id}`;
-      lastPlayContext = {};
+      lastPlayContext = { playMode: 'ARTIST' as any };
     }
 
     // 3. Immediately notify UI of "Loading" state with new metadata
