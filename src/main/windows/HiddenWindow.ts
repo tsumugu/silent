@@ -26,9 +26,9 @@ export function createHiddenWindow(): BrowserWindow {
     win.webContents.openDevTools({ mode: 'detach' });
   }
 
-  win.webContents.on('did-finish-load', () => {
-    console.log('[HiddenWindow] Page loaded');
-  });
+  // win.webContents.on('did-finish-load', () => {
+  //   console.log('[HiddenWindow] Page loaded');
+  // });
 
   // Prevent closing the hidden window, just hide it
   win.on('close', (e) => {

@@ -13,7 +13,7 @@ interface TrackInfoProps {
   isMini?: boolean;
 }
 
-export function TrackInfo({ title, artist, artists, album, onAlbumClick, onArtistClick, isVisible, isMini }: TrackInfoProps) {
+export const TrackInfo = React.memo(({ title, artist, artists, album, onAlbumClick, onArtistClick, isVisible, isMini }: TrackInfoProps) => {
   if (!title) return null;
 
   return (
@@ -107,4 +107,4 @@ export function TrackInfo({ title, artist, artists, album, onAlbumClick, onArtis
       )}
     </AnimatePresence>
   );
-}
+});

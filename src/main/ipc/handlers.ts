@@ -22,6 +22,13 @@ let lastPlayContext: {
 // To prevent stale enrichment results from overwriting newer ones
 let enrichmentVersion = 0;
 
+// The official duration from YTMusic API, used to cap any "jumping" durations from the video element
+let referenceDuration = 0;
+
+// Cache the last enriched metadata to avoid redundant updates to the UI
+let lastEnrichedMetadata: any = null;
+let lastEnrichedVideoId: string | null = null;
+
 export function setupIPCHandlers(
   hiddenWindow: BrowserWindow
 ) {
@@ -67,6 +74,24 @@ export function setupIPCHandlers(
     // STEP 1: Immediate UI forwarding (non-blocking)
     // This ensures 'playing' state reaches UI without delay
     // ================================================================
+
+    // Safety Guard: Use referenceDuration from API as the absolute Source of Truth for songs.
+    if (referenceDuration > 0) {
+      // 1. Cap duration
+      playbackInfo.duration = referenceDuration;
+
+      // 2. Cap position (prevent progress bar blowout if video plays past official end)
+      if (playbackInfo.position > referenceDuration) {
+        playbackInfo.position = referenceDuration;
+      }
+    }
+
+    // Apply cached enrichment immediately if it's the same track
+    // This prevents the "flash" of basic metadata and reduces redundant Step 2 updates
+    if (playbackInfo.metadata?.videoId && playbackInfo.metadata.videoId === lastEnrichedVideoId) {
+      playbackInfo.metadata = { ...lastEnrichedMetadata };
+    }
+
     lastPlaybackInfo = playbackInfo;
 
     BrowserWindow.getAllWindows().forEach(win => {
@@ -125,7 +150,6 @@ export function setupIPCHandlers(
 
           // Version check: discard if a newer track has started
           if (currentVersion !== enrichmentVersion) {
-            console.log('[Handlers] Discarding stale enrichment for', currentVideoId);
             return;
           }
 
@@ -139,6 +163,10 @@ export function setupIPCHandlers(
             if (!enrichedMetadata.albumId && songDetails.album?.youtube_browse_id) {
               enrichedMetadata.albumId = songDetails.album.youtube_browse_id;
             }
+            // Update reference duration once we have official details
+            if (songDetails.duration?.seconds) {
+              referenceDuration = songDetails.duration.seconds;
+            }
           }
         } catch (e) {
           console.warn('[Handlers] Metadata enrichment failed', e);
@@ -150,9 +178,16 @@ export function setupIPCHandlers(
         (enrichedMetadata.artists && enrichedMetadata.artists.length > 0 && !playbackInfo.metadata.artists?.length) ||
         (enrichedMetadata.albumId && !playbackInfo.metadata.albumId);
 
+      // Only proceed if info has changed since last enrichment
       if (hasNewInfo && enrichmentVersion === currentVersion) {
+        // Cache this for Step 1 of next poll
+        lastEnrichedMetadata = enrichedMetadata;
+        lastEnrichedVideoId = currentVideoId;
+
+        // Ensure duration consistency even in enriched info
         const enrichedPlaybackInfo: PlaybackInfo = {
           ...playbackInfo,
+          duration: referenceDuration > 0 ? referenceDuration : playbackInfo.duration,
           metadata: enrichedMetadata
         };
 
@@ -168,12 +203,6 @@ export function setupIPCHandlers(
         if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
           trayService.updateTrack(enrichedMetadata);
         }
-
-        console.log('[Handlers] Sent enriched metadata:', {
-          videoId: currentVideoId,
-          artists: enrichedMetadata.artists?.map((a: any) => ({ name: a.name, id: a.id })),
-          albumId: enrichedMetadata.albumId
-        });
       }
     }
   });
@@ -312,7 +341,6 @@ export function setupIPCHandlers(
     const videoIdForDupCheck = isSongItem(item) ? item.youtube_video_id : undefined;
     // Skip if we are already playing or explicitly loading THIS same videoId
     if (videoIdForDupCheck && lastPlayContext.videoId === videoIdForDupCheck && lastPlaybackInfo?.playbackState === 'loading') {
-      console.log(`[Handlers] YT_PLAY skipping duplicate request for ${videoIdForDupCheck}`);
       return;
     }
 
@@ -320,7 +348,6 @@ export function setupIPCHandlers(
 
     // Increment version ONLY when we actually proceed with a new playback request
     const currentPlayVersion = ++enrichmentVersion;
-    console.log(`[Handlers] YT_PLAY starting version: ${currentPlayVersion} for ${item.title} (ID: ${videoIdForDupCheck})`);
 
     // 2. Extract necessary info
     let id: string | undefined = videoIdForDupCheck;
@@ -340,7 +367,6 @@ export function setupIPCHandlers(
       if (listId?.startsWith('VL')) {
         listId = listId.substring(2);
       }
-      console.log('[Handlers] YT_PLAY SongItem:', { videoId: id, contextId, itemPlaylistId: item.youtube_playlist_id, listId });
       if (listId) {
         url += `&list=${listId}`;
       }
@@ -350,7 +376,6 @@ export function setupIPCHandlers(
         videoId: item.youtube_video_id,
         playMode: (listId?.startsWith('MPRE') || item.album?.youtube_browse_id) ? 'ALBUM' : (listId ? 'PLAYLIST' : 'SONG')
       };
-      console.log('[Handlers] YT_PLAY lastPlayContext:', lastPlayContext);
     } else if (isAlbumItem(item)) {
       id = item.youtube_browse_id;
       // Normalize: VL prefix is for browse IDs, strip it for watch URLs
@@ -404,6 +429,9 @@ export function setupIPCHandlers(
       duration: isSongItem(item) ? (item.duration?.seconds || 0) : 0,
     };
 
+    // Store reference duration to prevent jumps during playback
+    referenceDuration = loadingInfo.duration;
+
     lastPlaybackInfo = loadingInfo;
     BrowserWindow.getAllWindows().forEach(win => {
       if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
@@ -412,8 +440,12 @@ export function setupIPCHandlers(
     });
 
     // 4. Force state in hidden window and load
-    hiddenWindow.webContents.executeJavaScript('navigator.mediaSession.playbackState = "none"; block_updates = true;')
-      .catch(() => { });
+    // Inject official duration to hidden window so preload can handle auto-advance correctly
+    hiddenWindow.webContents.executeJavaScript(`
+      navigator.mediaSession.playbackState = "none"; 
+      block_updates = true;
+      window._officialDuration = ${loadingInfo.duration};
+    `).catch(() => { });
 
     trayService.showLoading();
     // Immediate tray update with new metadata if available (prevents marquee from old track)

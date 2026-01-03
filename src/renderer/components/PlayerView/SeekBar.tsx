@@ -5,119 +5,123 @@ interface SeekBarProps {
   currentTime: number;
   duration: number;
   isVisible: boolean;
-  isMini?: boolean;
   isPlaying: boolean;
+  isMini?: boolean;
 }
 
-export function SeekBar({ currentTime, duration, isVisible, isMini, isPlaying }: SeekBarProps) {
+export function SeekBar({ currentTime, duration, isVisible, isPlaying, isMini }: SeekBarProps) {
+  const [visualTime, setVisualTime] = useState(currentTime);
   const [isDragging, setIsDragging] = useState(false);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
-  const [visualTime, setVisualTime] = useState(currentTime);
+  const [dragTime, setDragTime] = useState<number | null>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const animationFrameRef = useRef<number | undefined>(undefined);
 
-  // Sync visual time with prop time when it updates from backend
-  // But also allow for local interpolation
+  // Sync visual time with props whenever currentTime changes significantly (e.g. backend poll or seek)
   React.useEffect(() => {
-    if (!isDragging) {
-      setVisualTime(currentTime);
-      lastUpdateTimeRef.current = Date.now();
-    }
-  }, [currentTime, isDragging]);
+    setVisualTime(currentTime);
+    lastUpdateTimeRef.current = Date.now();
+  }, [currentTime]);
 
-  // Interpolation loop
+  // Use requestAnimationFrame for smooth interpolation ONLY when playing
   React.useEffect(() => {
-    if (!isPlaying || isDragging) {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+    const updateTime = () => {
+      if (isPlaying && !isDragging) {
+        const now = Date.now();
+        const deltaTime = (now - lastUpdateTimeRef.current) / 1000;
+        lastUpdateTimeRef.current = now;
+
+        setVisualTime(prev => {
+          const next = prev + deltaTime;
+          return next > duration ? duration : next;
+        });
+      } else {
+        // If not playing, keep refreshing the timestamp to prevent jump when resuming
+        lastUpdateTimeRef.current = Date.now();
       }
-      return;
-    }
-
-    const animate = () => {
-      const now = Date.now();
-      const deltaTime = (now - lastUpdateTimeRef.current) / 1000;
-
-      // Update visual time based on elapsed real time
-      // We rely on the useEffect above to "re-anchor" us to the server time every ~2 seconds
-      // This prevents drift from accumulating too much.
-      setVisualTime(prev => {
-        const next = prev + deltaTime;
-        return Math.min(next, duration);
-      });
-
-      lastUpdateTimeRef.current = now;
-      animationFrameRef.current = requestAnimationFrame(animate);
+      animationFrameRef.current = requestAnimationFrame(updateTime);
     };
 
-    lastUpdateTimeRef.current = Date.now();
-    animationFrameRef.current = requestAnimationFrame(animate);
-
+    animationFrameRef.current = requestAnimationFrame(updateTime);
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isPlaying, isDragging, duration, currentTime]); // Dependency on currentTime ensures we restart loop base on new anchor if needed (though the other effect handles the set)
+  }, [isPlaying, isDragging, duration]);
+
+  // Display time: use drag position while dragging, otherwise use visual interpolation
+  const displayTime = isDragging && dragTime !== null ? dragTime : visualTime;
+  const progress = duration > 0 ? (displayTime / duration) * 100 : 0;
 
   const formatTime = (seconds: number) => {
+    if (!isFinite(seconds) || seconds < 0) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Use visualTime for display, but hoverTime overrides it for the preview label
-  const displayTime = isDragging && hoverTime !== null ? hoverTime : visualTime;
-  const progress = duration > 0 ? (displayTime / duration) * 100 : 0;
+  const calculateTimeFromPosition = (clientX: number): number => {
+    if (!progressBarRef.current || duration <= 0) return 0;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, clientX - rect.left));
+    const ratio = x / rect.width;
+    const time = ratio * duration;
+
+    return Math.max(0, Math.min(duration, time));
+  };
 
   const handleSeek = (clientX: number) => {
-    if (!progressBarRef.current) return;
-
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const width = rect.width;
-    const seekTime = (x / width) * duration;
-
-    window.electronAPI.playbackSeek(Math.max(0, Math.min(duration, seekTime)));
+    const seekTime = calculateTimeFromPosition(clientX);
+    window.electronAPI.playbackSeek(seekTime);
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
+    const time = calculateTimeFromPosition(e.clientX);
+    setDragTime(time);
     handleSeek(e.clientX);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!progressBarRef.current) return;
-
-    const rect = progressBarRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const width = rect.width;
-    const time = (x / width) * duration;
-    setHoverTime(Math.max(0, Math.min(duration, time)));
+    const time = calculateTimeFromPosition(e.clientX);
+    setHoverTime(time);
 
     if (isDragging) {
-      handleSeek(e.clientX);
+      setDragTime(time);
+      // Removed: window.electronAPI.playbackSeek(time);
+      // We only seek on MouseUp to prevent massive seek requests that can confuse the player backend
     }
   };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (isDragging) {
+      const time = calculateTimeFromPosition(e.clientX);
+      window.electronAPI.playbackSeek(time);
+      setIsDragging(false);
+      setDragTime(null);
+    }
   };
 
   const handleMouseLeave = () => {
     setHoverTime(null);
-    if (isDragging) {
-      setIsDragging(false);
-    }
   };
 
   React.useEffect(() => {
     if (isDragging) {
-      const handleGlobalMouseUp = () => setIsDragging(false);
+      const handleGlobalMouseUp = (e: MouseEvent) => {
+        if (isDragging) {
+          const time = calculateTimeFromPosition(e.clientX);
+          window.electronAPI.playbackSeek(time);
+          setIsDragging(false);
+          setDragTime(null);
+        }
+      };
       const handleGlobalMouseMove = (e: MouseEvent) => {
         if (isDragging) {
-          handleSeek(e.clientX);
+          const time = calculateTimeFromPosition(e.clientX);
+          setDragTime(time);
         }
       };
 
@@ -129,7 +133,7 @@ export function SeekBar({ currentTime, duration, isVisible, isMini, isPlaying }:
         window.removeEventListener('mousemove', handleGlobalMouseMove);
       };
     }
-  }, [isDragging]);
+  }, [isDragging, duration]);
 
   return (
     <AnimatePresence>
@@ -177,7 +181,7 @@ export function SeekBar({ currentTime, duration, isVisible, isMini, isPlaying }:
           {/* Time labels */}
           <div className="flex justify-between items-center px-1">
             <span className={`${isMini ? 'text-xs' : 'text-sm'} text-white/70`}>
-              {formatTime(visualTime)}
+              {formatTime(displayTime)}
             </span>
             <span className={`${isMini ? 'text-xs' : 'text-sm'} text-white/70`}>
               {formatTime(duration)}

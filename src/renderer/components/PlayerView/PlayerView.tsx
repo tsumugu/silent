@@ -19,22 +19,28 @@ interface PlayerViewProps {
 export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: PlayerViewProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [albumInfo, setAlbumInfo] = useState<{ id: string; name: string } | null>(null);
-  const { playbackInfo } = usePlayerStore();
+
+  // Use granular selectors to prevent re-rendering PlayerView on every position update
+  // metadata and playbackState change much less frequently than position.
+  const metadata = usePlayerStore(state => state.playbackInfo?.metadata);
+  const playbackState = usePlayerStore(state => state.playbackInfo?.playbackState);
+  const position = usePlayerStore(state => state.playbackInfo?.position);
+  const duration = usePlayerStore(state => state.playbackInfo?.duration);
+
   const { height } = useWindowDimensions();
 
   // Responsive logic for visibility/font-sizes only
   const isMini = height < 450;
 
   // Extract original artwork URL from metadata
-  // Extract original artwork URL from metadata
-  const originalArtwork = playbackInfo?.metadata?.artwork?.[0]?.src || null;
-  const videoId = playbackInfo?.metadata?.videoId;
+  const originalArtwork = metadata?.artwork?.[0]?.src || null;
+  const videoId = metadata?.videoId;
 
   // Extract Album info from metadata
-  const albumName = playbackInfo?.metadata?.album;
-  const albumId = playbackInfo?.metadata?.albumId;
+  const albumName = metadata?.album;
+  const albumId = metadata?.albumId;
 
-  const handleAlbumClick = () => {
+  const handleAlbumClick = React.useCallback(() => {
     if (albumName && albumId && onNavigateToAlbum) {
       const albumItem: MusicItem = {
         type: 'ALBUM',
@@ -45,9 +51,9 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
       };
       onNavigateToAlbum(albumItem);
     }
-  };
+  }, [albumName, albumId, onNavigateToAlbum]);
 
-  const handleArtistClick = (artist: MusicArtist) => {
+  const handleArtistClick = React.useCallback((artist: MusicArtist) => {
     if (artist.id && onNavigateToArtist) {
       const artistItem: MusicItem = {
         type: 'ARTIST',
@@ -57,19 +63,20 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
       };
       onNavigateToArtist(artistItem);
     }
-  };
+  }, [onNavigateToArtist]);
 
   // Generate stable cache key
   const cacheKey = getImageCacheKey(
-    playbackInfo?.metadata?.title || '',
-    playbackInfo?.metadata?.artist || '',
+    metadata?.title || '',
+    metadata?.artist || '',
     { videoId }
   );
 
   // Use the integrated hook for high-quality blob URL and colors
   const { blobUrl, colors } = useTrackAssets(originalArtwork, cacheKey);
 
-  const isLoading = playbackInfo?.playbackState === 'loading';
+  const isLoading = playbackState === 'loading';
+  const isPlaying = playbackState === 'playing';
 
   return (
     /*
@@ -136,9 +143,9 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
         {(isHovered || isMini) && (
           <motion.div layout className="w-full h-min flex flex-col items-center">
             <TrackInfo
-              title={playbackInfo?.metadata?.title}
-              artist={playbackInfo?.metadata?.artist}
-              artists={playbackInfo?.metadata?.artists}
+              title={metadata?.title}
+              artist={metadata?.artist}
+              artists={metadata?.artists}
               album={albumName}
               onAlbumClick={handleAlbumClick}
               onArtistClick={handleArtistClick}
@@ -167,15 +174,15 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
         {(isHovered || isMini) && (
           <motion.div layout className="w-full flex-shrink-0 flex flex-col items-center gap-6">
             <SeekBar
-              currentTime={playbackInfo?.position || 0}
-              duration={playbackInfo?.duration || 0}
+              currentTime={position || 0}
+              duration={duration || 0}
+              isPlaying={isPlaying}
               isVisible={isHovered || isMini}
               isMini={isMini}
-              isPlaying={playbackInfo?.playbackState === 'playing'}
             />
             <ControlBar
-              isPlaying={playbackInfo?.playbackState === 'playing'}
-              isLoading={playbackInfo?.playbackState === 'loading'}
+              isPlaying={isPlaying}
+              isLoading={isLoading}
               isVisible={isHovered || isMini}
               isMini={isMini}
             />

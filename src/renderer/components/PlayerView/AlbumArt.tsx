@@ -7,7 +7,7 @@ interface AlbumArtProps {
   isMini?: boolean;
 }
 
-export function AlbumArt({ src, isHovered, isMini }: AlbumArtProps) {
+export const AlbumArt = React.memo(({ src, isHovered, isMini }: AlbumArtProps) => {
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Reset loading state when src changes
@@ -64,4 +64,4 @@ export function AlbumArt({ src, isHovered, isMini }: AlbumArtProps) {
       </div>
     </div>
   );
-}
+});

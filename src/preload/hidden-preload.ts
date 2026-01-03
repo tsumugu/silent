@@ -5,8 +5,9 @@ import { PlaybackInfo } from '../shared/types/playback';
 (window as any).block_updates = false;
 
 let lastValidMetadata: any = null;
-let lastState: string | null = null;
+let lastStateText: string | null = null;
 let lastStateTime = 0;
+let lastReportedDuration = 0;
 let hasInteracted = false;
 type MSHandler = (details: any) => void;
 const msHandlers: Record<string, MSHandler> = {};
@@ -57,7 +58,7 @@ window.addEventListener('unhandledrejection', (e) => {
 (window as any).block_updates = false;
 
 function forceUpdateState() {
-  lastState = null; // Force next poll to send update
+  lastStateText = null; // Force next poll to send update
   lastStateTime = 0;
 }
 
@@ -76,7 +77,6 @@ function setupVideoPlayingListener() {
   if (video) {
     video.addEventListener('playing', () => {
       if ((window as any).block_updates) {
-        console.log('[HiddenPreload] Video playing - unblocking updates');
         (window as any).block_updates = false;
         forceUpdateState();
       }
@@ -94,7 +94,8 @@ setupVideoPlayingListener();
 window.addEventListener('beforeunload', () => {
   (window as any).block_updates = true;
   lastValidMetadata = null; // Clear old metadata on navigation
-  lastState = null;
+  lastStateText = null;
+  lastReportedDuration = 0;
   // Safety timeout: if page doesn't load within 8s, unblock anyway (Issue #22)
   setTimeout(() => { (window as any).block_updates = false; }, 8000);
 });
@@ -139,11 +140,17 @@ function observeMediaSession() {
   const activeMetadata = hasMetadata ? lastValidMetadata : (lastValidMetadata || null);
   if (!activeMetadata) return;
 
-  // Use video element as source of truth for playback state if possible
-  const video = document.querySelector('video');
+  // Find the primary video element playing the content
+  const allVideos = Array.from(document.querySelectorAll('video'));
+  const video = allVideos.find(v => {
+    // Basic checks for the main player video
+    const isVisible = v.offsetWidth > 0 || v.offsetHeight > 0;
+    const hasSource = v.src && v.src.startsWith('blob:'); // YouTube Music uses blob URLs for main content
+    return isVisible && hasSource;
+  }) || allVideos[0]; // fallback to first if none match
+
   let playbackState = mediaSession.playbackState || 'none';
   if (video) {
-    // If video is strictly paused/playing, overwrite MediaSession state which can lag
     playbackState = video.paused ? 'paused' : 'playing';
   }
 
@@ -165,26 +172,36 @@ function observeMediaSession() {
     duration: 0,
   };
 
-  if (video && !isNaN(video.currentTime) && !isNaN(video.duration)) {
-    playbackInfo.position = video.currentTime;
-    playbackInfo.duration = video.duration;
+  if (video && isFinite(video.currentTime) && isFinite(video.duration) && video.duration > 0) {
+    const newPos = video.currentTime;
+    const newDur = video.duration;
+
+    // // Detect duration drift/jump using the persistent lastReportedDuration
+    // if (Math.abs(newDur - lastReportedDuration) > 1 && lastReportedDuration > 0) {
+    //   console.log(`[HiddenPreload] Duration changed significantly: ${lastReportedDuration.toFixed(2)} -> ${newDur.toFixed(2)}`);
+    // }
+
+    playbackInfo.position = newPos;
+    playbackInfo.duration = newDur;
+    lastReportedDuration = newDur;
   } else if ("getPositionState" in mediaSession) {
     try {
       const positionState = (mediaSession as any).getPositionState();
-      if (positionState) {
+      if (positionState && isFinite(positionState.duration) && positionState.duration > 0) {
         playbackInfo.position = positionState.position || 0;
         playbackInfo.duration = positionState.duration || 0;
+        lastReportedDuration = playbackInfo.duration;
       }
     } catch (e) { /* ignore */ }
   }
 
   // Optimization: Only send update if significant changes occurred
   let shouldUpdate = false;
-  if (!lastState) {
+  if (!lastStateText) {
     shouldUpdate = true;
   } else {
     try {
-      const last = JSON.parse(lastState) as PlaybackInfo;
+      const last = JSON.parse(lastStateText) as PlaybackInfo;
       const metadataChanged = JSON.stringify(playbackInfo.metadata) !== JSON.stringify(last.metadata);
       const stateChanged = playbackInfo.playbackState !== last.playbackState;
       const durationChanged = Math.abs(playbackInfo.duration - last.duration) > 1;
@@ -201,8 +218,15 @@ function observeMediaSession() {
   }
 
   if (shouldUpdate) {
+    // Safety Force end: If we exceed the official duration (metadata truth), trigger next track
+    const officialDur = (window as any)._officialDuration || 0;
+    if (officialDur > 0 && playbackInfo.position >= officialDur - 0.5) {
+      triggerAction('nexttrack');
+      return; // Skip this update to avoid jitter
+    }
+
     const currentState = JSON.stringify(playbackInfo);
-    lastState = currentState;
+    lastStateText = currentState;
     lastStateTime = Date.now();
     ipcRenderer.send('playback:state-changed', playbackInfo);
   }
@@ -240,6 +264,14 @@ ipcRenderer.on('playback:previous', () => {
 
 ipcRenderer.on('playback:seek', (_event, seekTime: number) => {
   hasInteracted = true;
+
+  // Safety: If seeking to the very end (within 1 second), treat it as a "next" command
+  // This prevents the player from getting stuck at the end of a track or reported duration increasing
+  if (lastReportedDuration > 0 && seekTime >= lastReportedDuration - 1.0) {
+    triggerAction('nexttrack');
+    return;
+  }
+
   // Use the MediaSession 'seekto' action if available (modern API way)
   if (!triggerAction('seekto', { seekTime })) {
     // Fallback to direct video manipulation
@@ -249,3 +281,16 @@ ipcRenderer.on('playback:seek', (_event, seekTime: number) => {
     }
   }
 });
+
+// Add explicit listener for when the video actually ends
+function setupVideoEndListener() {
+  const video = document.querySelector('video');
+  if (video) {
+    video.addEventListener('ended', () => {
+      triggerAction('nexttrack');
+    });
+  } else {
+    setTimeout(setupVideoEndListener, 500);
+  }
+}
+setupVideoEndListener();
