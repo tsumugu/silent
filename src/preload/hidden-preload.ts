@@ -1,5 +1,6 @@
 import { ipcRenderer } from 'electron';
 import { PlaybackInfo } from '../shared/types/playback';
+import { createPlaybackObservable } from './playback/observables';
 
 // Forced global variables for control from main process
 (window as any).block_updates = false;
@@ -220,8 +221,50 @@ function observePlayback() {
   }
 }
 
-// Start polling
-setInterval(observePlayback, 100);
+// Feature flag for RxJS event-driven playback
+const USE_RXJS_PLAYBACK = process.env.USE_RXJS_PLAYBACK === 'true';
+
+let pollingInterval: NodeJS.Timeout | undefined;
+let rxjsSubscription: any;
+
+if (USE_RXJS_PLAYBACK) {
+  // RxJS event-driven mode
+  console.log('[HiddenPreload] Using RxJS event-driven playback monitoring');
+
+  const playback$ = createPlaybackObservable();
+  rxjsSubscription = playback$.subscribe({
+    next: (playbackInfo) => {
+      // Apply safety guard: force end of track if position exceeds official duration
+      const officialDur = (window as any)._officialDuration || 0;
+      if (officialDur > 0 && playbackInfo.position >= officialDur - 0.5) {
+        triggerAction('nexttrack');
+        return;
+      }
+
+      // Send IPC to main process
+      ipcRenderer.send('playback:state-changed', playbackInfo);
+    },
+    error: (err) => {
+      console.error('[HiddenPreload] RxJS playback stream error:', err);
+      // TODO: Add fallback or restart logic
+    }
+  });
+
+  // Cleanup subscription on window unload
+  const existingBeforeUnload = window.onbeforeunload;
+  window.addEventListener('beforeunload', () => {
+    if (rxjsSubscription) {
+      rxjsSubscription.unsubscribe();
+    }
+    if (existingBeforeUnload) {
+      existingBeforeUnload.call(window, null as any);
+    }
+  });
+} else {
+  // Legacy polling mode (100ms interval)
+  console.log('[HiddenPreload] Using legacy polling playback monitoring');
+  pollingInterval = setInterval(observePlayback, 100);
+}
 
 // Playback Controls (STRICTLY Selector-less via MediaSession Hook)
 ipcRenderer.on('playback:play', () => {
