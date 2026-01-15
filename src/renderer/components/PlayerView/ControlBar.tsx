@@ -62,33 +62,8 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini, isShuffle,
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3 }}
         >
-          {/* Like button */}
-          {!isMini && (
-            <button
-              onClick={handleToggleLike}
-              disabled={isLoading || !videoId || isLikeLoading}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isLoading || !videoId || isLikeLoading ? 'opacity-30' : 'hover:scale-110'} ${likeStatus === 'LIKE' ? 'text-white bg-white/20' : 'text-white/40 hover:text-white/60'}`}
-              title={likeStatus === 'LIKE' ? 'Unlike' : 'Like'}
-              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            >
-              {isLikeLoading ? (
-                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              ) : (
-                <svg
-                  className="w-5 h-5 transition-transform active:scale-90"
-                  fill={likeStatus === 'LIKE' ? 'currentColor' : 'none'}
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth={likeStatus === 'LIKE' ? 0 : 2}
-                >
-                  <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
-                </svg>
-              )}
-            </button>
-          )}
-
           {/* Shuffle button */}
-          {!isMini && (
+          {/* {!isMini && (
             <button
               onClick={handleShuffle}
               disabled={isLoading}
@@ -104,7 +79,7 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini, isShuffle,
                 <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
               </svg>
             </button>
-          )}
+          )} */}
 
           {/* Previous button */}
           <button
@@ -168,6 +143,32 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini, isShuffle,
               <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
             </svg>
           </button>
+
+          {/* Like button */}
+          {/* {!isMini && (
+            <button
+              onClick={handleToggleLike}
+              disabled={isLoading || !videoId || isLikeLoading}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isLoading || !videoId || isLikeLoading ? 'opacity-30' : 'hover:scale-110'} ${likeStatus === 'LIKE' ? 'text-white bg-white/20' : 'text-white/40 hover:text-white/60'}`}
+              title={likeStatus === 'LIKE' ? 'Unlike' : 'Like'}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
+              {isLikeLoading ? (
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              ) : (
+                <svg
+                  className="w-5 h-5 transition-transform active:scale-90"
+                  fill={likeStatus === 'LIKE' ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={likeStatus === 'LIKE' ? 0 : 2}
+                >
+                  <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                </svg>
+              )}
+            </button>
+          )} */}
+
         </motion.div>
       )}
     </AnimatePresence>

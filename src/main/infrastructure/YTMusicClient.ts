@@ -157,7 +157,7 @@ export class YTMusicClient {
      * youtubei.js の InteractionManager が一部の環境で 400 Error (Invalid Target) を出すため、
      * 直接 Actions API を叩く
      */
-    public async setLikeStatus(videoId: string, status: 'LIKE' | 'DISLIKE' | 'INDIFFERENT'): Promise<any> {
+    public async setLikeStatus(id: string, status: 'LIKE' | 'DISLIKE' | 'INDIFFERENT', isPlaylist = false): Promise<any> {
         await this.initialize();
         if (!this.innertube) throw new Error('[YTMusicClient] Innertube not initialized');
 
@@ -167,8 +167,10 @@ export class YTMusicClient {
         if (status === 'DISLIKE') endpoint = '/like/dislike';
         else if (status === 'INDIFFERENT') endpoint = '/like/removelike';
 
+        const target = isPlaylist ? { playlistId: id } : { videoId: id };
+
         return await (this.innertube as any).actions.execute(endpoint, {
-            target: { videoId },
+            target,
             status: status,
             client: 'YTMUSIC'
         });

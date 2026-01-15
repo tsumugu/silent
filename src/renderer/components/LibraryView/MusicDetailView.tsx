@@ -29,6 +29,8 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
+    const [trackLikes, setTrackLikes] = useState<Record<string, 'LIKE' | 'DISLIKE' | 'INDIFFERENT'>>({});
+    const [likeLoading, setLikeLoading] = useState<Record<string, boolean>>({});
 
     // Get cache actions from store
     const {
@@ -112,6 +114,35 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
 
         fetchData();
     }, [id, type, getAlbum, setAlbum, getPlaylist, setPlaylist]);
+
+    // Handle like toggle for tracks
+    const handleToggleLike = async (e: React.MouseEvent, song: MusicItem) => {
+        e.stopPropagation();
+        if (!isSongItem(song)) return;
+
+        const videoId = song.youtube_video_id;
+        if (likeLoading[videoId]) return;
+
+        const currentStatus = trackLikes[videoId] || song.likeStatus || 'INDIFFERENT';
+        const newStatus = currentStatus === 'LIKE' ? 'INDIFFERENT' : 'LIKE';
+
+        // Optimistic update
+        setTrackLikes(prev => ({ ...prev, [videoId]: newStatus }));
+        setLikeLoading(prev => ({ ...prev, [videoId]: true }));
+
+        try {
+            const success = await window.electronAPI.setLikeStatus(videoId, newStatus);
+            if (!success) {
+                // Rollback on failure
+                setTrackLikes(prev => ({ ...prev, [videoId]: currentStatus }));
+            }
+        } catch (error) {
+            console.error('[MusicDetailView] Failed to toggle like:', error);
+            setTrackLikes(prev => ({ ...prev, [videoId]: currentStatus }));
+        } finally {
+            setLikeLoading(prev => ({ ...prev, [videoId]: false }));
+        }
+    };
 
     if (!data && !loading && !isEntering && !initialItem) {
         return (
@@ -239,10 +270,10 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                     </div>
                 </div>
 
-                {/* Song List Header */}
-                <div className="grid grid-cols-[3rem_1fr_4rem] gap-4 px-4 py-3 border-b border-white/5 text-white/30 text-[10px] uppercase tracking-widest font-bold mb-2">
+                <div className="grid grid-cols-[3rem_1fr_4rem_4rem] gap-4 px-4 py-3 border-b border-white/5 text-white/30 text-[10px] uppercase tracking-widest font-bold mb-2">
                     <div className="text-center">#</div>
                     <div>{t.title_label}</div>
+                    <div className="text-center"></div>
                     <div className="text-right">{t.time_label}</div>
                 </div>
 
@@ -269,7 +300,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.03 }}
-                                        className={`group grid grid-cols-[3rem_1fr_4rem] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-all active:scale-[0.995] ${isGlobalLoading ? 'opacity-40 blur-[0.5px] pointer-events-none' : ''}`}
+                                        className={`group grid grid-cols-[3rem_1fr_4rem_4rem] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-all active:scale-[0.995] ${isGlobalLoading ? 'opacity-40 blur-[0.5px] pointer-events-none' : ''}`}
                                         onClick={() => {
                                             if (!isGlobalLoading) onPlaySong(song);
                                         }}
@@ -303,6 +334,26 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                                 }) : artistName}
                                             </div>
                                         </div>
+
+                                        {/* Like Button */}
+                                        <div className="flex justify-center">
+                                            {isSongItem(song) && (
+                                                <button
+                                                    onClick={(e) => handleToggleLike(e, song)}
+                                                    disabled={likeLoading[videoId]}
+                                                    className={`p-2 rounded-full hover:bg-white/10 transition-all ${((trackLikes[videoId] || song.likeStatus) === 'LIKE') ? 'text-white' : 'text-white/10 group-hover:text-white/30 hover:!text-white'}`}
+                                                >
+                                                    {likeLoading[videoId] ? (
+                                                        <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                                    ) : (
+                                                        <svg className="w-4 h-4" fill={(trackLikes[videoId] || song.likeStatus) === 'LIKE' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+
                                         <div className="text-right text-white/30 text-xs font-mono group-hover:text-white/60">
                                             {isSongItem(song) ? (song.duration?.text || '--:--') : '--:--'}
                                         </div>
