@@ -177,11 +177,23 @@ function observePlayback() {
     hasInteracted = true;
   }
 
+  // 3. EXTRACT SHUFFLE AND REPEAT STATES
+  const shuffleButton = document.querySelector('ytmusic-player-bar .shuffle') as HTMLElement;
+  const isShuffle = shuffleButton?.getAttribute('aria-pressed') === 'true';
+
+  const repeatButton = document.querySelector('ytmusic-player-bar .repeat') as HTMLElement;
+  const repeatTitle = repeatButton?.getAttribute('title')?.toLowerCase() || '';
+  let isRepeat: 'none' | 'one' | 'all' = 'none';
+  if (repeatTitle.includes('one')) isRepeat = 'one';
+  else if (repeatTitle.includes('all')) isRepeat = 'all';
+
   const playbackInfo: PlaybackInfo = {
     metadata: lastValidMetadata,
     playbackState: playbackState as any,
     position: video.currentTime || 0,
     duration: video.duration || 0,
+    isShuffle,
+    isRepeat,
   };
 
   // Optimization: Only send update if significant changes occurred
@@ -306,6 +318,33 @@ ipcRenderer.on('playback:previous', () => {
   hasInteracted = true;
   triggerAction('previoustrack');
 });
+
+ipcRenderer.on('playback:shuffle', () => {
+  hasInteracted = true;
+  toggleShuffle(); // Toggle behavior for UI button
+});
+
+/**
+ * Toggle shuffle or force to a specific state
+ */
+function toggleShuffle(forceState?: boolean) {
+  const shuffleButton = document.querySelector('ytmusic-player-bar tp-yt-paper-icon-button.shuffle') as HTMLElement;
+  if (shuffleButton) {
+    const isCurrentlyActive = shuffleButton.getAttribute('aria-pressed') === 'true';
+
+    // If forceState is provided, only click if it doesn't match
+    if (forceState !== undefined) {
+      if (isCurrentlyActive !== forceState) {
+        shuffleButton.click();
+      }
+    } else {
+      // Standard toggle
+      shuffleButton.click();
+    }
+    return true;
+  }
+  return false;
+}
 
 ipcRenderer.on('playback:seek', (_event, seekTime: number) => {
   hasInteracted = true;

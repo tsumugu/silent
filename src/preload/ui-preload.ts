@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   playbackNext: () => ipcRenderer.send('playback:next'),
   playbackPrevious: () => ipcRenderer.send('playback:previous'),
   playbackSeek: (seekTime: number) => ipcRenderer.send('playback:seek', seekTime),
+  playbackShuffle: () => ipcRenderer.send('playback:shuffle'),
 
   // Image Proxy
   proxyFetchImage: (url: string) => ipcRenderer.invoke('image:proxy-fetch', url),
@@ -53,7 +54,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('ytmusic:session-updated', listener);
     return () => { ipcRenderer.removeListener('ytmusic:session-updated', listener); };
   },
-  play: (item: MusicItem, contextId?: string) => ipcRenderer.send(IPCChannels.YT_PLAY, item, contextId),
+  play: (item: any, contextId?: string, shuffle?: boolean) => ipcRenderer.send('ytmusic:play', item, contextId, shuffle),
   setVibrancy: (vibrancy: any) => ipcRenderer.send('window:set-vibrancy', vibrancy),
   getVersion: () => ipcRenderer.invoke('app:get-version'),
   checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),

@@ -118,6 +118,11 @@ export function setupIPCHandlers(
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_SEEK, seekTime);
   });
 
+  ipcMain.on(IPCChannels.PLAYBACK_SHUFFLE, () => {
+    if (hiddenWindow.isDestroyed() || !playbackService.getState()) return;
+    hiddenWindow.webContents.send(IPCChannels.PLAYBACK_SHUFFLE);
+  });
+
   // ========================================
   // Image Proxy: Fetch with browser-like headers
   // ========================================
@@ -199,7 +204,7 @@ export function setupIPCHandlers(
 
   let lastPlayRequestTime = 0;
 
-  ipcMain.on(IPCChannels.YT_PLAY, async (_event, item: MusicItem, contextId?: string) => {
+  ipcMain.on(IPCChannels.YT_PLAY, async (_event, item: MusicItem, contextId?: string, shuffle?: boolean) => {
     if (hiddenWindow.isDestroyed()) return;
 
     // 1. Throttling and duplicate prevention
@@ -246,6 +251,9 @@ export function setupIPCHandlers(
       if (listId) {
         url += `&list=${listId}`;
       }
+      if (shuffle) {
+        url += '&shuffle=1';
+      }
       playContext = {
         artists: item.artists,
         albumId: (contextId?.startsWith('MPRE') ? contextId : undefined) || item.album?.youtube_browse_id || contextId || item.youtube_playlist_id,
@@ -259,7 +267,7 @@ export function setupIPCHandlers(
       if (albumListId?.startsWith('VL')) {
         albumListId = albumListId.substring(2);
       }
-      url = `https://music.youtube.com/watch?list=${albumListId}`;
+      url = `https://music.youtube.com/watch?list=${albumListId}${shuffle ? '&shuffle=1' : ''}`;
       playContext = {
         artists: item.artists,
         albumId: id,
@@ -272,7 +280,7 @@ export function setupIPCHandlers(
       if (playlistListId?.startsWith('VL')) {
         playlistListId = playlistListId.substring(2);
       }
-      url = `https://music.youtube.com/watch?list=${playlistListId}`;
+      url = `https://music.youtube.com/watch?list=${playlistListId}${shuffle ? '&shuffle=1' : ''}`;
       playContext = {
         playMode: 'PLAYLIST',
         albumId: id // Store original ID for metadata

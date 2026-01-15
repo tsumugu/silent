@@ -203,7 +203,39 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                             </div>
                         </div>
 
-
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-4 mt-8">
+                            <button
+                                onClick={() => {
+                                    if (tracks.length > 0 && !isGlobalLoading) {
+                                        const contextId = type === 'PLAYLIST' ? id : (data?.youtube_playlist_id || id);
+                                        window.electronAPI.play(tracks[0], contextId, false);
+                                    }
+                                }}
+                                disabled={tracks.length === 0 || isGlobalLoading}
+                                className={`px-8 py-3 bg-white text-black rounded-full font-bold text-sm hover:scale-105 transition-all active:scale-95 flex items-center gap-2 ${isGlobalLoading ? 'opacity-50' : ''}`}
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                                {t.play}
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if ((data || initialItem) && !isGlobalLoading) {
+                                        const contextId = type === 'PLAYLIST' ? id : (data?.youtube_playlist_id || id);
+                                        window.electronAPI.play((data || initialItem!) as any, contextId, true);
+                                    }
+                                }}
+                                disabled={tracks.length === 0 || isGlobalLoading}
+                                className={`px-8 py-3 bg-white/10 text-white rounded-full font-bold text-sm hover:bg-white/20 hover:scale-105 transition-all active:scale-95 flex items-center gap-2 ${isGlobalLoading ? 'opacity-50' : ''}`}
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+                                </svg>
+                                {t.shuffle_play}
+                            </button>
+                        </div>
                     </div>
                 </div>
 

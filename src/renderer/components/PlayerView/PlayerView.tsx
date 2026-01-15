@@ -83,6 +83,7 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
   const playbackState = usePlayerStore(state => state.playbackInfo?.playbackState);
   const position = usePlayerStore(state => state.playbackInfo?.position);
   const duration = usePlayerStore(state => state.playbackInfo?.duration);
+  const isShuffle = usePlayerStore(state => state.playbackInfo?.isShuffle);
 
   const { height } = useWindowDimensions();
 
@@ -248,6 +249,7 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
               isLoading={isLoading}
               isVisible={isHovered || isMini}
               isMini={isMini}
+              isShuffle={isShuffle}
             />
           </motion.div>
         )}

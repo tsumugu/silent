@@ -25,7 +25,7 @@ export class CacheService {
             name: 'cache-index',
             defaults: { items: {} }
         });
-        this.cacheDir = path.join(app.getPath('userData'), 'cache');
+        this.cacheDir = path.join(app.getPath('userData'), 'silent_persistent_cache');
         this.ensureCacheDirSync();
     }
 

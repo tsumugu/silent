@@ -7,10 +7,17 @@ interface ControlBarProps {
   isLoading?: boolean;
   isVisible: boolean;
   isMini?: boolean;
+  isShuffle?: boolean;
 }
 
-export function ControlBar({ isPlaying, isLoading, isVisible, isMini }: ControlBarProps) {
+export function ControlBar({ isPlaying, isLoading, isVisible, isMini, isShuffle }: ControlBarProps) {
   const { t } = useTranslation();
+
+  const handleShuffle = () => {
+    if (isLoading) return;
+    window.electronAPI.playbackShuffle();
+  };
+
   const handlePrevious = () => {
     if (isLoading) return;
     window.electronAPI.playbackPrevious();
@@ -41,6 +48,25 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini }: ControlB
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3 }}
         >
+          {/* Shuffle button */}
+          {!isMini && (
+            <button
+              onClick={handleShuffle}
+              disabled={isLoading}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isLoading ? 'opacity-30' : 'hover:scale-110'} ${isShuffle ? 'bg-white/30 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+              title={t.shuffle}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
+              <svg
+                className="w-5 h-5"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z" />
+              </svg>
+            </button>
+          )}
+
           {/* Previous button */}
           <button
             onClick={handlePrevious}

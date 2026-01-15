@@ -20,6 +20,7 @@ declare global {
       playbackNext: () => void;
       playbackPrevious: () => void;
       playbackSeek: (seekTime: number) => void;
+      playbackShuffle: () => void;
       // Image Proxy
       proxyFetchImage: (url: string) => Promise<string>;
       // YTMusic API
@@ -37,7 +38,7 @@ declare global {
       showLogin: () => void;
       checkLogin: () => Promise<boolean>;
       onSessionUpdated: (callback: () => void) => () => void;
-      play: (item: MusicItem, contextId?: string) => void;
+      play: (item: MusicItem, contextId?: string, shuffle?: boolean) => void;
       setVibrancy: (vibrancy: 'under-window' | 'content' | 'sidebar' | 'menu' | 'popover' | 'hud' | 'sheet' | 'window' | 'dropdown' | 'tooltip' | 'device-discovery' | 'video' | 'selection' | 'titlebar' | null) => void;
       // Settings
       getSettings: () => Promise<AppSettings>;

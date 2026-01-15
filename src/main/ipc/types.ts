@@ -16,6 +16,7 @@ export enum IPCChannels {
   PLAYBACK_NEXT = 'playback:next',
   PLAYBACK_PREVIOUS = 'playback:previous',
   PLAYBACK_SEEK = 'playback:seek',
+  PLAYBACK_SHUFFLE = 'playback:shuffle',
 
   // Image Proxy
   IMAGE_PROXY_FETCH = 'image:proxy-fetch',

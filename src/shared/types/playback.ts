@@ -27,6 +27,8 @@ export interface PlaybackInfo {
     playbackState: PlaybackState;
     position: number;
     duration: number;
+    isShuffle?: boolean;
+    isRepeat?: 'none' | 'one' | 'all';
 }
 
 // Raw playback state from Hidden Window (before enrichment)
