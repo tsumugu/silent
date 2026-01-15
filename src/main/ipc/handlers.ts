@@ -6,32 +6,14 @@ import { AppSettings } from '../../shared/types/settings';
 import { ytMusicService } from '../services/YTMusicService';
 import { settingsService } from '../services/SettingsService';
 import { trayService } from '../services/TrayService';
+import { playbackService } from '../services/PlaybackService';
 import { MusicArtist, MusicItem, isSongItem, isAlbumItem, isPlaylistItem, isChartItem, isRadioItem } from '../../shared/types/music';
-
-// Persist the last known playback state to restore it when UI window is recreated
-let lastPlaybackInfo: PlaybackInfo | null = null;
-
-// Store context from play command for enrichment
-let lastPlayContext: {
-  artists?: MusicArtist[];
-  albumId?: string;
-  videoId?: string;         // The videoId this context belongs to
-  playMode?: 'ALBUM' | 'PLAYLIST' | 'SONG' | 'RADIO'; // The mode in which playback started
-} = {};
-
-// To prevent stale enrichment results from overwriting newer ones
-let enrichmentVersion = 0;
-
-// The official duration from YTMusic API, used to cap any "jumping" durations from the video element
-let referenceDuration = 0;
-
-// Cache the last enriched metadata to avoid redundant updates to the UI
-let lastEnrichedMetadata: any = null;
-let lastEnrichedVideoId: string | null = null;
 
 export function setupIPCHandlers(
   hiddenWindow: BrowserWindow
 ) {
+  // Initialize PlaybackService with hidden window reference
+  playbackService.initialize(hiddenWindow);
   // ========================================
   // Window controls (Generic for any window)
   // ========================================
@@ -70,161 +52,21 @@ export function setupIPCHandlers(
   // ========================================
 
   ipcMain.on(IPCChannels.PLAYBACK_STATE_CHANGED, async (_event, playbackInfo: PlaybackInfo) => {
-    // ================================================================
-    // STEP 1: Immediate UI forwarding (non-blocking)
-    // This ensures 'playing' state reaches UI without delay
-    // ================================================================
+    // Delegate all state management to PlaybackService
+    await playbackService.handleStateChange(playbackInfo);
 
-    // Safety Guard: Use referenceDuration from API as the absolute Source of Truth for songs.
-    if (referenceDuration > 0) {
-      // 1. Cap duration
-      playbackInfo.duration = referenceDuration;
-
-      // 2. Cap position (prevent progress bar blowout if video plays past official end)
-      if (playbackInfo.position > referenceDuration) {
-        playbackInfo.position = referenceDuration;
-      }
-    }
-
-    // Apply cached enrichment immediately if it's the same track
-    // This prevents the "flash" of basic metadata and reduces redundant Step 2 updates
-    if (playbackInfo.metadata?.videoId && playbackInfo.metadata.videoId === lastEnrichedVideoId) {
-      playbackInfo.metadata = { ...lastEnrichedMetadata };
-    }
-
-    lastPlaybackInfo = playbackInfo;
-
-    BrowserWindow.getAllWindows().forEach(win => {
-      if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
-        win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, playbackInfo);
-      }
-    });
-
-    // Update tray immediately with whatever metadata we have
-    const settings = settingsService.getSettings();
-    if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
-      trayService.updateTrack(playbackInfo.metadata);
-    }
-
-    // ================================================================
-    // STEP 2: Asynchronous metadata enrichment (separate update)
-    // If metadata is incomplete, fetch details and send enriched version
-    // ================================================================
-    if (playbackInfo.metadata?.videoId) {
-      const currentVideoId = playbackInfo.metadata.videoId;
-      const currentVersion = enrichmentVersion;
-      const isSameTrack = currentVideoId === lastPlayContext.videoId;
-      const isAlbumMode = lastPlayContext.playMode === 'ALBUM';
-      const isPlaylistMode = lastPlayContext.playMode === 'PLAYLIST';
-
-      let needsEnrichment = false;
-      const enrichedMetadata = { ...playbackInfo.metadata };
-
-      // Check if we need to enrich artists
-      if (!enrichedMetadata.artists || enrichedMetadata.artists.length === 0) {
-        if (isSameTrack && lastPlayContext.artists && lastPlayContext.artists.length > 0) {
-          enrichedMetadata.artists = lastPlayContext.artists;
-          if (!enrichedMetadata.artistId && lastPlayContext.artists[0].id) {
-            enrichedMetadata.artistId = lastPlayContext.artists[0].id;
-          }
-        } else {
-          needsEnrichment = true;
-        }
-      }
-
-      // Check if we need to enrich album ID
-      if (!enrichedMetadata.albumId) {
-        if (isSameTrack && lastPlayContext.albumId) {
-          enrichedMetadata.albumId = lastPlayContext.albumId;
-          const mode = lastPlayContext.playMode;
-          if (mode === 'ALBUM' || mode === 'PLAYLIST') {
-            enrichedMetadata.collectionType = mode;
-          }
-        } else if ((isAlbumMode || isPlaylistMode) && lastPlayContext.albumId) {
-          enrichedMetadata.albumId = lastPlayContext.albumId;
-          const mode = lastPlayContext.playMode;
-          if (mode === 'ALBUM' || mode === 'PLAYLIST') {
-            enrichedMetadata.collectionType = mode;
-          }
-        } else {
-          needsEnrichment = true;
-        }
-      } else if (!enrichedMetadata.collectionType) {
-        // Even if we have albumId, we might need collectionType
-        const mode = lastPlayContext.playMode;
-        if ((isSameTrack || isAlbumMode || isPlaylistMode) && (mode === 'ALBUM' || mode === 'PLAYLIST')) {
-          enrichedMetadata.collectionType = mode;
-        }
-      }
-
-      // Perform async enrichment if needed
-      if (needsEnrichment) {
-        try {
-          const songDetails = await ytMusicService.getSongDetails(currentVideoId);
-
-          // Version check: discard if a newer track has started
-          if (currentVersion !== enrichmentVersion) {
-            return;
-          }
-
-          if (songDetails && isSongItem(songDetails)) {
-            if (!enrichedMetadata.artists || enrichedMetadata.artists.length === 0) {
-              enrichedMetadata.artists = songDetails.artists;
-              if (songDetails.artists[0]?.id) {
-                enrichedMetadata.artistId = songDetails.artists[0].id;
-              }
-            }
-            if (!enrichedMetadata.albumId && songDetails.album?.youtube_browse_id) {
-              enrichedMetadata.albumId = songDetails.album.youtube_browse_id;
-              enrichedMetadata.collectionType = 'ALBUM';
-            }
-            // Update reference duration once we have official details
-            if (songDetails.duration?.seconds) {
-              referenceDuration = songDetails.duration.seconds;
-            }
-          }
-        } catch (e) {
-          console.warn('[Handlers] Metadata enrichment failed', e);
-        }
-      }
-
-      // Send enriched metadata update to UI (only if we actually enriched something)
-      const hasNewInfo =
-        (enrichedMetadata.artists && enrichedMetadata.artists.length > 0 && !playbackInfo.metadata.artists?.length) ||
-        (enrichedMetadata.albumId && !playbackInfo.metadata.albumId) ||
-        (enrichedMetadata.collectionType && !playbackInfo.metadata.collectionType);
-
-      // Only proceed if info has changed since last enrichment
-      if (hasNewInfo && enrichmentVersion === currentVersion) {
-        // Cache this for Step 1 of next poll
-        lastEnrichedMetadata = enrichedMetadata;
-        lastEnrichedVideoId = currentVideoId;
-
-        // Ensure duration consistency even in enriched info
-        const enrichedPlaybackInfo: PlaybackInfo = {
-          ...playbackInfo,
-          duration: referenceDuration > 0 ? referenceDuration : playbackInfo.duration,
-          metadata: enrichedMetadata
-        };
-
-        lastPlaybackInfo = enrichedPlaybackInfo;
-
-        BrowserWindow.getAllWindows().forEach(win => {
-          if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
-            win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, enrichedPlaybackInfo);
-          }
-        });
-
-        // Update tray with enriched metadata
-        if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
-          trayService.updateTrack(enrichedMetadata);
-        }
+    // Update tray with current state
+    const currentState = playbackService.getState();
+    if (currentState?.metadata) {
+      const settings = settingsService.getSettings();
+      if (settings.displayMode === 'menuBar' && process.platform === 'darwin') {
+        trayService.updateTrack(currentState.metadata);
       }
     }
   });
 
   ipcMain.handle(IPCChannels.PLAYBACK_GET_STATE, () => {
-    return lastPlaybackInfo;
+    return playbackService.getState();
   });
 
   // ========================================
@@ -258,19 +100,19 @@ export function setupIPCHandlers(
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_NEXT, () => {
-    if (hiddenWindow.isDestroyed() || !lastPlaybackInfo) return;
+    if (hiddenWindow.isDestroyed() || !playbackService.getState()) return;
     sendMediaKey('MediaNextTrack', 'n');
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_NEXT);
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_PREVIOUS, () => {
-    if (hiddenWindow.isDestroyed() || !lastPlaybackInfo) return;
+    if (hiddenWindow.isDestroyed() || !playbackService.getState()) return;
     sendMediaKey('MediaPreviousTrack', 'p');
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_PREVIOUS);
   });
 
   ipcMain.on(IPCChannels.PLAYBACK_SEEK, (_event, seekTime: number) => {
-    if (hiddenWindow.isDestroyed() || !lastPlaybackInfo) return;
+    if (hiddenWindow.isDestroyed() || !playbackService.getState()) return;
     // Seeking still needs IPC as there's no native "seek" media key
     hiddenWindow.webContents.send(IPCChannels.PLAYBACK_SEEK, seekTime);
   });
@@ -355,25 +197,26 @@ export function setupIPCHandlers(
     if (now - lastPlayRequestTime < 500) return;
 
     const videoIdForDupCheck = isSongItem(item) ? item.youtube_video_id : undefined;
+    const currentPlayContext = playbackService.getPlayContext();
+    const currentState = playbackService.getState();
+
     // Skip if we are already playing or explicitly loading THIS same videoId
-    if (videoIdForDupCheck && lastPlayContext.videoId === videoIdForDupCheck && lastPlaybackInfo?.playbackState === 'loading') {
+    if (videoIdForDupCheck && currentPlayContext.videoId === videoIdForDupCheck && currentState?.playbackState === 'loading') {
       return;
     }
 
     lastPlayRequestTime = now;
 
-    // Increment version ONLY when we actually proceed with a new playback request
-    const currentPlayVersion = ++enrichmentVersion;
-
-    // 2. Extract necessary info
+    // 2. Extract necessary info and build URL
     let id: string | undefined = videoIdForDupCheck;
     let type = item.type;
     let url: string = '';
-
-    // Reset context basics
-    lastPlayContext = {
-      playMode: item.type as any
-    };
+    let playContext: {
+      artists?: MusicArtist[];
+      albumId?: string;
+      videoId?: string;
+      playMode?: 'ALBUM' | 'PLAYLIST' | 'SONG' | 'RADIO' | 'ARTIST';
+    } = { playMode: item.type as any };
 
     if (isSongItem(item)) {
       id = item.youtube_video_id;
@@ -393,7 +236,7 @@ export function setupIPCHandlers(
       if (listId) {
         url += `&list=${listId}`;
       }
-      lastPlayContext = {
+      playContext = {
         artists: item.artists,
         albumId: (contextId?.startsWith('MPRE') ? contextId : undefined) || item.album?.youtube_browse_id || contextId || item.youtube_playlist_id,
         videoId: item.youtube_video_id,
@@ -407,7 +250,7 @@ export function setupIPCHandlers(
         albumListId = albumListId.substring(2);
       }
       url = `https://music.youtube.com/watch?list=${albumListId}`;
-      lastPlayContext = {
+      playContext = {
         artists: item.artists,
         albumId: id,
         playMode: 'ALBUM'
@@ -420,14 +263,14 @@ export function setupIPCHandlers(
         playlistListId = playlistListId.substring(2);
       }
       url = `https://music.youtube.com/watch?list=${playlistListId}`;
-      lastPlayContext = {
+      playContext = {
         playMode: 'PLAYLIST',
         albumId: id // Store original ID for metadata
       };
     } else if (isRadioItem(item)) {
       id = item.seed_video_id || item.youtube_playlist_id;
       url = `https://music.youtube.com/watch?v=${id}&list=${item.youtube_playlist_id}`;
-      lastPlayContext = {
+      playContext = {
         videoId: item.seed_video_id,
         playMode: 'RADIO'
       };
@@ -435,8 +278,11 @@ export function setupIPCHandlers(
       // Artist/etc.
       id = (item as any).youtube_browse_id;
       url = `https://music.youtube.com/browse/${id}`;
-      lastPlayContext = { playMode: 'ARTIST' as any };
+      playContext = { playMode: 'ARTIST' as any };
     }
+
+    // Set play context in PlaybackService
+    playbackService.setPlayContext(playContext);
 
     // 3. Immediately notify UI of "Loading" state with new metadata
     // This provides instant visual feedback and prevents the "disappearing" issue
@@ -446,23 +292,16 @@ export function setupIPCHandlers(
         artist: (item as any).artists ? (item as any).artists.map((a: any) => a.name).join(', ') : item.subtitle,
         artwork: item.thumbnails.map(t => ({ src: t.url, sizes: `${t.width}x${t.height}` })),
         videoId: isSongItem(item) ? item.youtube_video_id : undefined,
-        albumId: lastPlayContext.albumId,
-        collectionType: (lastPlayContext.playMode === 'ALBUM' || lastPlayContext.playMode === 'PLAYLIST') ? lastPlayContext.playMode : undefined,
+        albumId: playContext.albumId,
+        collectionType: (playContext.playMode === 'ALBUM' || playContext.playMode === 'PLAYLIST') ? playContext.playMode : undefined,
       },
       playbackState: 'loading',
       position: 0,
       duration: isSongItem(item) ? (item.duration?.seconds || 0) : 0,
     };
 
-    // Store reference duration to prevent jumps during playback
-    referenceDuration = loadingInfo.duration;
-
-    lastPlaybackInfo = loadingInfo;
-    BrowserWindow.getAllWindows().forEach(win => {
-      if (!win.isDestroyed() && win.id !== hiddenWindow.id) {
-        win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, loadingInfo);
-      }
-    });
+    // Set loading state in PlaybackService
+    playbackService.setLoadingState(loadingInfo);
 
     // 4. Force state in hidden window and load
     // Inject official duration to hidden window so preload can handle auto-advance correctly

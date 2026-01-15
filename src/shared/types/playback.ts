@@ -29,6 +29,17 @@ export interface PlaybackInfo {
     duration: number;
 }
 
+// Raw playback state from Hidden Window (before enrichment)
+export interface RawPlaybackState {
+    videoId: string;
+    title: string;
+    artist: string;
+    artwork: MediaImage[];
+    playbackState: 'playing' | 'paused' | 'loading';
+    position: number;
+    duration: number;
+}
+
 // Playback control actions
 export type PlaybackAction = 'play' | 'pause' | 'previoustrack' | 'nexttrack' | 'seekto';
 
