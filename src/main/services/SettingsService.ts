@@ -61,6 +61,9 @@ export class SettingsService extends EventEmitter {
       (this.store as any).set('launchAtLogin', DEFAULT_SETTINGS.launchAtLogin);
       (this.store as any).set('tray', DEFAULT_SETTINGS.tray);
     }
+
+    // Always reset debugMode to false on app startup (session-based setting)
+    (this.store as any).set('debugMode', false);
   }
 
   getSettings(): AppSettings {

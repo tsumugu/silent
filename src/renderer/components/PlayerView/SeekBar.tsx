@@ -6,54 +6,61 @@ interface SeekBarProps {
   duration: number;
   isVisible: boolean;
   isPlaying: boolean;
+  videoId?: string;
   isMini?: boolean;
 }
 
-export function SeekBar({ currentTime, duration, isVisible, isPlaying, isMini }: SeekBarProps) {
-  const [visualTime, setVisualTime] = useState(currentTime);
+export function SeekBar({ currentTime, duration, isVisible, isPlaying, videoId, isMini }: SeekBarProps) {
+  const [visualTime, setVisualTime] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
   const [dragTime, setDragTime] = useState<number | null>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const lastUpdateTimeRef = useRef<number>(Date.now());
   const animationFrameRef = useRef<number | undefined>(undefined);
+  const prevVideoIdRef = useRef(videoId);
 
-  // Sync visual time with props whenever currentTime changes significantly (e.g. backend poll or seek)
+  // Reset visual time when track changes (videoId changes)
+  React.useEffect(() => {
+    if (prevVideoIdRef.current !== videoId) {
+      setVisualTime(0);
+      lastUpdateTimeRef.current = Date.now();
+      prevVideoIdRef.current = videoId;
+    }
+  }, [videoId]);
+
+  // Sync visual time with currentTime from Main Process
   React.useEffect(() => {
     setVisualTime(currentTime);
     lastUpdateTimeRef.current = Date.now();
   }, [currentTime]);
 
-  // Use requestAnimationFrame for smooth interpolation ONLY when playing
+  // Smooth interpolation loop (only when playing)
   React.useEffect(() => {
-    const updateTime = () => {
-      if (isPlaying && !isDragging) {
+    if (!isPlaying || duration <= 0) return;
+
+    let frameId: number;
+    const animate = () => {
+      if (!isDragging) {
         const now = Date.now();
-        const deltaTime = (now - lastUpdateTimeRef.current) / 1000;
+        const delta = (now - lastUpdateTimeRef.current) / 1000;
         lastUpdateTimeRef.current = now;
 
-        setVisualTime(prev => {
-          const next = prev + deltaTime;
-          return next > duration ? duration : next;
-        });
-      } else {
-        // If not playing, keep refreshing the timestamp to prevent jump when resuming
-        lastUpdateTimeRef.current = Date.now();
+        setVisualTime(prev => Math.min(prev + delta, duration));
       }
-      animationFrameRef.current = requestAnimationFrame(updateTime);
+      frameId = requestAnimationFrame(animate);
     };
 
-    animationFrameRef.current = requestAnimationFrame(updateTime);
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
+    frameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frameId);
   }, [isPlaying, isDragging, duration]);
 
   // Display time: use drag position while dragging, otherwise use visual interpolation
   const displayTime = isDragging && dragTime !== null ? dragTime : visualTime;
-  const progress = duration > 0 ? (displayTime / duration) * 100 : 0;
+
+  // Duration validation: only display if duration is valid
+  const displayDuration = duration > 0 ? duration : 0;
+  const progress = displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0;
 
   const formatTime = (seconds: number) => {
     if (!isFinite(seconds) || seconds < 0) return '0:00';

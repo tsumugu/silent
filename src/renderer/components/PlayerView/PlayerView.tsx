@@ -186,6 +186,7 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
               currentTime={position || 0}
               duration={duration || 0}
               isPlaying={isPlaying}
+              videoId={videoId}
               isVisible={isHovered || isMini}
               isMini={isMini}
             />

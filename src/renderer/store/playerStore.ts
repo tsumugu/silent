@@ -3,18 +3,13 @@ import { PlaybackInfo } from '../../shared/types/playback';
 
 interface PlayerState {
   playbackInfo: PlaybackInfo | null;
-  isPlaying: boolean;
-  setPlaybackInfo: (info: PlaybackInfo) => void;
 }
 
-export const usePlayerStore = create<PlayerState>((set) => ({
+export const usePlayerStore = create<PlayerState>(() => ({
   playbackInfo: null,
-  isPlaying: false,
-
-  setPlaybackInfo: (info: PlaybackInfo | null) => {
-    set({
-      playbackInfo: info,
-      isPlaying: info?.playbackState === 'playing',
-    });
-  },
 }));
+
+// External update function (only called from useMediaSession)
+export function setPlaybackInfo(info: PlaybackInfo | null) {
+  usePlayerStore.setState({ playbackInfo: info });
+}

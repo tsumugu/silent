@@ -13,7 +13,7 @@ interface MiniPlayerProps {
 
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     const { t } = useTranslation();
-    const { playbackInfo, isPlaying } = usePlayerStore();
+    const playbackInfo = usePlayerStore(state => state.playbackInfo);
 
     // Hooks should be called unconditionally
     const metadata = playbackInfo?.metadata;
@@ -31,6 +31,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     const { colors, blobUrl } = useTrackAssets(originalArtwork, cacheKey);
 
     const isLoading = playbackInfo?.playbackState === 'loading';
+    const isPlaying = playbackInfo?.playbackState === 'playing';
 
     const handlePlayPause = (e: React.MouseEvent) => {
         e.stopPropagation();

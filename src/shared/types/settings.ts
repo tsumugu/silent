@@ -11,6 +11,10 @@ export interface AppSettings {
   language: string;
   location: string;
   tray: TraySettings;
+  /**
+   * Debug mode - shows the hidden window for development/debugging.
+   * Note: This is a session-based setting that automatically resets to false on app restart.
+   */
   debugMode: boolean;
 }
 

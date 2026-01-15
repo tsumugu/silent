@@ -10,6 +10,7 @@ import { ytMusicService } from './services/YTMusicService';
 import { settingsService } from './services/SettingsService';
 import { trayService } from './services/TrayService';
 import { IPCChannels } from './ipc/types';
+import { config } from '../shared/config';
 const { updateElectronApp } = require('update-electron-app');
 
 // Initialize auto-updates
@@ -100,8 +101,8 @@ app.whenReady().then(() => {
   // Set up IPC handlers for communication - Register once for the lifetime of the app
   setupIPCHandlers(hiddenWindow);
 
-  // Initial debug mode check
-  if (settings.debugMode) {
+  // Initial visibility check: show if config.showHiddenWindow OR debugMode is enabled
+  if (config.showHiddenWindow || settings.debugMode) {
     hiddenWindow.show();
   }
 
@@ -159,9 +160,9 @@ app.whenReady().then(() => {
       trayService.updateSettings(newSettings.tray);
     }
 
-    // Toggle hidden window based on debug mode
+    // Toggle hidden window based on config.showHiddenWindow OR debugMode
     if (hiddenWindow && !hiddenWindow.isDestroyed()) {
-      if (newSettings.debugMode) {
+      if (config.showHiddenWindow || newSettings.debugMode) {
         hiddenWindow.show();
       } else {
         hiddenWindow.hide();
