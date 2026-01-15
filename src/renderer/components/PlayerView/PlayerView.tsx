@@ -250,6 +250,8 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
               isVisible={isHovered || isMini}
               isMini={isMini}
               isShuffle={isShuffle}
+              videoId={videoId}
+              likeStatus={metadata?.likeStatus}
             />
           </motion.div>
         )}

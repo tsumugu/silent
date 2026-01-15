@@ -33,6 +33,8 @@ export enum IPCChannels {
   YT_PLAY = 'ytmusic:play',
   YT_CHECK_LOGIN = 'ytmusic:check-login',
   YT_SESSION_UPDATED = 'ytmusic:session-updated',
+  YT_SET_LIKE_STATUS = 'ytmusic:set-like-status',
+  YT_GET_LIKED_MUSIC = 'ytmusic:get-liked-music',
   WINDOW_SET_VIBRANCY = 'window:set-vibrancy',
 
   // Settings

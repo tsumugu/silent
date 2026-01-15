@@ -1,13 +1,10 @@
 import { ipcRenderer } from 'electron';
 import { PlaybackInfo } from '../shared/types/playback';
-import { createPlaybackObservable } from './playback/observables';
+import { createPlaybackObservable, manualLikeUpdate$ } from './playback/observables';
 
 // Forced global variables for control from main process
 (window as any).block_updates = false;
 
-let lastValidMetadata: any = null;
-let lastStateText: string | null = null;
-let lastStateTime = 0;
 let lastReportedDuration = 0;
 let hasInteracted = false;
 type MSHandler = (details: any) => void;
@@ -59,8 +56,7 @@ window.addEventListener('unhandledrejection', (e) => {
 (window as any).block_updates = false;
 
 function forceUpdateState() {
-  lastStateText = null; // Force next poll to send update
-  lastStateTime = 0;
+  // RxJS mode handles state changes automatically
 }
 
 // Cleanup on load
@@ -94,204 +90,39 @@ setupVideoPlayingListener();
 // Reset on navigation start
 window.addEventListener('beforeunload', () => {
   (window as any).block_updates = true;
-  lastValidMetadata = null; // Clear old metadata on navigation
-  lastStateText = null;
   lastReportedDuration = 0;
   // Safety timeout: if page doesn't load within 8s, unblock anyway (Issue #22)
   setTimeout(() => { (window as any).block_updates = false; }, 8000);
 });
 
-// Poll Video and DOM every 100ms
-function observePlayback() {
-  if ((window as any).block_updates) return;
+// RxJS event-driven mode (Default)
+console.log('[HiddenPreload] Using RxJS event-driven playback monitoring');
 
-  // 1. EXTRACT METADATA FROM DOM (SELECTOR-LESS / MINIMAL SELECTOR)
-  // We use the player bar elements which are more reliable than MediaSession which can be hijacked by OS or other tabs
-  const extractMetadata = () => {
-    try {
-      const playerBar = document.querySelector('ytmusic-player-bar');
-      if (!playerBar) return null;
-
-      const title = playerBar.querySelector('.title')?.textContent?.trim();
-      const byline = playerBar.querySelector('.byline')?.textContent?.trim();
-
-      // Byline typically contains "Artist • Album • Year" or "Artist • Year"
-      const parts = byline ? byline.split(' • ') : [];
-      const artist = parts[0] || '';
-      const album = parts[1] || '';
-
-      const artworkImg = playerBar.querySelector('.image') as HTMLImageElement;
-      const artwork = artworkImg && artworkImg.src ? [{
-        src: artworkImg.src,
-        sizes: '512x512',
-        type: 'image/jpeg'
-      }] : [];
-
-      const urlParams = new URLSearchParams(window.location.search);
-      const videoId = urlParams.get('v') || undefined;
-
-      if (!title) return null;
-
-      return {
-        title,
-        artist,
-        album,
-        artwork,
-        videoId
-      };
-    } catch (e) {
-      return null;
-    }
-  };
-
-  const metadata = extractMetadata();
-  if (metadata) {
-    lastValidMetadata = {
-      ...metadata,
-      albumId: undefined, // Enriched by main process
-      artistId: undefined // Enriched by main process
-    };
-  }
-
-  if (!lastValidMetadata) return;
-
-  // 2. FIND VIDEO ELEMENT
-  const allVideos = Array.from(document.querySelectorAll('video'));
-  const video = allVideos.find(v => {
-    const isVisible = v.offsetWidth > 0 || v.offsetHeight > 0;
-    const hasSource = v.src && v.src.startsWith('blob:');
-    return isVisible && hasSource;
-  }) || allVideos[0];
-
-  if (!video) return;
-
-  // 3. DETERMINE PLAYBACK STATE
-  const playbackState = video.paused ? 'paused' : 'playing';
-
-  // Initial state suppression
-  const isWatchPage = window.location.pathname.startsWith('/watch');
-  if (!hasInteracted && playbackState !== 'playing' && !isWatchPage) {
-    return;
-  }
-  if (isWatchPage || playbackState === 'playing') {
-    hasInteracted = true;
-  }
-
-  // 3. EXTRACT SHUFFLE AND REPEAT STATES
-  const shuffleButton = document.querySelector('ytmusic-player-bar .shuffle') as HTMLElement;
-  const isShuffle = shuffleButton?.getAttribute('aria-pressed') === 'true';
-
-  const repeatButton = document.querySelector('ytmusic-player-bar .repeat') as HTMLElement;
-  const repeatTitle = repeatButton?.getAttribute('title')?.toLowerCase() || '';
-  let isRepeat: 'none' | 'one' | 'all' = 'none';
-  if (repeatTitle.includes('one')) isRepeat = 'one';
-  else if (repeatTitle.includes('all')) isRepeat = 'all';
-
-  const playbackInfo: PlaybackInfo = {
-    metadata: lastValidMetadata,
-    playbackState: playbackState as any,
-    position: video.currentTime || 0,
-    duration: video.duration || 0,
-    isShuffle,
-    isRepeat,
-  };
-
-  // Optimization: Only send update if significant changes occurred
-  let shouldUpdate = false;
-  if (!lastStateText) {
-    shouldUpdate = true;
-  } else {
-    try {
-      const last = JSON.parse(lastStateText) as PlaybackInfo;
-      const metadataChanged = JSON.stringify(playbackInfo.metadata) !== JSON.stringify(last.metadata);
-      const stateChanged = playbackInfo.playbackState !== last.playbackState;
-      const durationChanged = Math.abs(playbackInfo.duration - last.duration) > 0.1;
-      const positionJump = Math.abs(playbackInfo.position - last.position) > 1.5;
-      const timeSinceLastUpdate = Date.now() - lastStateTime;
-
-      if (metadataChanged || stateChanged || durationChanged || positionJump || timeSinceLastUpdate > 2000) {
-        shouldUpdate = true;
-      }
-    } catch (e) {
-      shouldUpdate = true;
-    }
-  }
-
-  if (shouldUpdate) {
-    // Safety Force end
+const playback$ = createPlaybackObservable();
+const rxjsSubscription = playback$.subscribe({
+  next: (playbackInfo) => {
+    // Apply safety guard: force end of track if position exceeds official duration
     const officialDur = (window as any)._officialDuration || 0;
     if (officialDur > 0 && playbackInfo.position >= officialDur - 0.5) {
       triggerAction('nexttrack');
       return;
     }
 
-    // Guard against stale position on track change
-    const currentVideoId = playbackInfo.metadata?.videoId;
-    if (currentVideoId && currentVideoId !== (window as any)._lastReportedVideoId) {
-      (window as any)._isTransitioning = true;
-      (window as any)._lastReportedVideoId = currentVideoId;
-    }
-
-    if ((window as any)._isTransitioning) {
-      if (video.currentTime < 1.0) {
-        (window as any)._isTransitioning = false;
-      } else {
-        playbackInfo.position = 0;
-      }
-    }
-
     lastReportedDuration = playbackInfo.duration;
-    const currentState = JSON.stringify(playbackInfo);
-    lastStateText = currentState;
-    lastStateTime = Date.now();
+    // Send IPC to main process
     ipcRenderer.send('playback:state-changed', playbackInfo);
+  },
+  error: (err) => {
+    console.error('[HiddenPreload] RxJS playback stream error:', err);
   }
-}
+});
 
-// Feature flag for RxJS event-driven playback
-const USE_RXJS_PLAYBACK = process.env.USE_RXJS_PLAYBACK === 'true';
-
-let pollingInterval: NodeJS.Timeout | undefined;
-let rxjsSubscription: any;
-
-if (USE_RXJS_PLAYBACK) {
-  // RxJS event-driven mode
-  console.log('[HiddenPreload] Using RxJS event-driven playback monitoring');
-
-  const playback$ = createPlaybackObservable();
-  rxjsSubscription = playback$.subscribe({
-    next: (playbackInfo) => {
-      // Apply safety guard: force end of track if position exceeds official duration
-      const officialDur = (window as any)._officialDuration || 0;
-      if (officialDur > 0 && playbackInfo.position >= officialDur - 0.5) {
-        triggerAction('nexttrack');
-        return;
-      }
-
-      // Send IPC to main process
-      ipcRenderer.send('playback:state-changed', playbackInfo);
-    },
-    error: (err) => {
-      console.error('[HiddenPreload] RxJS playback stream error:', err);
-      // TODO: Add fallback or restart logic
-    }
-  });
-
-  // Cleanup subscription on window unload
-  const existingBeforeUnload = window.onbeforeunload;
-  window.addEventListener('beforeunload', () => {
-    if (rxjsSubscription) {
-      rxjsSubscription.unsubscribe();
-    }
-    if (existingBeforeUnload) {
-      existingBeforeUnload.call(window, null as any);
-    }
-  });
-} else {
-  // Legacy polling mode (100ms interval)
-  console.log('[HiddenPreload] Using legacy polling playback monitoring');
-  pollingInterval = setInterval(observePlayback, 100);
-}
+// Cleanup subscription on window unload
+window.addEventListener('beforeunload', () => {
+  if (rxjsSubscription) {
+    rxjsSubscription.unsubscribe();
+  }
+});
 
 // Playback Controls (STRICTLY Selector-less via MediaSession Hook)
 ipcRenderer.on('playback:play', () => {
@@ -363,6 +194,28 @@ ipcRenderer.on('playback:seek', (_event, seekTime: number) => {
     if (video) {
       video.currentTime = seekTime;
     }
+  }
+});
+
+// Listen for explicit like status updates from main process to sync local state
+ipcRenderer.on('playback:like-status-updating', (_event, status: string) => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const videoIdFromUrl = urlParams.get('v');
+  console.log(`[Preload] IPC like-status-updating received: ${status} (URL v=${videoIdFromUrl})`);
+
+  if (videoIdFromUrl) {
+    // 1. Trigger RxJS override (Sticky window)
+    manualLikeUpdate$.next({ videoId: videoIdFromUrl, status: status as any });
+
+    // 2. Enforcement: Force-update the DOM attribute so our own extractor sees it
+    // This helps Bridge the gap until the actual YTM UI (maybe) updates
+    const likeRenderer = document.querySelector('ytmusic-like-button-renderer');
+    if (likeRenderer) {
+      console.log(`[Preload] Enforcing DOM like-status attribute: ${status}`);
+      likeRenderer.setAttribute('like-status', status);
+    }
+  } else {
+    console.warn('[Preload] Could not find videoId from URL for manual like update');
   }
 });
 

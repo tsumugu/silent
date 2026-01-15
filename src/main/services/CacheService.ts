@@ -134,6 +134,10 @@ export class CacheService {
         return null;
     }
 
+    async deleteMetadata(key: string) {
+        await this.deleteEntry(key);
+    }
+
     private async deleteEntry(key: string) {
         const items = (this.store as any).get('items');
         const entry = items[key];

@@ -64,7 +64,24 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             } else {
                 // Home Mode
                 const homeData = await window.electronAPI.getHome();
-                setSections(homeData);
+
+                // Add Liked Music section at the top
+                const likedSection = {
+                    title: t.liked_music,
+                    contents: [{
+                        type: 'PLAYLIST' as const,
+                        title: t.liked_music,
+                        youtube_playlist_id: 'LM',
+                        thumbnails: [{
+                            url: 'https://www.gstatic.com/youtube/media/ytm/images/pbg/liked-music-@224.png',
+                            width: 224,
+                            height: 224
+                        }],
+                        author: 'YouTube Music'
+                    }]
+                };
+
+                setSections([likedSection, ...homeData]);
             }
         } catch (err) {
             console.error('Failed to fetch content:', err);

@@ -130,4 +130,47 @@ export class YTMusicClient {
 
         return await this.innertube.music.search(query);
     }
+
+    /**
+     * 楽曲にいいねをつける
+     */
+    async like(videoId: string): Promise<any> {
+        return this.setLikeStatus(videoId, 'LIKE');
+    }
+
+    /**
+     * 楽曲に低評価をつける
+     */
+    async dislike(videoId: string): Promise<any> {
+        return this.setLikeStatus(videoId, 'DISLIKE');
+    }
+
+    /**
+     * 評価を削除する
+     */
+    async removeRating(videoId: string): Promise<any> {
+        return this.setLikeStatus(videoId, 'INDIFFERENT');
+    }
+
+    /**
+     * 内部的な評価設定メソッド
+     * youtubei.js の InteractionManager が一部の環境で 400 Error (Invalid Target) を出すため、
+     * 直接 Actions API を叩く
+     */
+    public async setLikeStatus(videoId: string, status: 'LIKE' | 'DISLIKE' | 'INDIFFERENT'): Promise<any> {
+        await this.initialize();
+        if (!this.innertube) throw new Error('[YTMusicClient] Innertube not initialized');
+
+        // YouTube Music の評価用エンドポイント
+        // ステータスに応じてエンドポイントを切り替える
+        let endpoint = '/like/like';
+        if (status === 'DISLIKE') endpoint = '/like/dislike';
+        else if (status === 'INDIFFERENT') endpoint = '/like/removelike';
+
+        return await (this.innertube as any).actions.execute(endpoint, {
+            target: { videoId },
+            status: status,
+            client: 'YTMUSIC'
+        });
+    }
 }

@@ -47,6 +47,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getArtistDetails: (artistId: string) => ipcRenderer.invoke('ytmusic:get-artist-details', artistId),
   getSongDetails: (videoId: string) => ipcRenderer.invoke('ytmusic:get-song-details', videoId),
   search: (query: string) => ipcRenderer.invoke('ytmusic:search', query),
+  getLikedMusic: () => ipcRenderer.invoke('ytmusic:get-liked-music'),
+  setLikeStatus: (videoId: string, status: 'LIKE' | 'DISLIKE' | 'INDIFFERENT') => ipcRenderer.invoke('ytmusic:set-like-status', videoId, status),
   showLogin: () => ipcRenderer.send('ytmusic:show-login'),
   checkLogin: () => ipcRenderer.invoke('ytmusic:check-login'),
   onSessionUpdated: (callback: () => void) => {

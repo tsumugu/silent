@@ -88,6 +88,7 @@ export const translations = {
         new_releases: "New Releases",
         shuffle: "Shuffle",
         shuffle_play: "Shuffle Play",
+        liked_music: "Liked Music",
     },
     ja: {
         // App / Common
@@ -176,6 +177,7 @@ export const translations = {
         new_releases: "新着",
         shuffle: "シャッフル",
         shuffle_play: "シャッフル再生",
+        liked_music: "低評価を除く評価済みの曲",
     },
 };
 

@@ -193,6 +193,19 @@ export function setupIPCHandlers(
     return await ytMusicService.search(query);
   });
 
+  ipcMain.handle(IPCChannels.YT_GET_LIKED_MUSIC, async () => {
+    return await ytMusicService.getLikedMusic();
+  });
+
+  ipcMain.handle(IPCChannels.YT_SET_LIKE_STATUS, async (_event, videoId: string, status: 'LIKE' | 'DISLIKE' | 'INDIFFERENT') => {
+    const success = await ytMusicService.setLikeStatus(videoId, status);
+    if (success) {
+      // Update both persistent cache and live state
+      playbackService.updateEnrichedMetadata(videoId, { likeStatus: status });
+    }
+    return success;
+  });
+
   ipcMain.on(IPCChannels.YT_SHOW_LOGIN, () => {
     if (hiddenWindow.isDestroyed()) return;
     hiddenWindow.show();

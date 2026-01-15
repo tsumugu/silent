@@ -19,6 +19,7 @@ interface BaseMusicItem {
     title: string;
     thumbnails: MusicThumbnail[];
     subtitle?: string;
+    likeStatus?: 'LIKE' | 'DISLIKE' | 'INDIFFERENT';
 }
 
 /**

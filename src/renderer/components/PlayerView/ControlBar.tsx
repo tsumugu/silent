@@ -8,10 +8,13 @@ interface ControlBarProps {
   isVisible: boolean;
   isMini?: boolean;
   isShuffle?: boolean;
+  videoId?: string;
+  likeStatus?: 'LIKE' | 'DISLIKE' | 'INDIFFERENT';
 }
 
-export function ControlBar({ isPlaying, isLoading, isVisible, isMini, isShuffle }: ControlBarProps) {
+export function ControlBar({ isPlaying, isLoading, isVisible, isMini, isShuffle, videoId, likeStatus }: ControlBarProps) {
   const { t } = useTranslation();
+  const [isLikeLoading, setIsLikeLoading] = React.useState(false);
 
   const handleShuffle = () => {
     if (isLoading) return;
@@ -32,6 +35,17 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini, isShuffle 
     }
   };
 
+  const handleToggleLike = async () => {
+    if (!videoId || isLoading || isLikeLoading) return;
+    setIsLikeLoading(true);
+    try {
+      const nextStatus = likeStatus === 'LIKE' ? 'INDIFFERENT' : 'LIKE';
+      await window.electronAPI.setLikeStatus(videoId, nextStatus);
+    } finally {
+      setIsLikeLoading(false);
+    }
+  };
+
   const handleNext = () => {
     if (isLoading) return;
     window.electronAPI.playbackNext();
@@ -48,6 +62,31 @@ export function ControlBar({ isPlaying, isLoading, isVisible, isMini, isShuffle 
           exit={{ opacity: 0, y: 20 }}
           transition={{ duration: 0.3 }}
         >
+          {/* Like button */}
+          {!isMini && (
+            <button
+              onClick={handleToggleLike}
+              disabled={isLoading || !videoId || isLikeLoading}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 ${isLoading || !videoId || isLikeLoading ? 'opacity-30' : 'hover:scale-110'} ${likeStatus === 'LIKE' ? 'text-white bg-white/20' : 'text-white/40 hover:text-white/60'}`}
+              title={likeStatus === 'LIKE' ? 'Unlike' : 'Like'}
+              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            >
+              {isLikeLoading ? (
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              ) : (
+                <svg
+                  className="w-5 h-5 transition-transform active:scale-90"
+                  fill={likeStatus === 'LIKE' ? 'currentColor' : 'none'}
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={likeStatus === 'LIKE' ? 0 : 2}
+                >
+                  <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                </svg>
+              )}
+            </button>
+          )}
+
           {/* Shuffle button */}
           {!isMini && (
             <button

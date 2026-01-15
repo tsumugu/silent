@@ -39,6 +39,10 @@ export function createMetadataObservable(): Observable<MediaMetadata | null> {
         const urlParams = new URLSearchParams(window.location.search);
         const videoId = urlParams.get('v') || undefined;
 
+        // Extract like status from the like button renderer
+        const likeRenderer = playerBar.querySelector('ytmusic-like-button-renderer');
+        const likeStatus = likeRenderer?.getAttribute('like-status') as 'LIKE' | 'DISLIKE' | 'INDIFFERENT' | undefined;
+
         if (!title) return null;
 
         return {
@@ -47,6 +51,7 @@ export function createMetadataObservable(): Observable<MediaMetadata | null> {
           album,
           artwork,
           videoId,
+          likeStatus,
           albumId: undefined,  // Enriched by main process
           artistId: undefined  // Enriched by main process
         };

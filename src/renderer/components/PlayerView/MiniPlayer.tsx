@@ -14,6 +14,7 @@ interface MiniPlayerProps {
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     const { t } = useTranslation();
     const playbackInfo = usePlayerStore(state => state.playbackInfo);
+    const [isLikeLoading, setIsLikeLoading] = React.useState(false);
 
     // Hooks should be called unconditionally
     const metadata = playbackInfo?.metadata;
@@ -53,6 +54,18 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
         e.stopPropagation();
         if (isLoading) return;
         window.electronAPI.playbackNext();
+    };
+
+    const handleToggleLike = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!videoId || isLoading || isLikeLoading) return;
+        setIsLikeLoading(true);
+        try {
+            const nextStatus = metadata?.likeStatus === 'LIKE' ? 'INDIFFERENT' : 'LIKE';
+            await window.electronAPI.setLikeStatus(videoId, nextStatus);
+        } finally {
+            setIsLikeLoading(false);
+        }
     };
 
     return (
@@ -110,6 +123,27 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                 layoutId="player-controls"
                 className="flex items-center gap-1.5 sm:gap-3 relative z-10"
             >
+                <button
+                    onClick={handleToggleLike}
+                    disabled={isLoading || !videoId || isLikeLoading}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${isLoading || !videoId || isLikeLoading ? 'opacity-30' : 'hover:bg-black/20'} ${metadata?.likeStatus === 'LIKE' ? 'text-white' : 'text-white/40 hover:text-white/60'}`}
+                    title={metadata?.likeStatus === 'LIKE' ? 'Unlike' : 'Like'}
+                >
+                    {isLikeLoading ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        <svg
+                            className="w-4 h-4 transition-transform active:scale-90"
+                            fill={metadata?.likeStatus === 'LIKE' ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth={metadata?.likeStatus === 'LIKE' ? 0 : 2}
+                        >
+                            <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                        </svg>
+                    )}
+                </button>
+
                 <button
                     onClick={handlePrevious}
                     disabled={isLoading}

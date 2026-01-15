@@ -145,6 +145,12 @@ export class MusicMapper {
         const thumbnails = this.extractThumbnails(header.thumbnails || header.thumbnail || item.thumbnails || item.thumbnail);
         const subtitle = header.subtitle?.toString();
 
+        // 評価ステータスの抽出
+        let likeStatus: 'LIKE' | 'DISLIKE' | 'INDIFFERENT' | undefined;
+        if (item.is_liked === true || item.like_status === 'LIKE') likeStatus = 'LIKE';
+        else if (item.is_disliked === true || item.like_status === 'DISLIKE') likeStatus = 'DISLIKE';
+        else if (item.is_liked === false && item.is_disliked === false) likeStatus = 'INDIFFERENT';
+
         // ID の抽出 (タイプ判定の前に ID を取得しておく)
         let browseId = item.browse_id;
         let playlistId = item.playlist_id;
@@ -242,7 +248,8 @@ export class MusicMapper {
         const baseItem = {
             title,
             thumbnails,
-            subtitle
+            subtitle,
+            likeStatus
         };
 
         // タイプ別に discriminated union を構築

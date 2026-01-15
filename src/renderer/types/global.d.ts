@@ -30,6 +30,8 @@ declare global {
       getPlaylist: (playlistId: string) => Promise<MusicDetail | null>;
       getArtistDetails: (artistId: string) => Promise<MusicDetail | null>;
       getSongDetails: (videoId: string) => Promise<MusicItem | null>;
+      getLikedMusic: () => Promise<MusicDetail | null>;
+      setLikeStatus: (videoId: string, status: 'LIKE' | 'DISLIKE' | 'INDIFFERENT') => Promise<boolean>;
       search: (query: string) => Promise<{
         songs: MusicItem[];
         albums: MusicItem[];

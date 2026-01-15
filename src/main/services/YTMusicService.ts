@@ -312,6 +312,7 @@ export class YTMusicService {
                 const thumbnails = MusicMapper.extractThumbnails(basicInfo.thumbnail || basicInfo.thumbnails);
                 const rawArtists = basicInfo.author || basicInfo.artists || basicInfo.artist;
                 const artists = MusicMapper.normalizeArtists(rawArtists);
+                const likeStatus = basicInfo.like_status || (basicInfo.is_liked ? 'LIKE' : basicInfo.is_disliked ? 'DISLIKE' : 'INDIFFERENT');
 
                 let albumInfo = null;
                 if (basicInfo.album) {
@@ -327,7 +328,8 @@ export class YTMusicService {
                     thumbnails,
                     artists: artists.length > 0 ? artists : [{ name: 'Unknown Artist' }],
                     youtube_video_id: videoId,
-                    album: albumInfo || undefined
+                    album: albumInfo || undefined,
+                    likeStatus
                 };
 
                 // Quality Check: Fallback if IDs are missing
@@ -495,6 +497,31 @@ export class YTMusicService {
             console.error(`[YTMusicService] Search failed for query "${query}"`, e);
             return { songs: [], albums: [], playlists: [] };
         }
+    }
+
+    /**
+     * 楽曲の評価を設定する
+     */
+    async setLikeStatus(videoId: string, status: 'LIKE' | 'DISLIKE' | 'INDIFFERENT'): Promise<boolean> {
+        try {
+            await this.client.setLikeStatus(videoId, status);
+
+            // キャッシュをクリアして次回取得時に最新化されるように
+            await cacheService.deleteMetadata(`song:${videoId}`);
+
+            return true;
+        } catch (e) {
+            console.error(`[YTMusicService] Failed to set like status for ${videoId}`, e);
+            return false;
+        }
+    }
+
+    /**
+     * いいねした曲の一覧を取得
+     */
+    async getLikedMusic(): Promise<MusicDetail | null> {
+        // 'LM' は YouTube Music 特有の「いいねした曲」プレイリストID
+        return await this.getPlaylist('LM');
     }
 }
 

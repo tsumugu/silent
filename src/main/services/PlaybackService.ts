@@ -75,7 +75,12 @@ export class PlaybackService {
 
     // Apply cached enrichment immediately if available
     if (newVideoId === this.lastEnrichedVideoId && this.lastEnrichedMetadata) {
+      const incomingLikeStatus = playbackInfo.metadata?.likeStatus;
       playbackInfo.metadata = { ...this.lastEnrichedMetadata };
+      // Preserve live likeStatus if it exists, otherwise use cached
+      if (incomingLikeStatus !== undefined) {
+        playbackInfo.metadata.likeStatus = incomingLikeStatus;
+      }
     }
 
     // Apply safety guard for duration
@@ -109,7 +114,12 @@ export class PlaybackService {
     // Apply cached enrichment if available
     const videoId = playbackInfo.metadata?.videoId;
     if (videoId === this.lastEnrichedVideoId && this.lastEnrichedMetadata) {
+      const incomingLikeStatus = playbackInfo.metadata?.likeStatus;
       playbackInfo.metadata = { ...this.lastEnrichedMetadata };
+      // Preserve live likeStatus from DOM (hidden window)
+      if (incomingLikeStatus !== undefined) {
+        playbackInfo.metadata.likeStatus = incomingLikeStatus;
+      }
     }
 
     this.state = playbackInfo;
@@ -141,6 +151,11 @@ export class PlaybackService {
       } else {
         needsEnrichment = true;
       }
+    }
+
+    // Check if we need to enrich likeStatus
+    if (enrichedMetadata.likeStatus === undefined) {
+      needsEnrichment = true;
     }
 
     // Check if we need to enrich album ID
@@ -189,6 +204,9 @@ export class PlaybackService {
             enrichedMetadata.albumId = songDetails.album.youtube_browse_id;
             enrichedMetadata.collectionType = 'ALBUM';
           }
+          if (songDetails.likeStatus !== undefined) {
+            enrichedMetadata.likeStatus = songDetails.likeStatus;
+          }
           // Update reference duration with official data
           if (songDetails.duration?.seconds) {
             this.referenceDuration = songDetails.duration.seconds;
@@ -203,7 +221,8 @@ export class PlaybackService {
     const hasNewInfo =
       (enrichedMetadata.artists && enrichedMetadata.artists.length > 0 && !playbackInfo.metadata.artists?.length) ||
       (enrichedMetadata.albumId && !playbackInfo.metadata.albumId) ||
-      (enrichedMetadata.collectionType && !playbackInfo.metadata.collectionType);
+      (enrichedMetadata.collectionType && !playbackInfo.metadata.collectionType) ||
+      (enrichedMetadata.likeStatus !== playbackInfo.metadata.likeStatus);
 
     // Only broadcast if we have new information and version is still current
     if (hasNewInfo && version === this.enrichmentVersion) {
@@ -219,6 +238,31 @@ export class PlaybackService {
       };
 
       this.state = enrichedPlaybackInfo;
+      this.broadcast();
+    }
+  }
+
+  /**
+   * Manually update the enriched metadata cache (e.g. after a like action)
+   */
+  updateEnrichedMetadata(videoId: string, partialMetadata: Partial<MediaMetadata>): void {
+    if (videoId === this.lastEnrichedVideoId && this.lastEnrichedMetadata) {
+      this.lastEnrichedMetadata = {
+        ...this.lastEnrichedMetadata,
+        ...partialMetadata
+      };
+    }
+
+    // Also update current state if it matches
+    if (this.state && this.state.metadata?.videoId === videoId) {
+      if (partialMetadata.likeStatus !== undefined) {
+        // Tell hidden window to ignore its DOM state for a while to avoid race conditions
+        this.hiddenWindow?.webContents.send('playback:like-status-updating', partialMetadata.likeStatus);
+      }
+      this.state.metadata = {
+        ...this.state.metadata,
+        ...partialMetadata
+      };
       this.broadcast();
     }
   }

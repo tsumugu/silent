@@ -17,6 +17,7 @@ export interface MediaMetadata {
     collectionType?: 'ALBUM' | 'PLAYLIST';
     artwork?: MediaImage[];
     videoId?: string;
+    likeStatus?: 'LIKE' | 'DISLIKE' | 'INDIFFERENT';
 }
 
 // Playback state types
