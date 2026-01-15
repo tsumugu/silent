@@ -28,9 +28,17 @@ export class MusicMapper {
         } else if (data.contents && Array.isArray(data.contents)) {
             rawThumbnails = data.contents;
         } else if (typeof data === 'object') {
-            if (data.url) rawThumbnails = [data];
-            else if (data.thumbnails && Array.isArray(data.thumbnails)) rawThumbnails = data.thumbnails;
-            else rawThumbnails = Object.values(data).filter(v => v && typeof v === 'object' && (v as any).url);
+            if (data.url) {
+                rawThumbnails = [data];
+            } else if (data.thumbnails && Array.isArray(data.thumbnails)) {
+                rawThumbnails = data.thumbnails;
+            } else if (data.thumbnail && typeof data.thumbnail === 'object') {
+                if (data.thumbnail.thumbnails && Array.isArray(data.thumbnail.thumbnails)) {
+                    rawThumbnails = data.thumbnail.thumbnails;
+                } else if (data.thumbnail.url) {
+                    rawThumbnails = [data.thumbnail];
+                }
+            }
         }
 
         const thumbnails = rawThumbnails.map(t => {
@@ -136,13 +144,16 @@ export class MusicMapper {
     static mapToMusicItem(item: any, fallbackArtists?: MusicArtist[]): MusicItem | null {
         if (!item) return null;
 
-        // 詳細ビュー（Album/Playlist）の場合、メタデータが header に入っていることがある
         const header = item.header || item;
 
         const title = (header.title?.toString() || item.title?.toString() || item.name?.toString() || 'Untitled').trim();
         if (!title && !header.thumbnails && !item.thumbnails) return null;
 
-        const thumbnails = this.extractThumbnails(header.thumbnails || header.thumbnail || item.thumbnails || item.thumbnail);
+        // プレイリストアイテムなどの場合、item.thumbnails に正しいデータがある（header は親の情報の場合がある）
+        // そのため item を優先し、なければ header を見る
+        const thumbnails = this.extractThumbnails(
+            (item.thumbnails || item.thumbnail) || (item.header?.thumbnails || item.header?.thumbnail)
+        );
         const subtitle = header.subtitle?.toString();
 
         // 評価ステータスの抽出

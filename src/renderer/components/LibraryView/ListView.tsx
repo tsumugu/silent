@@ -34,6 +34,7 @@ export const ListView: React.FC<ListViewProps> = ({
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+    const [activeTab, setActiveTab] = useState<'home' | 'liked'>('home');
 
     const isSearchMode = !!(query && query.trim().length >= 1);
 
@@ -61,10 +62,22 @@ export const ListView: React.FC<ListViewProps> = ({
                     if (results.playlists.length > 0) mappedSections.push({ title: t.playlists, contents: results.playlists });
                 }
                 setSections(mappedSections);
-            } else {
+            } else if (activeTab === 'home') {
                 // Home Mode
                 const homeData = await window.electronAPI.getHome();
                 setSections(homeData);
+            } else if (activeTab === 'liked') {
+                // Liked Mode (LM Playlist)
+                const likedData = await window.electronAPI.getLikedMusic();
+                if (likedData) {
+                    // Convert playlist detail to sections format
+                    setSections([{
+                        title: t.liked_music,
+                        contents: likedData.tracks
+                    }]);
+                } else {
+                    setSections([]);
+                }
             }
         } catch (err) {
             console.error('Failed to fetch content:', err);
@@ -80,14 +93,12 @@ export const ListView: React.FC<ListViewProps> = ({
         fetchData();
 
         const unsub = window.electronAPI.onSessionUpdated(() => {
-
             fetchData();
         });
         return () => {
-
             unsub();
         };
-    }, [query]);
+    }, [query, activeTab]);
 
     // Login screen is handled locally if not logged in
     if (isLoggedIn === false) {
@@ -140,6 +151,24 @@ export const ListView: React.FC<ListViewProps> = ({
                     />
                 </div>
             </div>
+
+            {/* Tab Bar */}
+            {!isSearchMode && (
+                <div className="flex gap-6 px-8 mb-2">
+                    <button
+                        onClick={() => setActiveTab('home')}
+                        className={`pb-2 text-sm font-bold transition-all border-b-2 ${activeTab === 'home' ? 'text-white border-white' : 'text-white/40 border-transparent hover:text-white/60'}`}
+                    >
+                        {t.recommended}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('liked')}
+                        className={`pb-2 text-sm font-bold transition-all border-b-2 ${activeTab === 'liked' ? 'text-white border-white' : 'text-white/40 border-transparent hover:text-white/60'}`}
+                    >
+                        {t.liked_music}
+                    </button>
+                </div>
+            )}
 
             {/* List Content */}
             <div className="p-8 pb-32 pt-2">

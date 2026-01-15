@@ -1,20 +1,21 @@
 /**
  * Generates a stable and unique key for image caching.
  * Priority: browseId > playlistId > videoId > Metadata Hash
+ * Priority: videoId > browseId > playlistId > Metadata Hash
  */
 export function getImageCacheKey(
     title: string,
     artist?: string,
     ids?: { browseId?: string; videoId?: string; playlistId?: string }
 ): string {
-    // 1. YouTube Browse ID (Albums, Artists)
+    // 1. Video ID (Songs) - Highest priority
+    if (ids?.videoId) return ids.videoId;
+
+    // 2. YouTube Browse ID (Albums, Artists)
     if (ids?.browseId) return ids.browseId;
 
-    // 2. Playlist ID
+    // 3. Playlist ID (Playlists)
     if (ids?.playlistId) return ids.playlistId;
-
-    // 3. Video ID (Songs)
-    if (ids?.videoId) return ids.videoId;
 
     // 4. Fallback: Metadata-based hash (Deterministic)
     const t = (title || "").trim();

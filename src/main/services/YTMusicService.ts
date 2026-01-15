@@ -224,10 +224,12 @@ export class YTMusicService {
     /**
      * プレイリスト詳細の取得
      */
-    async getPlaylist(playlistId: string): Promise<MusicDetail | null> {
+    async getPlaylist(playlistId: string, skipCache = false): Promise<MusicDetail | null> {
         // 1. Check persistent cache
-        const cached = await cacheService.getMetadata<MusicDetail>(`playlist:${playlistId}`);
-        if (cached) return cached;
+        if (!skipCache) {
+            const cached = await cacheService.getMetadata<MusicDetail>(`playlist:${playlistId}`);
+            if (cached) return cached;
+        }
 
         try {
             const playlist: any = await this.client.getPlaylistRaw(playlistId);
@@ -274,7 +276,9 @@ export class YTMusicService {
 
             const finalResult = JSON.parse(JSON.stringify(result));
             // 2. Update persistent cache
-            await cacheService.setMetadata(`playlist:${playlistId}`, finalResult);
+            if (!skipCache) {
+                await cacheService.setMetadata(`playlist:${playlistId}`, finalResult);
+            }
 
             return finalResult;
         } catch (e) {
@@ -521,7 +525,8 @@ export class YTMusicService {
      */
     async getLikedMusic(): Promise<MusicDetail | null> {
         // 'LM' は YouTube Music 特有の「いいねした曲」プレイリストID
-        return await this.getPlaylist('LM');
+        // お気に入り一覧は頻繁に更新されるため、キャッシュをスキップして常に最新を取得する
+        return await this.getPlaylist('LM', true);
     }
 }
 

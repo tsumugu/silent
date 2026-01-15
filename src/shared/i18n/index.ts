@@ -177,7 +177,7 @@ export const translations = {
         new_releases: "新着",
         shuffle: "シャッフル",
         shuffle_play: "シャッフル再生",
-        liked_music: "低評価を除く評価済みの曲",
+        liked_music: "高評価した曲",
     },
 };
 
