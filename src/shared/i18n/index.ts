@@ -46,6 +46,12 @@ export const translations = {
         update_available: (v: string) => `New version available: v${v}`,
         update_up_to_date: "Your version is up to date.",
         view_on_github: "View on GitHub",
+        cache_management: "Cache Management",
+        cache_size: "Current Cache Size",
+        clear_cache: "Clear Cache",
+        clearing: "Clearing...",
+        clear_cache_confirm: "Are you sure you want to clear the cache? This will reset all temporarily saved metadata and images.",
+        cache_description: "Metadata is cached for 24 hours, and images are cached for 3 days.",
 
         // Preferences - Mode
         mode: "Mode",
@@ -126,6 +132,12 @@ export const translations = {
         update_available: (v: string) => `新しいバージョンが利用可能です: v${v}`,
         update_up_to_date: "現在のバージョンは最新です。",
         view_on_github: "GitHubで見る",
+        cache_management: "キャッシュ管理",
+        cache_size: "現在のキャッシュサイズ",
+        clear_cache: "キャッシュをクリア",
+        clearing: "削除中...",
+        clear_cache_confirm: "キャッシュをクリアしてもよろしいですか？保存されているメタデータや画像がリセットされます。",
+        cache_description: "メタデータは24時間、画像は3日間保持されます。",
 
         // Preferences - Mode
         mode: "表示モード",

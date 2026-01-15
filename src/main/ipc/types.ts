@@ -43,4 +43,8 @@ export enum IPCChannels {
   SETTINGS_REQUEST_RESTART = 'settings:request-restart',
   APP_GET_VERSION = 'app:get-version',
   APP_CHECK_FOR_UPDATES = 'app:check-for-updates',
+
+  // Cache
+  CACHE_CLEAR = 'cache:clear',
+  CACHE_GET_SIZE = 'cache:get-size',
 }

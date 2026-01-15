@@ -46,6 +46,8 @@ declare global {
       requestRestart: () => Promise<void>;
       getVersion: () => Promise<string>;
       checkForUpdates: () => Promise<any>;
+      clearCache: () => Promise<boolean>;
+      getCacheSize: () => Promise<number>;
     };
   }
 }

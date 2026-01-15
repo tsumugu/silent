@@ -5,6 +5,7 @@ import DisplayModeSection from './DisplayModeSection';
 import ContentSection from './ContentSection';
 import MenuBarSection from './MenuBarSection';
 import LaunchSection from './LaunchSection';
+import CacheSection from './CacheSection';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const PreferencesView: React.FC = () => {
@@ -126,6 +127,7 @@ const PreferencesView: React.FC = () => {
               settings={settings}
               onUpdate={handleSettingsUpdate}
             />
+            <CacheSection />
           </section>
 
           {/* Mode Section */}

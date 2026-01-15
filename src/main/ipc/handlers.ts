@@ -5,6 +5,7 @@ import { AppSettings } from '../../shared/types/settings';
 
 import { ytMusicService } from '../services/YTMusicService';
 import { settingsService } from '../services/SettingsService';
+import { cacheService } from '../services/CacheService';
 import { trayService } from '../services/TrayService';
 import { playbackService } from '../services/PlaybackService';
 import { MusicArtist, MusicItem, isSongItem, isAlbumItem, isPlaylistItem, isChartItem, isRadioItem } from '../../shared/types/music';
@@ -123,6 +124,10 @@ export function setupIPCHandlers(
 
   ipcMain.handle(IPCChannels.IMAGE_PROXY_FETCH, async (_event, url: string) => {
     try {
+      // 1. Check Cache
+      const cached = await cacheService.getImage(url);
+      if (cached) return cached;
+
       const response = await net.fetch(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -139,7 +144,12 @@ export function setupIPCHandlers(
       const base64 = Buffer.from(buffer).toString('base64');
       const contentType = response.headers.get('content-type') || 'image/jpeg';
 
-      return `data:${contentType};base64,${base64}`;
+      const dataUrl = `data:${contentType};base64,${base64}`;
+
+      // 2. Store in cache
+      await cacheService.setImage(url, dataUrl);
+
+      return dataUrl;
     } catch (err) {
       console.error('Image proxy fetch error:', err);
       throw err;
@@ -397,5 +407,18 @@ export function setupIPCHandlers(
       console.error('[Main] Update check failed:', error);
       throw error;
     }
+  });
+
+  // ========================================
+  // Cache Management
+  // ========================================
+
+  ipcMain.handle(IPCChannels.CACHE_CLEAR, async () => {
+    await cacheService.clearAll();
+    return true;
+  });
+
+  ipcMain.handle(IPCChannels.CACHE_GET_SIZE, async () => {
+    return await cacheService.getCacheSize();
   });
 }

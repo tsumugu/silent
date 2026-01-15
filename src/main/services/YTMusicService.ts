@@ -1,6 +1,7 @@
 import { MusicItem, MusicArtist, MusicDetail, isAlbumItem, isSongItem } from '../../shared/types/music';
 import { YTMusicClient } from '../infrastructure/YTMusicClient';
 import { MusicMapper } from '../../shared/mappers/musicMapper';
+import { cacheService } from './CacheService';
 
 /**
  * YouTube Music サービス (Application Layer)
@@ -74,6 +75,10 @@ export class YTMusicService {
      * アルバム詳細の取得
      */
     async getAlbumDetails(albumId: string): Promise<MusicDetail | null> {
+        // 1. Check persistent cache
+        const cached = await cacheService.getMetadata<MusicDetail>(`album:${albumId}`);
+        if (cached) return cached;
+
         try {
             const album: any = await this.client.getAlbumRaw(albumId);
 
@@ -145,7 +150,11 @@ export class YTMusicService {
                 (result as any).youtube_playlist_id = playlistId;
             }
 
-            return JSON.parse(JSON.stringify(result));
+            const finalResult = JSON.parse(JSON.stringify(result));
+            // 2. Update persistent cache
+            await cacheService.setMetadata(`album:${albumId}`, finalResult);
+
+            return finalResult;
         } catch (e) {
             console.warn(`[YTMusicService] Failed to fetch as album ${albumId}, trying as playlist...`, e);
             try {
@@ -162,6 +171,10 @@ export class YTMusicService {
      * アーティスト詳細の取得
      */
     async getArtistDetails(artistId: string): Promise<MusicDetail | null> {
+        // 1. Check persistent cache
+        const cached = await cacheService.getMetadata<MusicDetail>(`artist:${artistId}`);
+        if (cached) return cached;
+
         try {
             const artist: any = await this.client.getArtistRaw(artistId);
 
@@ -197,7 +210,11 @@ export class YTMusicService {
                 sections: sections.map((s: { title: string, contents: MusicItem[] }) => ({ title: s.title, items: s.contents }))
             };
 
-            return JSON.parse(JSON.stringify(result));
+            const finalResult = JSON.parse(JSON.stringify(result));
+            // 2. Update persistent cache
+            await cacheService.setMetadata(`artist:${artistId}`, finalResult);
+
+            return finalResult;
         } catch (e) {
             console.error(`[YTMusicService] Failed to get artist details for ${artistId}`, e);
             return null;
@@ -208,6 +225,10 @@ export class YTMusicService {
      * プレイリスト詳細の取得
      */
     async getPlaylist(playlistId: string): Promise<MusicDetail | null> {
+        // 1. Check persistent cache
+        const cached = await cacheService.getMetadata<MusicDetail>(`playlist:${playlistId}`);
+        if (cached) return cached;
+
         try {
             const playlist: any = await this.client.getPlaylistRaw(playlistId);
             const header = playlist.header;
@@ -251,7 +272,11 @@ export class YTMusicService {
             // Ensure playlist ID is on the detail object
             (result as any).youtube_playlist_id = playlistId;
 
-            return JSON.parse(JSON.stringify(result));
+            const finalResult = JSON.parse(JSON.stringify(result));
+            // 2. Update persistent cache
+            await cacheService.setMetadata(`playlist:${playlistId}`, finalResult);
+
+            return finalResult;
         } catch (e) {
             console.warn(`[YTMusicService] Failed to get playlist ${playlistId}`, e);
             return null;
@@ -262,7 +287,11 @@ export class YTMusicService {
      * 楽曲詳細の取得 (キャッシュ付き)
      */
     async getSongDetails(videoId: string): Promise<MusicItem | null> {
-        // 1. Check completed cache
+        // Check persistent cache first
+        const persistentCached = await cacheService.getMetadata<MusicItem>(`song:${videoId}`);
+        if (persistentCached) return persistentCached;
+
+        // 1. Check completed memory cache
         if (this.songDetailsCache.has(videoId)) {
             return this.songDetailsCache.get(videoId)!;
         }
@@ -325,6 +354,8 @@ export class YTMusicService {
 
                 const result = JSON.parse(JSON.stringify(musicItem));
                 this.songDetailsCache.set(videoId, result);
+                // Update persistent cache
+                await cacheService.setMetadata(`song:${videoId}`, result);
                 return result;
             } catch (e) {
                 console.error(`[YTMusicService] Failed to get song details for ${videoId}`, e);

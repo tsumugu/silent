@@ -68,4 +68,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('settings:changed', listener);
   },
   requestRestart: () => ipcRenderer.invoke('settings:request-restart'),
+  clearCache: () => ipcRenderer.invoke('cache:clear'),
+  getCacheSize: () => ipcRenderer.invoke('cache:get-size'),
 });
