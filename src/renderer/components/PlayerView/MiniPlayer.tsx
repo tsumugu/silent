@@ -61,7 +61,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
             onClick={onClick}
             className="absolute bottom-4 left-4 right-4 h-16 bg-white/5 backdrop-blur-[80px] backdrop-saturate-150 rounded-xl flex items-center px-4 cursor-pointer z-40 shadow-xl overflow-hidden group"
             style={{
-                background: `linear-gradient(135deg, ${colors.primary}cc 0%, ${colors.secondary}cc 100%)`
+                background: `linear-gradient(135deg, ${colors.primary}cc 0%, ${colors.secondary}cc 50%, ${colors.tertiary}cc 100%)`
             }}
         >
             {/* Hover overlay for better interaction feedback */}

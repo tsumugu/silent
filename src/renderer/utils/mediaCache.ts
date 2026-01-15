@@ -7,6 +7,8 @@ export interface MediaCacheItem {
     colors?: {
         primary: string;
         secondary: string;
+        tertiary: string;
+        quaternary: string;
     };
     artworkUrl?: string;
     blobUrl?: string;
@@ -45,8 +47,8 @@ class MediaCache extends EventEmitter {
         return this.cache.get(id)?.colors;
     }
 
-    setColors(id: string, primary: string, secondary: string) {
-        this.set(id, { colors: { primary, secondary } });
+    setColors(id: string, primary: string, secondary: string, tertiary: string, quaternary: string) {
+        this.set(id, { colors: { primary, secondary, tertiary, quaternary } });
     }
 
     getArtworkUrl(id: string) {
@@ -119,9 +121,10 @@ class MediaCache extends EventEmitter {
 
                     const primary = palette.Vibrant?.hex || palette.LightVibrant?.hex || '#ffffff';
                     const secondary = palette.DarkVibrant?.hex || palette.Muted?.hex || palette.DarkMuted?.hex || '#1a1a1a';
+                    const tertiary = palette.Muted?.hex || palette.DarkMuted?.hex || secondary;
+                    const quaternary = palette.LightVibrant?.hex || palette.LightMuted?.hex || primary;
 
-
-                    this.setColors(id, primary, secondary);
+                    this.setColors(id, primary, secondary, tertiary, quaternary);
                 }
 
 

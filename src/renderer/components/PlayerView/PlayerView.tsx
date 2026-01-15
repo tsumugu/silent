@@ -11,6 +11,61 @@ import { getImageCacheKey } from '../../../shared/utils/imageKey';
 import { MusicItem, MusicArtist } from '../../../shared/types/music';
 import { useTranslation } from '../../hooks/useTranslation';
 
+interface MeshBackgroundProps {
+  colors: {
+    primary: string;
+    secondary: string;
+    tertiary: string;
+    quaternary: string;
+  };
+}
+
+const MeshBackground: React.FC<MeshBackgroundProps> = ({ colors }) => {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <motion.div
+        className="absolute inset-0 opacity-50"
+        animate={{
+          scale: [1, 1.2, 1],
+          rotate: [0, 90, 0],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "linear"
+        }}
+        style={{
+          background: `radial-gradient(circle at 0% 0%, ${colors.primary} 0%, transparent 50%),
+                       radial-gradient(circle at 100% 0%, ${colors.secondary} 0%, transparent 50%),
+                       radial-gradient(circle at 100% 100%, ${colors.tertiary} 0%, transparent 50%),
+                       radial-gradient(circle at 0% 100%, ${colors.quaternary} 0%, transparent 50%)`,
+          filter: 'blur(60px)',
+        }}
+      />
+
+      {/* Dynamic Wiggling Blobs */}
+      <motion.div
+        className="absolute w-[80%] h-[80%] rounded-full opacity-30"
+        style={{ background: colors.primary, top: '10%', left: '10%', filter: 'blur(80px)' }}
+        animate={{
+          x: [0, 50, -30, 0],
+          y: [0, -40, 60, 0],
+        }}
+        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute w-[70%] h-[70%] rounded-full opacity-30"
+        style={{ background: colors.secondary, bottom: '5%', right: '5%', filter: 'blur(80px)' }}
+        animate={{
+          x: [0, -60, 40, 0],
+          y: [0, 30, -50, 0],
+        }}
+        transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+};
+
 interface PlayerViewProps {
   onClose?: () => void;
   onNavigateToAlbum?: (albumItem: MusicItem) => void;
@@ -106,15 +161,13 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
     <motion.div
       layoutId="player-shell"
       className="absolute inset-0 z-50 w-full h-full flex items-center justify-center overflow-hidden"
-      style={{
-        background: `linear-gradient(-135deg, ${colors.primary}B3 0%, ${colors.secondary}B3 100%)`
-      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div
-        className="absolute inset-0 opacity-20 transition-all duration-1000"
-      />
+      <MeshBackground colors={colors} />
+
+      {/* Dark overlay for depth and legibility */}
+      <div className="absolute inset-0" />
 
       {/* Close Button - Absolute Position */}
       <AnimatePresence>

@@ -6,6 +6,8 @@ interface TrackAssets {
     colors: {
         primary: string;
         secondary: string;
+        tertiary: string;
+        quaternary: string;
     };
     isLoading: boolean;
 }
@@ -13,6 +15,8 @@ interface TrackAssets {
 const DEFAULT_COLORS = {
     primary: '#1a1a1a',
     secondary: '#2a2a2a',
+    tertiary: '#3a3a3a',
+    quaternary: '#1a1a1a',
 };
 
 export function useTrackAssets(rawImageUrl: string | null, id?: string | null): TrackAssets {
