@@ -20,20 +20,17 @@ export function SeekBar({ currentTime, duration, isVisible, isPlaying, videoId, 
   const animationFrameRef = useRef<number | undefined>(undefined);
   const prevVideoIdRef = useRef(videoId);
 
-  // Reset visual time when track changes (videoId changes)
+  // Sync visual time with currentTime from Main Process, but reset on track change
   React.useEffect(() => {
     if (prevVideoIdRef.current !== videoId) {
       setVisualTime(0);
       lastUpdateTimeRef.current = Date.now();
       prevVideoIdRef.current = videoId;
+    } else {
+      setVisualTime(currentTime);
+      lastUpdateTimeRef.current = Date.now();
     }
-  }, [videoId]);
-
-  // Sync visual time with currentTime from Main Process
-  React.useEffect(() => {
-    setVisualTime(currentTime);
-    lastUpdateTimeRef.current = Date.now();
-  }, [currentTime]);
+  }, [currentTime, videoId]);
 
   // Smooth interpolation loop (only when playing)
   React.useEffect(() => {

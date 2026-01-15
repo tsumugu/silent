@@ -1,7 +1,7 @@
 import { merge, combineLatest, fromEvent, EMPTY, Observable } from 'rxjs';
 import {
   switchMap, map, filter, distinctUntilChanged,
-  debounceTime, catchError, shareReplay, startWith
+  debounceTime, catchError, shareReplay, startWith, scan
 } from 'rxjs/operators';
 import { PlaybackInfo } from '../../shared/types/playback';
 import { createVideoDetector } from './video-detector';
@@ -76,14 +76,42 @@ export function createPlaybackObservable(): Observable<PlaybackInfo> {
       if (!metadata) return null;
 
       const playbackState = video.paused ? 'paused' : 'playing';
+      let position = video.currentTime || 0;
 
+      // Synchronization guard: If videoId changed but currentTime is still high, it's stale
+      // We need a way to track the previous videoId in the stream
       return {
         metadata,
         playbackState: playbackState as any,
-        position: video.currentTime || 0,
+        position,
         duration: video.duration || 0,
       };
     }),
+
+    // Detect track changes and fix stale positions (Sticky Transition)
+    scan((acc: (PlaybackInfo & { isTransitioning?: boolean }) | null, current: PlaybackInfo | null) => {
+      if (!current) return null;
+      if (!acc) return current;
+
+      const prevVideoId = acc.metadata?.videoId;
+      const currVideoId = current.metadata?.videoId;
+      let isTransitioning = acc.isTransitioning || false;
+
+      // Track changed!
+      if (prevVideoId && currVideoId && prevVideoId !== currVideoId) {
+        isTransitioning = true;
+      }
+
+      if (isTransitioning) {
+        if (current.position < 1.0) {
+          isTransitioning = false; // Video element reset
+        } else {
+          return { ...current, position: 0, isTransitioning: true };
+        }
+      }
+
+      return { ...current, isTransitioning: false };
+    }, null as (PlaybackInfo & { isTransitioning?: boolean }) | null),
 
     // Filter out null states (no metadata available)
     filter((state: PlaybackInfo | null): state is PlaybackInfo => state !== null),

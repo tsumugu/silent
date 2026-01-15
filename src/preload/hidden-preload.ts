@@ -213,6 +213,21 @@ function observePlayback() {
       return;
     }
 
+    // Guard against stale position on track change
+    const currentVideoId = playbackInfo.metadata?.videoId;
+    if (currentVideoId && currentVideoId !== (window as any)._lastReportedVideoId) {
+      (window as any)._isTransitioning = true;
+      (window as any)._lastReportedVideoId = currentVideoId;
+    }
+
+    if ((window as any)._isTransitioning) {
+      if (video.currentTime < 1.0) {
+        (window as any)._isTransitioning = false;
+      } else {
+        playbackInfo.position = 0;
+      }
+    }
+
     lastReportedDuration = playbackInfo.duration;
     const currentState = JSON.stringify(playbackInfo);
     lastStateText = currentState;
