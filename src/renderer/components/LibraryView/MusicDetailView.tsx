@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     MusicDetail,
     MusicItem,
@@ -13,6 +13,7 @@ import { useMusicStore } from '../../store/musicStore';
 import { useTranslation } from '../../hooks/useTranslation';
 import { usePlayerStore } from '../../store/playerStore';
 import { useLikeStore } from '../../store/likeStore';
+import { getShareUrl, getCollectionShareUrl } from '../../utils/share';
 
 interface MusicDetailViewProps {
     id: string;
@@ -31,6 +32,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
     const [likeLoading, setLikeLoading] = useState<Record<string, boolean>>({});
+    const [showCopied, setShowCopied] = useState<string | null>(null); // null, 'collection', or videoId
     const { setLikeStatus: setGlobalLikeStatus, getLikeStatus: getGlobalLikeStatus } = useLikeStore();
 
     // Get cache actions from store
@@ -143,6 +145,19 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
         } finally {
             setLikeLoading(prev => ({ ...prev, [videoId]: false }));
         }
+    };
+
+    const handleShare = (e: React.MouseEvent, targetId: string, shareType: 'track' | 'collection') => {
+        e.stopPropagation();
+        const url = shareType === 'track'
+            ? getShareUrl(targetId, id) // Use current album/playlist ID as context
+            : getCollectionShareUrl(id, type);
+
+        navigator.clipboard.writeText(url).then(() => {
+            const feedbackId = shareType === 'collection' ? 'collection' : targetId;
+            setShowCopied(feedbackId);
+            setTimeout(() => setShowCopied(null), 1000);
+        });
     };
 
     if (!data && !loading && !isEntering && !initialItem) {
@@ -267,15 +282,62 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                 </svg>
                                 {t.shuffle_play}
                             </button>
+                            <button
+                                onClick={(e) => handleShare(e, id, 'collection')}
+                                className={`w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition-all active:scale-95 relative ${isGlobalLoading ? 'opacity-50' : ''}`}
+                                title={t.share}
+                            >
+                                <AnimatePresence mode="wait">
+                                    {showCopied === 'collection' ? (
+                                        <motion.svg
+                                            key="check"
+                                            initial={{ scale: 0.5, opacity: 0, rotate: -45 }}
+                                            animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                            exit={{ scale: 0.5, opacity: 0, rotate: 45 }}
+                                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                                            className="w-5 h-5 text-white"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                            strokeWidth={2.5}
+                                        >
+                                            <motion.path
+                                                initial={{ pathLength: 0 }}
+                                                animate={{ pathLength: 1 }}
+                                                transition={{ duration: 0.15, delay: 0.05, ease: 'easeOut' }}
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                d="M5 13l4 4L19 7"
+                                            />
+                                        </motion.svg>
+                                    ) : (
+                                        <motion.svg
+                                            key="share"
+                                            initial={{ scale: 0.8, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            exit={{ scale: 0.8, opacity: 0 }}
+                                            transition={{ duration: 0.15, ease: 'easeOut' }}
+                                            className="w-5 h-5 transition-transform active:scale-90"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                            strokeWidth={2}
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                        </motion.svg>
+                                    )}
+                                </AnimatePresence>
+                            </button>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-[3rem_1fr_4rem_4rem] gap-4 px-4 py-3 border-b border-white/5 text-white/30 text-[10px] uppercase tracking-widest font-bold mb-2">
+                <div className="grid grid-cols-[3rem_1fr_5.5rem_3.5rem_3.5rem] gap-4 px-3 py-3 border-b border-white/5 text-white/30 text-[10px] uppercase tracking-widest font-bold mb-2">
                     <div className="text-center">#</div>
                     <div>{t.title_label}</div>
-                    <div className="text-center"></div>
                     <div className="text-right">{t.time_label}</div>
+                    <div className="text-center"></div>
+                    <div className="text-center"></div>
                 </div>
 
                 {/* Song List or Loader */}
@@ -301,7 +363,7 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.03 }}
-                                        className={`group grid grid-cols-[3rem_1fr_4rem_4rem] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-all active:scale-[0.995] ${isGlobalLoading ? 'opacity-40 blur-[0.5px] pointer-events-none' : ''}`}
+                                        className={`group grid grid-cols-[3rem_1fr_5.5rem_3.5rem_3.5rem] gap-4 items-center p-3 rounded-lg hover:bg-white/5 cursor-pointer transition-all active:scale-[0.995] ${isGlobalLoading ? 'opacity-40 blur-[0.5px] pointer-events-none' : ''}`}
                                         onClick={() => {
                                             if (!isGlobalLoading) onPlaySong(song);
                                         }}
@@ -336,13 +398,17 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                             </div>
                                         </div>
 
+                                        <div className="text-right text-white/30 text-xs font-mono group-hover:text-white/60">
+                                            {isSongItem(song) ? (song.duration?.text || '--:--') : '--:--'}
+                                        </div>
+
                                         {/* Like Button */}
-                                        <div className="flex justify-center">
+                                        <div className="flex justify-end">
                                             {isSongItem(song) && (
                                                 <button
                                                     onClick={(e) => handleToggleLike(e, song)}
                                                     disabled={likeLoading[videoId]}
-                                                    className={`p-2 rounded-full hover:bg-white/10 transition-all ${((getGlobalLikeStatus(videoId) || song.likeStatus) === 'LIKE') ? 'text-white' : 'text-white/10 group-hover:text-white/30 hover:!text-white'}`}
+                                                    className={`p-2 rounded-full hover:bg-white/10 transition-all ${((getGlobalLikeStatus(videoId) || song.likeStatus) === 'LIKE') ? 'text-white' : 'text-white/30 group-hover:text-white/60 hover:!text-white'}`}
                                                 >
                                                     {likeLoading[videoId] ? (
                                                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
@@ -355,8 +421,56 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                             )}
                                         </div>
 
-                                        <div className="text-right text-white/30 text-xs font-mono group-hover:text-white/60">
-                                            {isSongItem(song) ? (song.duration?.text || '--:--') : '--:--'}
+                                        {/* Share Button */}
+                                        <div className="flex justify-end relative">
+                                            {isSongItem(song) && (
+                                                <button
+                                                    onClick={(e) => handleShare(e, song.youtube_video_id, 'track')}
+                                                    className="p-2 rounded-full text-white/30 group-hover:text-white/60 hover:!text-white hover:bg-white/10 transition-all flex items-center justify-center min-w-[36px] min-h-[36px]"
+                                                    title={t.share}
+                                                >
+                                                    <AnimatePresence mode="wait">
+                                                        {showCopied === song.youtube_video_id ? (
+                                                            <motion.svg
+                                                                key="check"
+                                                                initial={{ scale: 0.5, opacity: 0, rotate: -45 }}
+                                                                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                                                exit={{ scale: 0.5, opacity: 0, rotate: 45 }}
+                                                                transition={{ duration: 0.15, ease: 'easeOut' }}
+                                                                className="w-4 h-4 text-white"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                                strokeWidth={2.5}
+                                                            >
+                                                                <motion.path
+                                                                    initial={{ pathLength: 0 }}
+                                                                    animate={{ pathLength: 1 }}
+                                                                    transition={{ duration: 0.15, delay: 0.05, ease: 'easeOut' }}
+                                                                    strokeLinecap="round"
+                                                                    strokeLinejoin="round"
+                                                                    d="M5 13l4 4L19 7"
+                                                                />
+                                                            </motion.svg>
+                                                        ) : (
+                                                            <motion.svg
+                                                                key="share"
+                                                                initial={{ scale: 0.8, opacity: 0 }}
+                                                                animate={{ scale: 1, opacity: 1 }}
+                                                                exit={{ scale: 0.8, opacity: 0 }}
+                                                                transition={{ duration: 0.15, ease: 'easeOut' }}
+                                                                className="w-4 h-4"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                viewBox="0 0 24 24"
+                                                                strokeWidth={2}
+                                                            >
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                                            </motion.svg>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </button>
+                                            )}
                                         </div>
                                     </motion.div>
                                 );

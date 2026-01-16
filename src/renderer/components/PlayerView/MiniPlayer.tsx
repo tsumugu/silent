@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../../hooks/useTranslation';
 import { usePlayerStore } from '../../store/playerStore';
 import { useLikeStore } from '../../store/likeStore';
@@ -7,6 +7,7 @@ import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
 import { MusicItem } from '../../../shared/types/music';
+import { getShareUrl } from '../../utils/share';
 
 interface MiniPlayerProps {
     onClick: () => void;
@@ -17,6 +18,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     const playbackInfo = usePlayerStore(state => state.playbackInfo);
     const { setLikeStatus: setGlobalLikeStatus } = useLikeStore();
     const [isLikeLoading, setIsLikeLoading] = React.useState(false);
+    const [showCopied, setShowCopied] = React.useState(false);
 
     // Hooks should be called unconditionally
     const metadata = playbackInfo?.metadata;
@@ -83,6 +85,18 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
         }
     };
 
+    const handleShare = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!videoId) return;
+        const listId = metadata?.playlistId || metadata?.albumId;
+        const url = getShareUrl(videoId, listId);
+
+        navigator.clipboard.writeText(url).then(() => {
+            setShowCopied(true);
+            setTimeout(() => setShowCopied(false), 1000);
+        });
+    };
+
     return (
         <motion.div
             layoutId="player-shell"
@@ -141,7 +155,7 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                 <button
                     onClick={handleToggleLike}
                     disabled={isLoading || !videoId || isLikeLoading}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${isLoading || !videoId || isLikeLoading ? 'opacity-30' : 'hover:bg-black/20'} ${metadata?.likeStatus === 'LIKE' ? 'text-white' : 'text-white/40 hover:text-white/60'}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${metadata?.likeStatus === 'LIKE' ? 'text-white' : 'text-white/70'} hover:enabled:bg-black/20 hover:text-white disabled:opacity-30 disabled:cursor-default`}
                     title={metadata?.likeStatus === 'LIKE' ? 'Unlike' : 'Like'}
                 >
                     {isLikeLoading ? (
@@ -157,6 +171,54 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
                             <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
                         </svg>
                     )}
+                </button>
+
+                <button
+                    onClick={handleShare}
+                    disabled={isLoading || !videoId}
+                    className="p-1.5 rounded-full flex items-center justify-center transition-all active:scale-95 min-w-[32px] min-h-[32px] text-white/70 hover:enabled:bg-black/20 hover:text-white disabled:opacity-30 disabled:cursor-default"
+                    title={t.share}
+                >
+                    <AnimatePresence mode="wait">
+                        {showCopied ? (
+                            <motion.svg
+                                key="check"
+                                initial={{ scale: 0.5, opacity: 0, rotate: -45 }}
+                                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                                exit={{ scale: 0.5, opacity: 0, rotate: 45 }}
+                                transition={{ duration: 0.15, ease: 'easeOut' }}
+                                className="w-4 h-4 text-white"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2.5}
+                            >
+                                <motion.path
+                                    initial={{ pathLength: 0 }}
+                                    animate={{ pathLength: 1 }}
+                                    transition={{ duration: 0.15, delay: 0.05, ease: 'easeOut' }}
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M5 13l4 4L19 7"
+                                />
+                            </motion.svg>
+                        ) : (
+                            <motion.svg
+                                key="share"
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                transition={{ duration: 0.15, ease: 'easeOut' }}
+                                className="w-4 h-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                            </motion.svg>
+                        )}
+                    </AnimatePresence>
                 </button>
 
                 <button

@@ -12,6 +12,7 @@ export interface MediaMetadata {
     artist?: string;
     album?: string;
     albumId?: string;
+    playlistId?: string;
     artistId?: string;
     artists?: MusicArtist[];
     collectionType?: 'ALBUM' | 'PLAYLIST';

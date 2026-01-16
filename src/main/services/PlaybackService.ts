@@ -165,12 +165,18 @@ export class PlaybackService {
         const mode = this.lastPlayContext.playMode;
         if (mode === 'ALBUM' || mode === 'PLAYLIST') {
           enrichedMetadata.collectionType = mode;
+          if (mode === 'PLAYLIST') {
+            enrichedMetadata.playlistId = this.lastPlayContext.albumId;
+          }
         }
       } else if ((isAlbumMode || isPlaylistMode) && this.lastPlayContext.albumId) {
         enrichedMetadata.albumId = this.lastPlayContext.albumId;
         const mode = this.lastPlayContext.playMode;
         if (mode === 'ALBUM' || mode === 'PLAYLIST') {
           enrichedMetadata.collectionType = mode;
+          if (mode === 'PLAYLIST') {
+            enrichedMetadata.playlistId = this.lastPlayContext.albumId;
+          }
         }
       } else {
         needsEnrichment = true;
@@ -179,6 +185,9 @@ export class PlaybackService {
       const mode = this.lastPlayContext.playMode;
       if ((isSameTrack || isAlbumMode || isPlaylistMode) && (mode === 'ALBUM' || mode === 'PLAYLIST')) {
         enrichedMetadata.collectionType = mode;
+        if (mode === 'PLAYLIST') {
+          enrichedMetadata.playlistId = enrichedMetadata.albumId;
+        }
       }
     }
 
@@ -203,6 +212,9 @@ export class PlaybackService {
           if (!enrichedMetadata.albumId && songDetails.album?.youtube_browse_id) {
             enrichedMetadata.albumId = songDetails.album.youtube_browse_id;
             enrichedMetadata.collectionType = 'ALBUM';
+          }
+          if (!enrichedMetadata.playlistId && (songDetails as any).youtube_playlist_id) {
+            enrichedMetadata.playlistId = (songDetails as any).youtube_playlist_id;
           }
           if (songDetails.likeStatus !== undefined) {
             enrichedMetadata.likeStatus = songDetails.likeStatus;

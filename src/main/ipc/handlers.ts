@@ -324,6 +324,7 @@ export function setupIPCHandlers(
         artwork: item.thumbnails.map(t => ({ src: t.url, sizes: `${t.width}x${t.height}` })),
         videoId: isSongItem(item) ? item.youtube_video_id : undefined,
         albumId: playContext.albumId,
+        playlistId: (item as any).youtube_playlist_id || (contextId?.startsWith('MPRE') ? undefined : contextId),
         collectionType: (playContext.playMode === 'ALBUM' || playContext.playMode === 'PLAYLIST') ? playContext.playMode : undefined,
       },
       playbackState: 'loading',
