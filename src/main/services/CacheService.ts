@@ -138,6 +138,15 @@ export class CacheService {
         await this.deleteEntry(key);
     }
 
+    async deleteByPrefix(prefix: string) {
+        const items = (this.store as any).get('items');
+        const keysToDelete = Object.keys(items).filter(key => key.startsWith(prefix));
+
+        for (const key of keysToDelete) {
+            await this.deleteEntry(key);
+        }
+    }
+
     private async deleteEntry(key: string) {
         const items = (this.store as any).get('items');
         const entry = items[key];

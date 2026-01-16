@@ -12,6 +12,7 @@ import { getImageCacheKey } from '../../../shared/utils/imageKey';
 import { useMusicStore } from '../../store/musicStore';
 import { useTranslation } from '../../hooks/useTranslation';
 import { usePlayerStore } from '../../store/playerStore';
+import { useLikeStore } from '../../store/likeStore';
 
 interface MusicDetailViewProps {
     id: string;
@@ -29,8 +30,8 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
     const [data, setData] = useState<MusicDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [isEntering, setIsEntering] = useState(true);
-    const [trackLikes, setTrackLikes] = useState<Record<string, 'LIKE' | 'DISLIKE' | 'INDIFFERENT'>>({});
     const [likeLoading, setLikeLoading] = useState<Record<string, boolean>>({});
+    const { setLikeStatus: setGlobalLikeStatus, getLikeStatus: getGlobalLikeStatus } = useLikeStore();
 
     // Get cache actions from store
     const {
@@ -123,22 +124,22 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
         const videoId = song.youtube_video_id;
         if (likeLoading[videoId]) return;
 
-        const currentStatus = trackLikes[videoId] || song.likeStatus || 'INDIFFERENT';
+        const currentStatus = getGlobalLikeStatus(videoId) || song.likeStatus || 'INDIFFERENT';
         const newStatus = currentStatus === 'LIKE' ? 'INDIFFERENT' : 'LIKE';
 
-        // Optimistic update
-        setTrackLikes(prev => ({ ...prev, [videoId]: newStatus }));
+        // Optimistic update to global store
+        setGlobalLikeStatus(videoId, newStatus);
         setLikeLoading(prev => ({ ...prev, [videoId]: true }));
 
         try {
             const success = await window.electronAPI.setLikeStatus(videoId, newStatus);
             if (!success) {
                 // Rollback on failure
-                setTrackLikes(prev => ({ ...prev, [videoId]: currentStatus }));
+                setGlobalLikeStatus(videoId, currentStatus);
             }
         } catch (error) {
             console.error('[MusicDetailView] Failed to toggle like:', error);
-            setTrackLikes(prev => ({ ...prev, [videoId]: currentStatus }));
+            setGlobalLikeStatus(videoId, currentStatus);
         } finally {
             setLikeLoading(prev => ({ ...prev, [videoId]: false }));
         }
@@ -341,12 +342,12 @@ export const MusicDetailView: React.FC<MusicDetailViewProps> = ({ id, type, init
                                                 <button
                                                     onClick={(e) => handleToggleLike(e, song)}
                                                     disabled={likeLoading[videoId]}
-                                                    className={`p-2 rounded-full hover:bg-white/10 transition-all ${((trackLikes[videoId] || song.likeStatus) === 'LIKE') ? 'text-white' : 'text-white/10 group-hover:text-white/30 hover:!text-white'}`}
+                                                    className={`p-2 rounded-full hover:bg-white/10 transition-all ${((getGlobalLikeStatus(videoId) || song.likeStatus) === 'LIKE') ? 'text-white' : 'text-white/10 group-hover:text-white/30 hover:!text-white'}`}
                                                 >
                                                     {likeLoading[videoId] ? (
                                                         <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                                                     ) : (
-                                                        <svg className="w-4 h-4" fill={(trackLikes[videoId] || song.likeStatus) === 'LIKE' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                                        <svg className="w-4 h-4" fill={(getGlobalLikeStatus(videoId) || song.likeStatus) === 'LIKE' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                                                             <path strokeLinecap="round" strokeLinejoin="round" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
                                                         </svg>
                                                     )}

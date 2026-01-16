@@ -2,6 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from '../../hooks/useTranslation';
 import { usePlayerStore } from '../../store/playerStore';
+import { useLikeStore } from '../../store/likeStore';
 import { useTrackAssets } from '../../hooks/useTrackAssets';
 import { useWindowDimensions } from '../../hooks/useWindowDimensions';
 import { getImageCacheKey } from '../../../shared/utils/imageKey';
@@ -14,6 +15,7 @@ interface MiniPlayerProps {
 export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     const { t } = useTranslation();
     const playbackInfo = usePlayerStore(state => state.playbackInfo);
+    const { setLikeStatus: setGlobalLikeStatus } = useLikeStore();
     const [isLikeLoading, setIsLikeLoading] = React.useState(false);
 
     // Hooks should be called unconditionally
@@ -59,10 +61,23 @@ export const MiniPlayer: React.FC<MiniPlayerProps> = ({ onClick }) => {
     const handleToggleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!videoId || isLoading || isLikeLoading) return;
+
+        const currentStatus = metadata?.likeStatus || 'INDIFFERENT';
+        const nextStatus = currentStatus === 'LIKE' ? 'INDIFFERENT' : 'LIKE';
+
+        // Optimistic update to global store
+        setGlobalLikeStatus(videoId, nextStatus);
         setIsLikeLoading(true);
+
         try {
-            const nextStatus = metadata?.likeStatus === 'LIKE' ? 'INDIFFERENT' : 'LIKE';
-            await window.electronAPI.setLikeStatus(videoId, nextStatus);
+            const success = await window.electronAPI.setLikeStatus(videoId, nextStatus);
+            if (!success) {
+                // Rollback on failure
+                setGlobalLikeStatus(videoId, currentStatus);
+            }
+        } catch (error) {
+            console.error('[MiniPlayer] Failed to toggle like:', error);
+            setGlobalLikeStatus(videoId, currentStatus);
         } finally {
             setIsLikeLoading(false);
         }

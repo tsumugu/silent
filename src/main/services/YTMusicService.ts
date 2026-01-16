@@ -39,17 +39,18 @@ export class YTMusicService {
             const homeFeed: any = await this.client.getHomeFeed();
 
             const sections = homeFeed.sections || [];
-            const result = sections.map((section: any) => {
+            const result = await Promise.all(sections.map(async (section: any) => {
                 const title = section.title?.toString() || section.header?.title?.toString() || 'Untitled Section';
                 const items = section.contents || section.items || [];
                 const contents = items
                     .map((item: any) => MusicMapper.mapToMusicItem(item))
                     .filter(Boolean);
 
-                return { title, contents };
-            }).filter((s: any) => s.contents.length > 0);
+                const enrichedContents = await this.enrichTracksWithLikes(contents);
+                return { title, contents: enrichedContents };
+            }));
 
-            return JSON.parse(JSON.stringify(result));
+            return JSON.parse(JSON.stringify(result.filter((s: any) => s.contents.length > 0)));
         } catch (e) {
             console.error('[YTMusicService] getHome failed:', e);
             return [];
@@ -139,10 +140,12 @@ export class YTMusicService {
                 return mapped;
             }).filter(Boolean) as MusicItem[];
 
+            const enrichedTracks = await this.enrichTracksWithLikes(tracks);
+
             const result: MusicDetail = {
                 ...musicItem,
                 description: header?.description?.toString(),
-                tracks: tracks,
+                tracks: enrichedTracks,
             };
 
             // Ensure playlist ID is on the detail object
@@ -190,15 +193,16 @@ export class YTMusicService {
 
             // Align with getHome logic: Map all sections dynamically
             const rawSections = artist.sections || [];
-            const sections = rawSections.map((section: any) => {
+            const sections = await Promise.all(rawSections.map(async (section: any) => {
                 const title = section.title?.toString() || section.header?.title?.toString() || 'Untitled Section';
                 const items = section.contents || section.items || [];
                 const contents = items
                     .map((item: any) => MusicMapper.mapToMusicItem(item))
                     .filter(Boolean) as MusicItem[];
 
-                return { title, contents };
-            }).filter((s: any) => s.contents.length > 0);
+                const enrichedContents = await this.enrichTracksWithLikes(contents);
+                return { title, contents: enrichedContents };
+            }));
 
             const result: MusicDetail = {
                 ...musicItem,
@@ -265,10 +269,12 @@ export class YTMusicService {
                 return mapped;
             }).filter(Boolean) as MusicItem[];
 
+            const enrichedTracks = await this.enrichTracksWithLikes(tracks);
+
             const result: MusicDetail = {
                 ...musicItem,
                 description: header?.description?.toString(),
-                tracks: tracks,
+                tracks: enrichedTracks,
             };
 
             // Ensure playlist ID is on the detail object
@@ -491,7 +497,7 @@ export class YTMusicService {
             findAndProcessShelves(searchResults);
 
             const result = {
-                songs: songs.slice(0, 20),
+                songs: await this.enrichTracksWithLikes(songs.slice(0, 20)),
                 albums: albums.slice(0, 20),
                 playlists: playlists.slice(0, 20),
             };
@@ -510,8 +516,16 @@ export class YTMusicService {
         try {
             await this.client.setLikeStatus(videoId, status);
 
-            // キャッシュをクリアして次回取得時に最新化されるように
+            // 1. 個別の楽曲のメタデータキャッシュを削除 (再取得を促す)
             await cacheService.deleteMetadata(`song:${videoId}`);
+
+            // 2. 「いいね」状態を永続キャッシュに保存
+            // これにより、アルバム詳細などを再取得した際にこの状態が優先される
+            await cacheService.setMetadata(`like:${videoId}`, status, 30 * 24 * 60 * 60 * 1000); // 30日間保持
+
+            // 3. アルバムとプレイリストのメタデータキャッシュも無効化
+            await cacheService.deleteByPrefix('album:');
+            await cacheService.deleteByPrefix('playlist:');
 
             return true;
         } catch (e) {
@@ -521,12 +535,39 @@ export class YTMusicService {
     }
 
     /**
+     * トラックリストに対してキャッシュされている「いいね」状態を適用する
+     */
+    private async enrichTracksWithLikes(tracks: MusicItem[]): Promise<MusicItem[]> {
+        return await Promise.all(tracks.map(async (track) => {
+            if (isSongItem(track)) {
+                const videoId = track.youtube_video_id;
+                const cachedStatus = await cacheService.getMetadata<'LIKE' | 'DISLIKE' | 'INDIFFERENT'>(`like:${videoId}`);
+                if (cachedStatus) {
+                    track.likeStatus = cachedStatus;
+                }
+            }
+            return track;
+        }));
+    }
+
+    /**
      * いいねした曲の一覧を取得
      */
     async getLikedMusic(): Promise<MusicDetail | null> {
         // 'LM' は YouTube Music 特有の「いいねした曲」プレイリストID
-        // お気に入り一覧は頻繁に更新されるため、キャッシュをスキップして常に最新を取得する
-        return await this.getPlaylist('LM', true);
+        const detail = await this.getPlaylist('LM', true);
+
+        // 初回同期: 取得した曲をすべて LIKE としてキャッシュに保存
+        if (detail && detail.tracks) {
+            for (const track of detail.tracks) {
+                if (isSongItem(track)) {
+                    // 効率のため非同期で回すが、await はしない (UI応答優先)
+                    cacheService.setMetadata(`like:${track.youtube_video_id}`, 'LIKE', 30 * 24 * 60 * 60 * 1000).catch(() => { });
+                }
+            }
+        }
+
+        return detail;
     }
 }
 
