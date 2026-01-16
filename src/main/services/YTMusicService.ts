@@ -336,7 +336,7 @@ export class YTMusicService {
                     type: 'SONG',
                     title,
                     thumbnails,
-                    artists: artists.length > 0 ? artists : [{ name: 'Unknown Artist' }],
+                    artists: artists.length > 0 ? artists : [{ name: '' }],
                     youtube_video_id: videoId,
                     album: albumInfo || undefined,
                     likeStatus
@@ -438,7 +438,7 @@ export class YTMusicService {
                                 }
 
                                 // Extract artist name from subtitle (format: "曲 • アーティスト名 • 時間")
-                                let artistName = 'Unknown Artist';
+                                let artistName = '';
                                 const subtitle = section.subtitle?.toString() || '';
                                 const subtitleParts = subtitle.split(' • ');
                                 if (subtitleParts.length >= 2) {

@@ -82,7 +82,7 @@ export class MusicMapper {
                         a.navigation_endpoint?.payload?.browseId ||
                         a.navigationEndpoint?.payload?.browseId
                 }))
-                .filter(a => a.name.length > 0 && a.name !== 'Unknown Artist' && a.name !== '[object Object]')
+                .filter(a => a.name.length > 0 && a.name !== 'Unknown Artist' && a.name !== 'アーティスト不明' && a.name !== '[object Object]')
             );
         } else if (typeof rawArtists === 'object') {
             // runs があればそこから抽出
@@ -97,14 +97,14 @@ export class MusicMapper {
                             a.navigationEndpoint?.payload?.browseId ||
                             a.id || a.browseId || a.browse_id
                     }))
-                    .filter((a: any) => a.name.length > 0 && a.name !== 'Unknown Artist')
+                    .filter((a: any) => a.name.length > 0 && a.name !== 'Unknown Artist' && a.name !== 'アーティスト不明')
                 );
             }
 
             // それ以外、または runs で取得できなかった場合に単体として処理
             if (artists.length === 0) {
                 const name = rawArtists.name?.toString().trim() || rawArtists.text?.toString().trim();
-                if (name && name.length > 0 && name !== 'Unknown Artist' && name !== '[object Object]') {
+                if (name && name.length > 0 && name !== 'Unknown Artist' && name !== 'アーティスト不明' && name !== '[object Object]') {
                     artists.push({
                         name,
                         id: rawArtists.id || rawArtists.browse_id ||
@@ -114,7 +114,7 @@ export class MusicMapper {
                     });
                 } else if (rawArtists.toString() !== '[object Object]') {
                     const toStringName = rawArtists.toString().trim();
-                    if (toStringName.length > 0 && toStringName !== 'Unknown Artist') {
+                    if (toStringName.length > 0 && toStringName !== 'Unknown Artist' && toStringName !== 'アーティスト不明') {
                         artists.push({
                             name: toStringName,
                             id: rawArtists.id || rawArtists.browse_id ||
@@ -127,7 +127,7 @@ export class MusicMapper {
             }
         } else if (typeof rawArtists === 'string') {
             const name = rawArtists.trim();
-            if (name && name.length > 0 && name !== 'Unknown Artist') {
+            if (name && name.length > 0 && name !== 'Unknown Artist' && name !== 'アーティスト不明') {
                 artists.push({
                     name,
                     id: undefined
@@ -250,7 +250,7 @@ export class MusicMapper {
                 if (type === 'PLAYLIST' || type === 'RADIO') {
                     finalArtists = [{ name: 'YouTube' }];
                 } else {
-                    finalArtists = [{ name: 'Unknown Artist' }];
+                    finalArtists = [{ name: '' }];
                 }
             }
         }

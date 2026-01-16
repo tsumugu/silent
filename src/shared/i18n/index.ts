@@ -35,7 +35,7 @@ export const translations = {
         play: "Play",
         pause: "Pause",
         unknown_title: "Unknown Title",
-        unknown_artist: "Unknown Artist",
+        unknown_artist: "",
 
         // Preferences - General
         preferences: "Preferences",
@@ -124,7 +124,7 @@ export const translations = {
         play: "再生",
         pause: "一時停止",
         unknown_title: "タイトル不明",
-        unknown_artist: "アーティスト不明",
+        unknown_artist: "",
 
         // Preferences - General
         preferences: "設定",
