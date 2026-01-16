@@ -347,6 +347,23 @@ export function setupIPCHandlers(
     trayService.updateTrack(loadingInfo.metadata);
 
     hiddenWindow.webContents.stop(); // Discard previous load/navigation
+
+    // 5. Ensure all current video elements are stopped and cleared before loading new content
+    // This prevents audio from previous tracks lingering after navigation
+    await hiddenWindow.webContents.executeJavaScript(`
+      (function() {
+        const videos = document.querySelectorAll('video');
+        videos.forEach(v => {
+          try {
+            v.pause();
+            v.src = "";
+            v.load();
+            v.remove(); // Also remove to be safe
+          } catch (e) {}
+        });
+      })();
+    `).catch(() => { });
+
     hiddenWindow.loadURL(url);
   });
 
