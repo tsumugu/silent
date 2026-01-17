@@ -48,6 +48,13 @@ export function setupIPCHandlers(
     }
   });
 
+  ipcMain.on(IPCChannels.WINDOW_SET_SHADOW, (event, hasShadow: boolean) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (win && !win.isDestroyed()) {
+      win.setHasShadow(hasShadow);
+    }
+  });
+
   // ========================================
   // Playback state updates: Hidden → All Windows
   // ========================================

@@ -6,6 +6,8 @@ export enum IPCChannels {
   WINDOW_CLOSE = 'window:close',
   FULLSCREEN_CHANGED = 'fullscreen-changed',
 
+  WINDOW_SET_VIBRANCY = 'window:set-vibrancy',
+  WINDOW_SET_SHADOW = 'window:set-shadow',
   // Playback state updates (Hidden → Main → UI)
   PLAYBACK_STATE_CHANGED = 'playback:state-changed',
   PLAYBACK_GET_STATE = 'playback:get-state',
@@ -35,7 +37,6 @@ export enum IPCChannels {
   YT_SESSION_UPDATED = 'ytmusic:session-updated',
   YT_SET_LIKE_STATUS = 'ytmusic:set-like-status',
   YT_GET_LIKED_MUSIC = 'ytmusic:get-liked-music',
-  WINDOW_SET_VIBRANCY = 'window:set-vibrancy',
 
   // Settings
   SETTINGS_GET = 'settings:get',

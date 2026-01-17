@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
   play: (item: any, contextId?: string, shuffle?: boolean) => ipcRenderer.send('ytmusic:play', item, contextId, shuffle),
   setVibrancy: (vibrancy: any) => ipcRenderer.send('window:set-vibrancy', vibrancy),
+  setShadow: (hasShadow: boolean) => ipcRenderer.send('window:set-shadow', hasShadow),
   getVersion: () => ipcRenderer.invoke('app:get-version'),
   checkForUpdates: () => ipcRenderer.invoke('app:check-for-updates'),
 

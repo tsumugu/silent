@@ -42,6 +42,7 @@ declare global {
       onSessionUpdated: (callback: () => void) => () => void;
       play: (item: MusicItem, contextId?: string, shuffle?: boolean) => void;
       setVibrancy: (vibrancy: 'under-window' | 'content' | 'sidebar' | 'menu' | 'popover' | 'hud' | 'sheet' | 'window' | 'dropdown' | 'tooltip' | 'device-discovery' | 'video' | 'selection' | 'titlebar' | null) => void;
+      setShadow: (hasShadow: boolean) => void;
       // Settings
       getSettings: () => Promise<AppSettings>;
       updateSettings: (settings: Partial<AppSettings>) => Promise<AppSettings>;

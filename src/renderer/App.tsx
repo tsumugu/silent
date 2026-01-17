@@ -123,6 +123,15 @@ export default function App() {
     }
   }, [isPlayerOpen]);
 
+  // Dynamically control window shadow based on player state
+  useEffect(() => {
+    if (isPlayerOpen) {
+      window.electronAPI.setShadow(false);
+    } else {
+      window.electronAPI.setShadow(true);
+    }
+  }, [isPlayerOpen]);
+
   return (
     <div className="w-full h-screen overflow-hidden relative font-sans select-none">
       <div className="draggable absolute top-0 left-0 right-0 h-10 z-50" />
