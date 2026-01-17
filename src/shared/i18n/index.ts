@@ -39,6 +39,7 @@ export const translations = {
 
         // Preferences - General
         preferences: "Preferences",
+        appearance: "Appearance",
         general: "General",
         software: "Software",
         update_check: "Check for Updates",
@@ -72,6 +73,7 @@ export const translations = {
         // Preferences - Startup
         startup: "Startup",
         launch_at_login: "Launch at Login",
+        player_opacity: "Player Background Opacity",
 
         // Restart Prompt
         restart_prompt_title: "Settings changed",
@@ -129,6 +131,7 @@ export const translations = {
 
         // Preferences - General
         preferences: "設定",
+        appearance: "外観",
         general: "一般",
         software: "ソフトウェア",
         update_check: "アップデートを確認",
@@ -162,6 +165,7 @@ export const translations = {
         // Preferences - Startup
         startup: "起動設定",
         launch_at_login: "ログイン時に自動起動",
+        player_opacity: "プレーヤー背景の不透明度",
 
         // Restart Prompt
         restart_prompt_title: "設定を変更しました",

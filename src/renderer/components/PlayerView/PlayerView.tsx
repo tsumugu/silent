@@ -12,6 +12,7 @@ import { MusicItem, MusicArtist } from '../../../shared/types/music';
 import { useTranslation } from '../../hooks/useTranslation';
 
 interface MeshBackgroundProps {
+  opacity: number;
   colors: {
     primary: string;
     secondary: string;
@@ -20,11 +21,13 @@ interface MeshBackgroundProps {
   };
 }
 
-const MeshBackground: React.FC<MeshBackgroundProps> = ({ colors }) => {
+const MeshBackground: React.FC<MeshBackgroundProps> = ({ colors, opacity }) => {
+  const blobOpacity = Math.max(0, opacity - 0.2); // Maintain the relative difference
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       <motion.div
-        className="absolute inset-0 opacity-50"
+        className="absolute inset-0"
         animate={{
           scale: [1, 1.2, 1],
           rotate: [0, 90, 0],
@@ -35,6 +38,7 @@ const MeshBackground: React.FC<MeshBackgroundProps> = ({ colors }) => {
           ease: "linear"
         }}
         style={{
+          opacity,
           background: `radial-gradient(circle at 0% 0%, ${colors.primary} 0%, transparent 50%),
                        radial-gradient(circle at 100% 0%, ${colors.secondary} 0%, transparent 50%),
                        radial-gradient(circle at 100% 100%, ${colors.tertiary} 0%, transparent 50%),
@@ -45,8 +49,14 @@ const MeshBackground: React.FC<MeshBackgroundProps> = ({ colors }) => {
 
       {/* Dynamic Wiggling Blobs */}
       <motion.div
-        className="absolute w-[80%] h-[80%] rounded-full opacity-30"
-        style={{ background: colors.primary, top: '10%', left: '10%', filter: 'blur(80px)' }}
+        className="absolute w-[80%] h-[80%] rounded-full"
+        style={{
+          opacity: blobOpacity,
+          background: colors.primary,
+          top: '10%',
+          left: '10%',
+          filter: 'blur(80px)'
+        }}
         animate={{
           x: [0, 50, -30, 0],
           y: [0, -40, 60, 0],
@@ -54,8 +64,14 @@ const MeshBackground: React.FC<MeshBackgroundProps> = ({ colors }) => {
         transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
       />
       <motion.div
-        className="absolute w-[70%] h-[70%] rounded-full opacity-30"
-        style={{ background: colors.secondary, bottom: '5%', right: '5%', filter: 'blur(80px)' }}
+        className="absolute w-[70%] h-[70%] rounded-full"
+        style={{
+          opacity: blobOpacity,
+          background: colors.secondary,
+          bottom: '5%',
+          right: '5%',
+          filter: 'blur(80px)'
+        }}
         animate={{
           x: [0, -60, 40, 0],
           y: [0, 30, -50, 0],
@@ -75,7 +91,16 @@ interface PlayerViewProps {
 export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: PlayerViewProps) {
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
-  const [albumInfo, setAlbumInfo] = useState<{ id: string; name: string } | null>(null);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(0.7);
+
+  useEffect(() => {
+    // Initial load
+    window.electronAPI.getSettings().then(s => setBackgroundOpacity(s.backgroundOpacity));
+
+    // Live update
+    const cleanup = window.electronAPI.onSettingsChanged(s => setBackgroundOpacity(s.backgroundOpacity));
+    return cleanup;
+  }, []);
 
   // Use granular selectors to prevent re-rendering PlayerView on every position update
   // metadata and playbackState change much less frequently than position.
@@ -165,7 +190,7 @@ export function PlayerView({ onClose, onNavigateToAlbum, onNavigateToArtist }: P
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <MeshBackground colors={colors} />
+      <MeshBackground colors={colors} opacity={backgroundOpacity} />
 
       {/* Dark overlay for depth and legibility */}
       <div className="absolute inset-0" />

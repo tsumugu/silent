@@ -47,6 +47,12 @@ export class SettingsService extends EventEmitter {
         debugMode: {
           type: 'boolean',
           default: false
+        },
+        backgroundOpacity: {
+          type: 'number',
+          minimum: 0,
+          maximum: 1,
+          default: 0.7
         }
       }
     });
@@ -74,7 +80,8 @@ export class SettingsService extends EventEmitter {
       language: (this.store as any).get('language'),
       location: (this.store as any).get('location'),
       tray: (this.store as any).get('tray'),
-      debugMode: !!(this.store as any).get('debugMode')
+      debugMode: !!(this.store as any).get('debugMode'),
+      backgroundOpacity: (this.store as any).get('backgroundOpacity') ?? 0.7
     } as AppSettings;
   }
 
@@ -102,6 +109,9 @@ export class SettingsService extends EventEmitter {
     }
     if (partial.debugMode !== undefined) {
       (this.store as any).set('debugMode', partial.debugMode);
+    }
+    if (partial.backgroundOpacity !== undefined) {
+      (this.store as any).set('backgroundOpacity', partial.backgroundOpacity);
     }
 
     const updated = this.getSettings();

@@ -16,6 +16,7 @@ export interface AppSettings {
    * Note: This is a session-based setting that automatically resets to false on app restart.
    */
   debugMode: boolean;
+  backgroundOpacity: number;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -27,5 +28,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     showTrackTitle: true,
     enableScrolling: true,
   },
-  debugMode: false
+  debugMode: false,
+  backgroundOpacity: 0.7
 };

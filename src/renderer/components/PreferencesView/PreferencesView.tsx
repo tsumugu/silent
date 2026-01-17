@@ -6,6 +6,7 @@ import ContentSection from './ContentSection';
 import MenuBarSection from './MenuBarSection';
 import LaunchSection from './LaunchSection';
 import CacheSection from './CacheSection';
+import AppearanceSection from './AppearanceSection';
 import { useTranslation } from '../../hooks/useTranslation';
 
 const PreferencesView: React.FC = () => {
@@ -128,6 +129,15 @@ const PreferencesView: React.FC = () => {
               onUpdate={handleSettingsUpdate}
             />
             <CacheSection />
+          </section>
+
+          {/* Appearance Section */}
+          <section className="space-y-4">
+            <h3 className="text-white/40 text-[10px] uppercase tracking-widest font-bold ml-1 mb-4">{t.appearance || 'Appearance'}</h3>
+            <AppearanceSection
+              settings={settings}
+              onUpdate={handleSettingsUpdate}
+            />
           </section>
 
           {/* Mode Section */}
