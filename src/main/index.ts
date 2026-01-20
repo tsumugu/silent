@@ -9,6 +9,7 @@ import { setupIPCHandlers } from './ipc/handlers';
 import { ytMusicService } from './services/YTMusicService';
 import { settingsService } from './services/SettingsService';
 import { trayService } from './services/TrayService';
+import { zandleHub } from './services/ZandleHub';
 import { IPCChannels } from './ipc/types';
 import { config } from '../shared/config';
 const { updateElectronApp } = require('update-electron-app');
@@ -100,6 +101,9 @@ app.whenReady().then(() => {
 
   // Set up IPC handlers for communication - Register once for the lifetime of the app
   setupIPCHandlers(hiddenWindow);
+
+  // Initialize Zandle state synchronization hub
+  zandleHub.start(hiddenWindow);
 
   // Initial visibility check: show if config.showHiddenWindow OR debugMode is enabled
   if (config.showHiddenWindow || settings.debugMode) {

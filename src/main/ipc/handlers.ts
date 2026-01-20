@@ -56,6 +56,14 @@ export function setupIPCHandlers(
   });
 
   // ========================================
+  // Zandle - Window ID (for sync loop prevention)
+  // ========================================
+
+  ipcMain.on(IPCChannels.GET_WINDOW_ID, (event) => {
+    event.returnValue = event.sender.id;
+  });
+
+  // ========================================
   // Playback state updates: Hidden → All Windows
   // ========================================
 

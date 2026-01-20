@@ -231,3 +231,36 @@ function setupVideoEndListener() {
   }
 }
 setupVideoEndListener();
+
+// ========================================
+// Zandle API (Special case for Hidden Window - no contextBridge)
+// ========================================
+
+// Zandle support for Hidden Window (no contextBridge due to contextIsolation: false)
+const zandleListeners: Map<string, (payload: any) => void> = new Map();
+
+// Listen for incoming zandle sync events
+['player', 'like'].forEach((storeName) => {
+  ipcRenderer.on(`zandle:sync:${storeName}`, (_event, payload) => {
+    const callback = zandleListeners.get(storeName);
+    if (callback) callback(payload);
+  });
+});
+
+// Expose zandle functions on window (since no contextBridge)
+(window as any).zandleAPI = {
+  windowId: ipcRenderer.sendSync('get-window-id'),
+
+  requestSync: (payload: any) => {
+    ipcRenderer.send('zandle:request-sync', payload);
+  },
+
+  requestHydration: (storeName: string) => {
+    return ipcRenderer.invoke('zandle:request-hydration', storeName);
+  },
+
+  onSync: (storeName: string, callback: (payload: any) => void) => {
+    zandleListeners.set(storeName, callback);
+    return () => zandleListeners.delete(storeName);
+  },
+};

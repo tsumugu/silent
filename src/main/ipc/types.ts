@@ -51,4 +51,11 @@ export enum IPCChannels {
   // Cache
   CACHE_CLEAR = 'cache:clear',
   CACHE_GET_SIZE = 'cache:get-size',
+
+  // Zandle state synchronization
+  ZANDLE_REQUEST_SYNC = 'zandle:request-sync',
+  ZANDLE_SYNC_PLAYER = 'zandle:sync:player',
+  ZANDLE_SYNC_LIKE = 'zandle:sync:like',
+  ZANDLE_REQUEST_HYDRATION = 'zandle:request-hydration',
+  GET_WINDOW_ID = 'get-window-id',
 }

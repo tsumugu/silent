@@ -74,4 +74,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   requestRestart: () => ipcRenderer.invoke('settings:request-restart'),
   clearCache: () => ipcRenderer.invoke('cache:clear'),
   getCacheSize: () => ipcRenderer.invoke('cache:get-size'),
+
+  // Zandle API for cross-window state synchronization
+  zandle: {
+    windowId: ipcRenderer.sendSync(IPCChannels.GET_WINDOW_ID),
+
+    requestSync: (payload: any) => {
+      ipcRenderer.send(IPCChannels.ZANDLE_REQUEST_SYNC, payload);
+    },
+
+    requestHydration: (storeName: string) => {
+      return ipcRenderer.invoke(IPCChannels.ZANDLE_REQUEST_HYDRATION, storeName);
+    },
+
+    onSync: (storeName: string, callback: (payload: any) => void) => {
+      const channel = `zandle:sync:${storeName}`;
+      const listener = (_event: any, payload: any) => callback(payload);
+      ipcRenderer.on(channel, listener);
+      return () => ipcRenderer.removeListener(channel, listener);
+    },
+  },
 });

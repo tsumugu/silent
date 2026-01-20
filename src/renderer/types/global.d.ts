@@ -1,6 +1,7 @@
 import { PlaybackInfo } from '../../shared/types/playback';
 import { MusicItem, MusicDetail, MusicArtist, ItemType } from '../../shared/types/music';
 import { AppSettings } from '../../shared/types/settings';
+import { ZandleSyncPayload, ZandleHydrationPayload, ZandleSyncableStore } from '../../shared/zandle/types';
 
 declare global {
   interface Window {
@@ -52,6 +53,13 @@ declare global {
       checkForUpdates: () => Promise<any>;
       clearCache: () => Promise<boolean>;
       getCacheSize: () => Promise<number>;
+      // Zandle - Cross-window state synchronization
+      zandle?: {
+        windowId: number;
+        requestSync: (payload: ZandleSyncPayload) => void;
+        requestHydration: (storeName: ZandleSyncableStore) => Promise<ZandleHydrationPayload>;
+        onSync: (storeName: string, callback: (payload: ZandleSyncPayload) => void) => () => void;
+      };
     };
   }
 }

@@ -1,16 +1,17 @@
-import { useEffect } from 'react';
-import { setPlaybackInfo } from '../store/playerStore';
-
+/**
+ * useMediaSession Hook
+ *
+ * NOTE: This hook is now a no-op. Playback state synchronization is now handled
+ * automatically by the Zandle middleware in playerStore.ts.
+ *
+ * The Zandle middleware:
+ * - Automatically subscribes to playback state changes via IPC
+ * - Handles initial state hydration on mount
+ * - Syncs state across all windows without manual intervention
+ *
+ * This hook is kept for backward compatibility and can be safely removed
+ * if all call sites are updated.
+ */
 export function useMediaSession() {
-  useEffect(() => {
-    // Listen for playback state updates from Main Process
-    const unsubscribe = window.electronAPI.onPlaybackStateChange((playbackInfo) => {
-      setPlaybackInfo(playbackInfo);
-    });
-
-    // Request initial state (for window reopen)
-    window.electronAPI.getPlaybackState().then(setPlaybackInfo);
-
-    return unsubscribe;
-  }, []);
+  // No-op: Zandle middleware handles all state synchronization
 }

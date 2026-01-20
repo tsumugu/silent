@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import { PlaybackInfo, MediaMetadata } from '../../shared/types/playback';
 import { MusicArtist, isSongItem } from '../../shared/types/music';
 import { ytMusicService } from './YTMusicService';
+import { zandleHub } from './ZandleHub';
 import { IPCChannels } from '../ipc/types';
 
 /**
@@ -320,13 +321,10 @@ export class PlaybackService {
    * Broadcast current state to all windows (except hidden window)
    */
   private broadcast(): void {
-    if (!this.state || !this.hiddenWindow) return;
+    if (!this.state) return;
 
-    BrowserWindow.getAllWindows().forEach(win => {
-      if (!win.isDestroyed() && win.id !== this.hiddenWindow!.id) {
-        win.webContents.send(IPCChannels.PLAYBACK_STATE_CHANGED, this.state);
-      }
-    });
+    // Use Zandle for cross-window state synchronization
+    zandleHub.updateState('player', 'playbackInfo', this.state, true);
   }
 
   /**
